@@ -31,8 +31,8 @@ end
 LPH_JIT_MAX = LPH_NO_VIRTUALIZE
 
 local devMode = true
-local defaultUIName = "Wapus.Shop" -- $$$
-local folderName = "Phantom Forces Cheat"
+local defaultUIName = "FischMartV3" 
+local folderName = "FischMartV3"
 local connectionList = {}
 local callbackList = {}
 local playerStatus = {}
