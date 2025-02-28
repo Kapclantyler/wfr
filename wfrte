@@ -3,7 +3,7 @@
 -- known to work on wave, nihon, awp.gg, syn z, seliware, sirhurt
 local isLimited = ...
 local environment = identifyexecutor and identifyexecutor() or ""
-local source = game:HttpGet("https://raw.githubusercontent.com/Kapclantyler/wfr/refs/heads/main/thedub" .. (isLimited and "thedub"))
+local source = game:HttpGet("https://raw.githubusercontent.com/Kapclantyler/wfr/refs/heads/main/thedub" .. ((isLimited and "thedub") or ""))
 if getfflag and string.find(string.lower(tostring(getfflag("DebugRunParallelLuaOnMainThread"))), "true") and not executed then
     loadstring(source)()
 elseif string.find(environment, "AWP") ~= nil and not executed then
