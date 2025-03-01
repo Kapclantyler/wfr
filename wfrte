@@ -315,14 +315,14 @@ NO_OPTIMIZE(function()
             h1 = a
             h2 = b
             c0 = c
-            h1d = d3
+           	h1d = d3
             h2d = d2
         elseif d2 > d3 and d2 > d1 then
             h1 = c
             h2 = b
             c0 = a
             h1d = d3
-           	h2d = d1
+            h2d = d1
         else
             h1 = c
             h2 = a
@@ -708,7 +708,6 @@ NO_OPTIMIZE(function()
                     local p2 = shape.PointC
                     local p3 = shape.PointD
                     if p0 and p1 and p2 and p3 and p0 ~= p1 and p0 ~= p2 and p0 ~= p3 and p1 ~= p2 and p1 ~= p3 and p2 ~= p3 then
-                        -- Compute the intersection of the diagonals (line from p0 to p2 and p1 to p3)
                         local m1 = (p2.Y - p0.Y) / (p2.X - p0.X)
                         local b1 = p0.Y - m1 * p0.X
                         local m2 = (p3.Y - p1.Y) / (p3.X - p1.X)
@@ -716,18 +715,189 @@ NO_OPTIMIZE(function()
                         local ix = (b2 - b1) / (m1 - m2)
                         local iy = m1 * ix + b1
                         local center = v2.new(ix, iy)
-                        -- Use the two triangle drawings stored in the quad's drawings to render the quad as two triangles.
                         local tri1 = drawings.triangles[1]
                         local tri2 = drawings.triangles[2]
                         renderTriangle(tri1[1], tri1[2], p0, p1, center)
                         renderTriangle(tri2[1], tri2[2], center, p2, p3)
+
+              
+                        local obtuse
+                        if not intersects then -- if not intersecting then gets the point with the biggest angle, 2 scalene triangles will share that point and the opposite point
+                            local biggestAngle = 0
+                            local biggestLine
+                            local total = 0
+                            
+                            for lineIndex = 1, 4 do
+                                local o0 = lines[(lineIndex == 1 and 4) or lineIndex - 1][1]
+                                local o1, t1 = table.unpack(lines[lineIndex])
+                                local supangle = (o0 - o1).Unit:Dot((t1 - o1).Unit)
+                                local angle
+                                
+                                if supangle < 0 then
+                                    angle = 2 + supangle
+                                else
+                                    angle = 1 - math.abs(supangle)
+                                end
+                                
+                                total = total + angle
+                                
+                                if angle >= biggestAngle then
+                                    biggestLine = lineIndex
+                                    biggestAngle = angle
+                                end
+                            end
+                            
+                            obtuse = biggestLine
+                        end
+                        
+                        for sideIndex = 1, 4 do
+                            local line = drawings.lines[sideIndex]
+                            local h1, h2, m, b = table.unpack(lines[sideIndex])
+                            
+                            local d = h2 - h1
+                            local mp = h1 + d * 0.5
+                            line.Position = UDim2.new(0, mp.X, 0, mp.Y) -- middle
+                            line.Rotation = math.deg(math.atan(d.Y / d.X))
+                            line.Size = UDim2.new(0, math.floor(d.Magnitude + 0.5), 0, math.abs(shape.Thickness))
+                        end
+                        
+                        if intersects then
+                            local l1 = lines[intersects]
+                            local l2 = lines[intersects == 3 and 1 or 4]
+                            local lt1, rt1 = table.unpack(drawings.triangles[1])
+                            local lt2, rt2 = table.unpack(drawings.triangles[2])
+                            local a1, b1, c1 = getPointOrder(intersection, l1[1], l1[2])
+                            local a2, b2, c2 = getPointOrder(intersection, l2[1], l2[2])
+                            renderTriangle(lt1, rt1, a1, b1, c1)
+                            renderTriangle(lt2, rt2, a2, b2, c2)
+                        else
+                            local l0 = lines[(obtuse < 3 and obtuse + 2) or obtuse - 2]
+                            local l1 = lines[obtuse]
+                            local lt1, rt1 = table.unpack(drawings.triangles[1])
+                            local lt2, rt2 = table.unpack(drawings.triangles[2])
+                            local a1, b1, c1 = getPointOrder(l1[1], l1[2], l0[1])
+                            local a2, b2, c2 = getPointOrder(l1[1], l0[2], l0[1])
+                            renderTriangle(lt1, rt1, a1, b1, c1)
+                            renderTriangle(lt2, rt2, a2, b2, c2)
+                        end
+                    end
+                end
+
+                if updateList.Filled ~= nil then
+                    if shape.Visible then
+                        for _, triangle in drawings.triangles do
+                            for _, drawing in triangle do
+                                drawing.Visible = updateList.Filled
+                            end
+                        end
+
+                        for _, drawing in drawings.lines do
+                            drawing.Visible = not updateList.Filled
+                        end
+                    end
+                end
+
+                if updateList.Visible ~= nil then
+                    if shape.Filled then
+                        for _, triangle in drawings.triangles do
+                            for _, drawing in triangle do
+                                drawing.Visible = updateList.Visible
+                            end
+                        end
+                    else
+                        for _, drawing in drawings.lines do
+                            drawing.Visible = updateList.Visible
+                        end
+                    end
+                end
+
+                if updateList.Transparency then
+                    for _, drawing in drawings.lines do
+                        drawing.Transparency = 1 - updateList.Transparency
+                    end
+
+                    for _, triangle in drawings.triangles do
+                        for _, drawing in triangle do
+                            drawing.ImageTransparency = 1 - updateList.Transparency
+                        end
+                    end
+                end
+
+                if updateList.Color then
+                    for _, drawing in drawings.lines do
+                        drawing.BackgroundColor3 = updateList.Color
+                    end
+
+                    for _, triangle in drawings.triangles do
+                        for _, drawing in triangle do
+                            drawing.ImageColor3 = updateList.Color
+                        end
+                    end
+                end
+
+                if updateList.ZIndex then
+                    for _, drawing in drawings.lines do
+                        drawing.ZIndex = updateList.ZIndex
+                    end
+
+                    for _, triangle in drawings.triangles do
+                        for _, drawing in triangle do
+                            drawing.ZIndex = updateList.ZIndex
+                        end
                     end
                 end
             end
         end
-    end
-end)
 
+        cache.updates = {}
+    endngs.box.Visible = updateList.Filled
+                        drawings.line1.Visible = not updateList.Filled
+                        drawings.line2.Visible = not updateList.Filled
+                        drawings.line3.Visible = not updateList.Filled
+                        drawings.line4.Visible = not updateList.Filled
+                    end
+                end
+
+                if updateList.Visible ~= nil then
+                    if shap
+
+    local function cleardrawcache()
+        for _, instanceList in cache.instances do
+            for _, instance in instanceList do
+                instance:Destroy()
+            end
+        end
+
+        return
+    end
+
+    local function isrenderobj(obj)
+        return table.find(cache.shapes, obj) ~= nil
+    end
+
+    local function getrenderproperty(obj, idx)
+        return obj[idx]
+    end
+
+    local function setrenderproperty(obj, idx, val)
+        obj[idx] = val
+        return
+    end
+
+    local function getgui()
+        return folder
+    end
+
+    --getgenv().Drawing = drawing -- this shit was actually causing the esp lag sorry throit for blaming u i didnt know until i switched the esp fr
+    getgenv().drawing = drawing
+    --getgenv().cleardrawcache = cleardrawcache
+    --getgenv().isrenderobj = isrenderobj
+    --getgenv().getrenderproperty = getrenderproperty
+    --getgenv().setrenderproperty = setrenderproperty
+    getgenv().getgui = getgui
+
+    game:GetService("RunService").RenderStepped:Connect(render)
+end
 
 do -- UI Library
     local COLOR = 1
