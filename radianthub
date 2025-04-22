@@ -8,6 +8,8 @@ elseif game.PlaceId == 85896571713843 then
     loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/69410e3782566c23d2e6a5f54c173786.lua"))()
 elseif game.PlaceId == 122678592501168 then
     loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/9df258f7afdd3450955fdcdbf64d917b.lua"))()
+elseif game.PlaceId == 81440632616906 then
+    loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/0b96d33892bf1bb4271fd90be16ae0fa.lua"))()
 else 
     loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/ab58cbb0b70b1a198d3843c468bf4d35.lua"))()
 end
