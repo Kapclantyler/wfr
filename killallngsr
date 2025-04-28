@@ -54,7 +54,6 @@ return {function(Player, parent)
 		["Name"] = create("TextLabel",{TextYAlignment = Enum.TextYAlignment.Bottom,BackgroundTransparency = 1,Size = UDim2.new(0, 0, 0, 0),TextStrokeTransparency = 0,TextColor3 = Color3.fromRGB(255, 255, 255),AnchorPoint = Vector2.new(0.5, 0.5),TextSize = 11,Font = Enum.Font.Gotham}),
 		["Distance"] = create("TextLabel",{TextYAlignment = Enum.TextYAlignment.Top,BackgroundTransparency = 1,Size = UDim2.new(0, 0, 0, 0),TextStrokeTransparency = 0,TextColor3 = Color3.fromRGB(255, 255, 255),AnchorPoint = Vector2.new(0.5, 0.5),TextSize = 11,Font = Enum.Font.Gotham}),
 		["HealthBar"] = create("Frame", {BackgroundColor3 = Color3.fromRGB(62, 62, 62);AnchorPoint = Vector2.new(0.5, 0.5);Size = UDim2.new(0.00005, 0, 0.002, 0);Position = UDim2.new(0.4989, -2, 0.5, 0);BorderColor3 = Color3.fromRGB(0, 0, 0);BackgroundTransparency = 0.75;},{create("Frame", {Name = "Framehb";BorderSizePixel = 0;BackgroundColor3 = Color3.fromRGB(255, 128, 85);AnchorPoint = Vector2.new(0.5, 1);Size = UDim2.new(1, 0, 0.5, 0);Position = UDim2.new(0.5, 0, 1, 0);BorderColor3 = Color3.fromRGB(0, 0, 0);});	create("TextLabel", {TextStrokeTransparency = 0;BorderSizePixel = 0;TextSize = 10;TextXAlignment = Enum.TextXAlignment.Right;BackgroundColor3 = Color3.fromRGB(255, 255, 255);FontFace = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);TextColor3 = Color3.fromRGB(255, 128, 85);AnchorPoint = Vector2.new(1, 0.5);BorderColor3 = Color3.fromRGB(0, 0, 0);Text = [[100%]];Name = [[health%]];Position = UDim2.new(-0.5, 1, 0, 0);});});
-
 	});
 
 	local Connection,hue = nil,math.random(1,300);
@@ -70,14 +69,14 @@ return {function(Player, parent)
 
 		Gui.Size = UDim2.fromScale((Size.X + 1) * 500,(Size.Y + 1) * 500)
 		----
-		if settings.box then
+		if Settings.box then
 			UI.Main.Visible = true
 			UI.Main.Size = UDim2.fromScale(1 /500, 1 /500)
 			UI.Main.Line.Color = color
 		else 
 			UI.Main.Visible = false
 		end
-		if settings.healthbar then
+		if Settings.healthbar then
 			local num = Player.Humanoid.Health / Player.Humanoid.MaxHealth
 		    UI.HealthBar.Framehb.Size = UDim2.new(1,0,num,0)
 		    UI.HealthBar["health%"].Text = math.floor(Player.Humanoid.Health) 
@@ -87,7 +86,7 @@ return {function(Player, parent)
 		else
 			UI.HealthBar.Visible = false
 		end
-		if settings.name then
+		if Settings.name then
 			UI.Name.Position = UDim2.new(.5,0,0.499,-4) 
 			UI.Name.Text = Player.Name
 			UI.Name.TextColor3 = color
@@ -95,7 +94,7 @@ return {function(Player, parent)
 		else
 			UI.Name.Visible = false
 		end
-		if settings.distance then
+		if Settings.distance then
 			UI.Distance.Position = UDim2.new(.5,0,0.501,4) 
 		    UI.Distance.Text = "[" .. math.floor((Player:FindFirstChild("HumanoidRootPart").Position - camera.CFrame.Position).Magnitude).. "]s"
 		    UI.Distance.TextColor3 = color
