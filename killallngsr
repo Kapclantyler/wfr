@@ -69,14 +69,14 @@ return {function(Player, parent)
 
 		Gui.Size = UDim2.fromScale((Size.X + 1) * 500,(Size.Y + 1) * 500)
 		----
-		if Settings.box and not health == 0 then
+		if Settings.box and then
 			UI.Main.Visible = true
 			UI.Main.Size = UDim2.fromScale(1 /500, 1 /500)
 			UI.Main.Line.Color = color
 		else 
 			UI.Main.Visible = false
 		end
-		if Settings.healthbar and not health == 0 then
+		if Settings.healthbar then
 			local num = Player.Humanoid.Health / Player.Humanoid.MaxHealth
 		    UI.HealthBar.Framehb.Size = UDim2.new(1,0,num,0)
 		    UI.HealthBar["health%"].Text = math.floor(Player.Humanoid.Health) 
@@ -86,7 +86,7 @@ return {function(Player, parent)
 		else
 			UI.HealthBar.Visible = false
 		end
-		if Settings.name and not health == 0 then
+		if Settings.name then
 			UI.Name.Position = UDim2.new(.5,0,0.499,-4) 
 			UI.Name.Text = Player.Name
 			UI.Name.TextColor3 = color
@@ -94,7 +94,7 @@ return {function(Player, parent)
 		else
 			UI.Name.Visible = false
 		end
-		if Settings.distance and not health == 0 then
+		if Settings.distance then
 			UI.Distance.Position = UDim2.new(.5,0,0.501,4) 
 		    UI.Distance.Text = "[" .. math.floor((Player:FindFirstChild("HumanoidRootPart").Position - camera.CFrame.Position).Magnitude).. "]s"
 		    UI.Distance.TextColor3 = color
