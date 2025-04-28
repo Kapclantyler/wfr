@@ -23,7 +23,7 @@ end;
 
 function GetBoundingBox(model:Instance?)
 	local cframe, size = model:GetBoundingBox()
-	return cframe, Vector3.new(math.min(size.X,99999),math.min(size.Y,99999999),math.min(size.Z,999999999999))
+	return cframe, Vector3.new(math.min(size.X,5),math.min(size.Y,6.75),math.min(size.Z,5))
 end
 function getColorFromGradient(Num)
 	local color1, color2, color3, color4 = Color3.fromRGB(255, 0, 0), Color3.fromRGB(255, 165, 0), Color3.fromRGB(255, 255, 0), Color3.fromRGB(0, 255, 0)
@@ -64,7 +64,7 @@ return {function(Player, parent)
 		UI.Main.Size = UDim2.fromScale(1 /500, 1 /500)
 		local num = Player.Humanoid.Health / Player.Humanoid.MaxHealth
 		UI.HealthBar.Framehb.Size = UDim2.new(1,0,num,0)
-		UI.HealthBar["health%"].Text = Player.Humanoid.Health 
+		UI.HealthBar["health%"].Text = math.floor(Player.Humanoid.Health) 
 		UI.HealthBar.Framehb.BackgroundColor3 = getColorFromGradient(num)
 		UI.HealthBar["health%"].TextColor3 = getColorFromGradient(num)
 		----
