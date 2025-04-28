@@ -65,11 +65,11 @@ return {function(Player, parent)
 		if hue > 300 then hue = 0 end
 		----
 		local color = Color3.fromHSV(hue/300, 1, 1)
-		local health = Player.Humanoid.Health 
+		
 
 		Gui.Size = UDim2.fromScale((Size.X + 1) * 500,(Size.Y + 1) * 500)
 		----
-		if Settings.box and then
+		if Settings.box then
 			UI.Main.Visible = true
 			UI.Main.Size = UDim2.fromScale(1 /500, 1 /500)
 			UI.Main.Line.Color = color
