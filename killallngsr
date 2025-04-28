@@ -1,6 +1,14 @@
 
 ---
-local Settings ,Players = {}, {};
+
+
+local Settings ,Players = {
+	box = false ,
+	healthbar = false ,
+	name = false,
+	distance = false
+
+}, {};
 local RunService = game:GetService("RunService")
 local camera = workspace.CurrentCamera
 
@@ -61,28 +69,40 @@ return {function(Player, parent)
 
 
 		Gui.Size = UDim2.fromScale((Size.X + 1) * 500,(Size.Y + 1) * 500)
-		UI.Main.Size = UDim2.fromScale(1 /500, 1 /500)
-		local num = Player.Humanoid.Health / Player.Humanoid.MaxHealth
-		UI.HealthBar.Framehb.Size = UDim2.new(1,0,num,0)
-		UI.HealthBar["health%"].Text = math.floor(Player.Humanoid.Health) 
-		UI.HealthBar.Framehb.BackgroundColor3 = getColorFromGradient(num)
-		UI.HealthBar["health%"].TextColor3 = getColorFromGradient(num)
 		----
-		
-
-		UI.Distance.Position = UDim2.new(.5,0,0.501,4) 
-		UI.Distance.Text = "[" .. math.floor((Player:FindFirstChild("HumanoidRootPart").Position - camera.CFrame.Position).Magnitude).. "]s"
-		UI.Distance.TextColor3 = color
-		
-		
-		
-		UI.Name.Position = UDim2.new(.5,0,0.499,-4) 
-        UI.Name.Text = Player.Name
-
-		UI.Main.Line.Color = color
-		UI.Name.TextColor3 = color
-
-
+		if settings.box then
+			UI.Main.Visible = true
+			UI.Main.Size = UDim2.fromScale(1 /500, 1 /500)
+			UI.Main.Line.Color = color
+		else 
+			UI.Main.Visible = false
+		end
+		if settings.healthbar then
+			local num = Player.Humanoid.Health / Player.Humanoid.MaxHealth
+		    UI.HealthBar.Framehb.Size = UDim2.new(1,0,num,0)
+		    UI.HealthBar["health%"].Text = math.floor(Player.Humanoid.Health) 
+		    UI.HealthBar.Framehb.BackgroundColor3 = getColorFromGradient(num)
+		    UI.HealthBar["health%"].TextColor3 = getColorFromGradient(num)
+			UI.HealthBar.Visible = true
+		else
+			UI.HealthBar.Visible = false
+		end
+		if settings.name then
+			UI.Name.Position = UDim2.new(.5,0,0.499,-4) 
+			UI.Name.Text = Player.Name
+			UI.Name.TextColor3 = color
+			UI.Name.Visible = true
+		else
+			UI.Name.Visible = false
+		end
+		if settings.distance then
+			UI.Distance.Position = UDim2.new(.5,0,0.501,4) 
+		    UI.Distance.Text = "[" .. math.floor((Player:FindFirstChild("HumanoidRootPart").Position - camera.CFrame.Position).Magnitude).. "]s"
+		    UI.Distance.TextColor3 = color
+			UI.Distance.Visible = true
+		else 
+			UI.Distance.Visible = false
+		end
 	end)
 
 	local Connection2;Connection2 = Player.AncestryChanged:Connect(function(_,Parent)
