@@ -63,8 +63,6 @@ return {function(Player, parent)
 
 		if not Player:FindFirstChild("Humanoid") or Player.Humanoid.Health <= 0 then
 			Players[Player.Name] = nil
-			Connection:Disconnect()
-			Connection2:Disconnect()
 			Gui:Destroy()
 			return
 		end
