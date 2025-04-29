@@ -126,7 +126,7 @@ return {function(Player)
 	local HealthBar = create("Frame", {Parent = Gui , BackgroundColor3 = Color3.fromRGB(17, 17, 17);AnchorPoint = Vector2.new(1, 0.5);Size = UDim2.new(0, 1, 0.002, 0);Position = UDim2.new(0.49895, -1, 0.5, 0);BorderColor3 = Color3.fromRGB(0, 0, 0);Name = [[Health]];BackgroundTransparency = 0.5;}):: Frame;
 	create("Frame", {Parent = HealthBar, BorderSizePixel = 0;BackgroundColor3 = Color3.fromRGB(7, 255, 0);AnchorPoint = Vector2.new(0.5, 1);Size = UDim2.new(1, 0, 1, 0);Position = UDim2.new(0.5, 0, 1, 0);BorderColor3 = Color3.fromRGB(0, 0, 0);Name = [[bar]];});
     if Settings.Corner then
-        Box = game:GetObjects("rbxassetid://134402666892187")[1]:Clone();corner.Parent = Gui
+        Box = game:GetObjects("rbxassetid://134402666892187")[1]:Clone();Box.Parent = Gui
     else
         Box = create("Frame",{ Parent = Gui,BorderSizePixel = 0,AnchorPoint = Vector2.new(0.5, 0.5),Position = UDim2.new(0.5, 0, 0.5, 0),BackgroundTransparency = 1}):: Frame;
     end
