@@ -125,6 +125,9 @@ return {function(Player)
 		local _, on = CurrentCamera:WorldToViewportPoint(Cf.Position)
 		hue = hue + 1
 		if hue > 300 then hue = 0 end
+        if Player.Character.Humanoid.Health <= 0 then
+            Gui.Enabled = false
+        end
 		if on and Settings.Enabled then
 			local color = Color3.fromHSV(hue/300, 1, 1);
 			Part.Position = Cf.Position;
