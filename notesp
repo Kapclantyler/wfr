@@ -95,12 +95,14 @@ end
 local Hasesp,Settings,Namedb = {},{
 
 	Box = false,
+    Filled = false,
 	Name = false,
     Color = "Rainbow",
 	Weapon = false,
 	Enabled = false,
 	Distance = false,
 	HealthBar = false,
+
 },{}
 return {function(Player)
 	Hasesp[Player] = {}
@@ -108,7 +110,7 @@ return {function(Player)
 	local con1,con2,hue = nil,nil,math.random(1,300);
 	local Part = create("Part", {Size = Vector3.zero,Parent = workspace.Terrain,Anchored = true,Transparency = 1, CanCollide = false}) :: Part;
 	local Gui = create("BillboardGui", {Parent = Part,AlwaysOnTop = true,ClipsDescendants = false}) :: BillboardGui;
-	local Box = create("Frame",{ Parent = Gui,AnchorPoint = Vector2.new(0.5, 0.5),Position = UDim2.new(0.5, 0, 0.5, 0),BackgroundTransparency = 1}):: Frame;
+	local Box = create("Frame",{ Parent = Gui,BorderSizePixel = 0,AnchorPoint = Vector2.new(0.5, 0.5),Position = UDim2.new(0.5, 0, 0.5, 0),BackgroundTransparency = 1}):: Frame;
 	local Top = create("Frame", {Parent = Box, ZIndex = 10;BorderSizePixel = 0;BackgroundColor3 = Color3.fromRGB(255, 255, 255);AnchorPoint = Vector2.new(0.5, 0);Size = UDim2.new(1, 0, 0, 1);Position = UDim2.new(0.5, 0, 0, 0);BorderColor3 = Color3.fromRGB(0, 0, 0);Name = [[Top]];LayoutOrder = 10;}):: Frame;
 	create("Frame" ,{Parent = Top ,BorderSizePixel = 0;BackgroundColor3 = Color3.fromRGB(0, 0, 0);AnchorPoint = Vector2.new(0.5, 0.5);Size = UDim2.new(1, 0, 1, 2);Position = UDim2.new(0.5, 0, 0.5, 0);BorderColor3 = Color3.fromRGB(0, 0, 0);});
 	local Bottom = create("Frame", {Parent = Box,ZIndex = 10;BorderSizePixel = 0;BackgroundColor3 = Color3.fromRGB(255, 255, 255);AnchorPoint = Vector2.new(0.5, 1);Size = UDim2.new(1, 0, 0, 1);Position = UDim2.new(0.5, 0, 1, 0);BorderColor3 = Color3.fromRGB(0, 0, 0);Name = [[Bottom]];LayoutOrder = 10;}):: Frame;
@@ -136,6 +138,7 @@ return {function(Player)
             Gui.Enabled = false
             dead = true
         end
+        
 		if on and Settings.Enabled and not dead then
             
 			local color = Settings.Color == "Rainbow" and Color3.fromHSV(hue/300, 1, 1) or Settings.Color 
@@ -151,6 +154,8 @@ return {function(Player)
 				Name.Visible = false
 			end
 			if Settings.Box then
+                Box.BackgroundTransparency = Settings.Filled and 0.75 or 1 
+                Box.BackgroundColor3 = color
 				Box.Visible = true;
 				Box.Size = UDim2.fromScale(1/500,1/500)
                 Top.BackgroundColor3 = color
