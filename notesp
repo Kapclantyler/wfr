@@ -180,10 +180,9 @@ return {function(Player)
 	con2 = Player.Character.AncestryChanged:Connect(function(_,Parent)
 		if Parent == nil then
 			con1:Disconnect();
-
-
 			Part:Destroy();
 			con2:Disconnect();
+            Hasesp[Player] = nil
 		end;
 	end);
 
