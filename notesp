@@ -157,7 +157,7 @@ return {function(Player)
 				if Weapon.Visible then
 					pos = pos + Weapon.TextBounds.Y + 1
 				end
-				Distance.Text = tostring(math.floor(Player:DistanceFromCharacter(CurrentCamera.CFrame.Position)))
+				Distance.Text = "[" .. tostring(math.floor(Player:DistanceFromCharacter(CurrentCamera.CFrame.Position))) .. "]s"
 				Distance.Position = UDim2.new(0.5, 0, 0.501, pos)
 			else
 				Distance.Visible = false
