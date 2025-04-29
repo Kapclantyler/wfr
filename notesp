@@ -93,8 +93,10 @@ function getColorFromGradient(Num)
 	end
 end
 local Hasesp,Settings,Namedb = {},{
+
 	Box = false,
 	Name = false,
+    Color = "Rainbow",
 	Weapon = false,
 	Enabled = false,
 	Distance = false,
@@ -135,8 +137,8 @@ return {function(Player)
             dead = true
         end
 		if on and Settings.Enabled and not dead then
-
-			local color = Color3.fromHSV(hue/300, 1, 1);
+            
+			local color = Settings.Color == "Rainbow" and Color3.fromHSV(hue/300, 1, 1) or Settings.Color 
 			Part.Position = Cf.Position;
 			Gui.Enabled = true;
 			Gui.Size = UDim2.fromScale((Size.X + 1) * 500,(Size.Y + 1) * 500)
@@ -144,12 +146,17 @@ return {function(Player)
 			if Settings.Name then
 				Name.Visible = true
 				Name.Text = Player.Name
+                Name.TextColor3 = color 
 			else
 				Name.Visible = false
 			end
 			if Settings.Box then
 				Box.Visible = true;
 				Box.Size = UDim2.fromScale(1/500,1/500)
+                Top.BackgroundColor3 = color
+                Bottom.BackgroundColor3 = color
+                Left.BackgroundColor3 = color
+                Right.BackgroundColor3 = color
 			else
 				Box.Visible = false
 			end;
@@ -157,6 +164,7 @@ return {function(Player)
 			if Settings.Weapon then
 				Weapon.Visible = true
 				Weapon.Text = Player.Character:FindFirstChildOfClass("Tool") and Player.Character:FindFirstChildOfClass("Tool").Name or "None"
+                Weapon.TextColor3 = color 
 			else
 				Weapon.Visible = false
 			end
@@ -167,6 +175,7 @@ return {function(Player)
 				if Weapon.Visible then
 					pos = pos + Weapon.TextBounds.Y + 1
 				end
+                Distance.TextColor3 = color 
 				Distance.Text = "[" .. tostring(math.floor(Player:DistanceFromCharacter(CurrentCamera.CFrame.Position))) .. "]s"
 				Distance.Position = UDim2.new(0.5, 0, 0.501, pos)
 			else
