@@ -1,6 +1,3 @@
-
----
-
 local Workspace = game:FindService("Workspace");
 local CurrentCamera = workspace.CurrentCamera;
 local RunService = game:FindService("RunService");
@@ -160,7 +157,7 @@ return {function(Player)
 				if Weapon.Visible then
 					pos = pos + Weapon.TextBounds.Y + 1
 				end
-				Distance.Text = tostring(math.floor(Player:DistanceFromCharacter(Cf.Position)))
+				Distance.Text = tostring(math.floor(Player:DistanceFromCharacter(CurrentCamera.CFrame.Position)))
 				Distance.Position = UDim2.new(0.5, 0, 0.501, pos)
 			else
 				Distance.Visible = false
