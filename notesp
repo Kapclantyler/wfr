@@ -127,7 +127,7 @@ return {function(Player)
         
 		hue = hue + 1
 		if hue > 300 then hue = 0 end
-        if Player.Character.Humanoid.Health <= 0 then
+        if Player.Character:FindFirstChild("Humanoid") and Player.Character:FindFirstChild("Humanoid").Health <= 0 then
             Gui.Enabled = false
         end
 		if on and Settings.Enabled then
