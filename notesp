@@ -120,6 +120,7 @@ return {function(Player)
 	local Distance = create("TextLabel", {Parent = Gui,TextStrokeTransparency = 0;BorderSizePixel = 0;TextSize = 12;TextYAlignment = Enum.TextYAlignment.Top;BackgroundColor3 = Color3.fromRGB(255, 255, 255);FontFace = Font.new([[rbxasset://fonts/families/Ubuntu.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);TextColor3 = Color3.fromRGB(255, 255, 255);AnchorPoint = Vector2.new(0.5, 1);BorderColor3 = Color3.fromRGB(0, 0, 0);Text = [[42079]];Name = [[Dis]];Position = UDim2.new(0.5, 0, 0.501, 13);}):: TextLabel;
 	local HealthBar = create("Frame", {Parent = Gui , BackgroundColor3 = Color3.fromRGB(17, 17, 17);AnchorPoint = Vector2.new(1, 0.5);Size = UDim2.new(0, 1, 0.002, 0);Position = UDim2.new(0.49895, -1, 0.5, 0);BorderColor3 = Color3.fromRGB(0, 0, 0);Name = [[Health]];BackgroundTransparency = 0.5;}):: Frame;
 	create("Frame", {Parent = HealthBar, BorderSizePixel = 0;BackgroundColor3 = Color3.fromRGB(7, 255, 0);AnchorPoint = Vector2.new(0.5, 1);Size = UDim2.new(1, 0, 1, 0);Position = UDim2.new(0.5, 0, 1, 0);BorderColor3 = Color3.fromRGB(0, 0, 0);Name = [[bar]];});
+    local dead = false
     con1 = RunService.Stepped:Connect(function()	
 		local Cf, Size = GetBoundingBox(Player.Character);
         if Cf == nil then return end
@@ -127,10 +128,14 @@ return {function(Player)
         
 		hue = hue + 1
 		if hue > 300 then hue = 0 end
+
         if Player.Character:FindFirstChild("Humanoid") and Player.Character:FindFirstChild("Humanoid").Health <= 0 then
+            print("hi")
             Gui.Enabled = false
+            dead = true
         end
-		if on and Settings.Enabled then
+		if on and Settings.Enabled and not dead then
+
 			local color = Color3.fromHSV(hue/300, 1, 1);
 			Part.Position = Cf.Position;
 			Gui.Enabled = true;
