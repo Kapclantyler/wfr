@@ -122,7 +122,9 @@ return {function(Player)
 	create("Frame", {Parent = HealthBar, BorderSizePixel = 0;BackgroundColor3 = Color3.fromRGB(7, 255, 0);AnchorPoint = Vector2.new(0.5, 1);Size = UDim2.new(1, 0, 1, 0);Position = UDim2.new(0.5, 0, 1, 0);BorderColor3 = Color3.fromRGB(0, 0, 0);Name = [[bar]];});
     con1 = RunService.Stepped:Connect(function()	
 		local Cf, Size = GetBoundingBox(Player.Character);
+        if Cf == nil then return end
 		local _, on = CurrentCamera:WorldToViewportPoint(Cf.Position)
+        
 		hue = hue + 1
 		if hue > 300 then hue = 0 end
         if Player.Character.Humanoid.Health <= 0 then
