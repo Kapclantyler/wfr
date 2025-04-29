@@ -134,7 +134,6 @@ return {function(Player)
 		if hue > 300 then hue = 0 end
 
         if Player.Character:FindFirstChild("Humanoid") and Player.Character:FindFirstChild("Humanoid").Health <= 0 then
-            print("hi")
             Gui.Enabled = false
             dead = true
         end
