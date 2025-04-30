@@ -1,0 +1,33 @@
+local RunService = game:GetService("RunService")
+local Item_Settings,Item_Hasesp = {Enabled = false, Dist = 100},{};
+local CurrentCamera = workspace.CurrentCamera
+return {function(Item,Color)
+    Item_Hasesp[Item] = {}
+    local con1 
+	local con2 
+	local Gui = game:GetObjects("rbxassetid://95622769540148")[1]:Clone();Gui.Parent = workspace.Terrain
+	local esp = Gui.Gui
+	con1 = RunService.Stepped:Connect(function()
+		local Distance = math.floor((Item.Position - CurrentCamera.CFrame.Position).Magnitude) 
+		if Item_Settings.Enabled and Distance <= Item_Settings.Dist then
+			Gui.Position = Item.Position
+			esp.Enabled = true
+			esp.Item.Visible = true
+			esp.Item.Text = Item.Name .. " [" .. Distance .. "]"
+			esp.Item.TextColor3 = Color or Color3.new(1,1,1)
+		else 
+			esp.Enabled = false
+		end		
+
+
+    end)
+    con2 = Item.AncestryChanged:Connect(function(_,Parent)
+		if Parent == nil then
+			con1:Disconnect()
+			con2:Disconnect()
+			Item_Hasesp[Item] = nil
+			Gui:Destroy()
+			return
+		end
+   end)
+end,Item_Settings,Item_Hasesp}
