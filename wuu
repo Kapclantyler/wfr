@@ -1355,11 +1355,20 @@ function RadiantHub:createLogo()
         Parent = logoFrame,
     })
 
-    -- Logo click only, no hover effects
-
-    logoBtn.MouseButton1Click:Connect(function()
-        self.notifications:info('RadiantHub', 'Logo clicked!', 2)
-    end)
+    -- UPDATED: Replace manual connection with ConnectionManager
+    -- Logo click only, with subtle press effect but no hover effects
+    self.connectionManager:autoConnect(logoBtn, {
+        click = {
+            callback = function()
+                self.notifications:info('RadiantHub', 'Logo clicked!', 2)
+            end,
+            pressEffect = {
+                scale = 0.95,
+                duration = 0.15
+            }
+        }
+        -- No hover effects as per original comment
+    })
 end
 
 function RadiantHub:createSettingsTab()
@@ -1412,7 +1421,19 @@ function RadiantHub:createSettingsTab()
         end
     end
 
-    tabBtn.MouseButton1Click:Connect(function() self:switchTab(tabName) end)
+    -- UPDATED: Replace manual connection with ConnectionManager
+    self.connectionManager:autoConnect(tabBtn, {
+        click = {
+            callback = function() 
+                self:switchTab(tabName) 
+            end,
+            pressEffect = {
+                scale = 0.98,
+                duration = 0.1
+            }
+        }
+        -- No hover effects as per original design comment
+    })
 
     -- Store the update function for later use
     self.settingsUpdateFunction = updateActiveState
@@ -1561,7 +1582,19 @@ function RadiantHub:createTab(name, icon)
         end
     end
 
-    tabBtn.MouseButton1Click:Connect(function() self:switchTab(name) end)
+    -- UPDATED: Replace manual connection with ConnectionManager
+    self.connectionManager:autoConnect(tabBtn, {
+        click = {
+            callback = function() 
+                self:switchTab(name) 
+            end,
+            pressEffect = {
+                scale = 0.98,
+                duration = 0.1
+            }
+        }
+        -- No hover effects as per original design comment
+    })
 
     return tab
 end
@@ -2252,38 +2285,84 @@ function RadiantHub:createKeybind(parent, title, key, pos)
     addStroke(keyBtn)
 
     local listening = false
-    keyBtn.MouseButton1Click:Connect(function()
-        if listening then return end
-        listening = true
+    
+    -- UPDATED: Replace manual connection with ConnectionManager
+    self.connectionManager:autoConnect(keyBtn, {
+        click = {
+            callback = function()
+                if listening then return end
+                listening = true
 
-        self.isSettingKeybind = true
+                self.isSettingKeybind = true
 
-        keyBtn.Text = '...'
-        keyBtn.BackgroundColor3 = Config.Colors.Active
+                keyBtn.Text = '...'
+                keyBtn.BackgroundColor3 = Config.Colors.Active
 
-        local connection
-        connection = Services.UserInputService.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                local newKey = input.KeyCode.Name
-                keyBtn.Text = newKey
-                keyBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-                listening = false
+                local connection
+                connection = Services.UserInputService.InputBegan:Connect(function(input)
+                    local newKey = nil
+                    local keyName = nil
+                    
+                    -- ENHANCED: Support for keyboard AND mouse inputs
+                    if input.UserInputType == Enum.UserInputType.Keyboard then
+                        newKey = input.KeyCode
+                        keyName = input.KeyCode.Name
+                    elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        newKey = Enum.UserInputType.MouseButton1
+                        keyName = "LMB"
+                    elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+                        newKey = Enum.UserInputType.MouseButton2
+                        keyName = "RMB"
+                    elseif input.UserInputType == Enum.UserInputType.MouseButton3 then
+                        newKey = Enum.UserInputType.MouseButton3
+                        keyName = "MMB"
+                    else
+                        -- Check for mouse side buttons
+                        if input.KeyCode == Enum.KeyCode.ButtonX1 then
+                            newKey = Enum.KeyCode.ButtonX1
+                            keyName = "X1"
+                        elseif input.KeyCode == Enum.KeyCode.ButtonX2 then
+                            newKey = Enum.KeyCode.ButtonX2
+                            keyName = "X2"
+                        end
+                    end
+                    
+                    if newKey and keyName then
+                        keyBtn.Text = keyName
+                        keyBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+                        listening = false
 
-                if title == 'Menu Toggle Key' then
-                    self.menuToggleKey = input.KeyCode
-                    self.notifications:success('Keybind Updated', 'Menu toggle key set to: ' .. newKey, 3)
-                end
+                        if title == 'Menu Toggle Key' then
+                            if input.UserInputType == Enum.UserInputType.Keyboard then
+                                self.menuToggleKey = input.KeyCode
+                            end
+                            self.notifications:success('Keybind Updated', 'Menu toggle key set to: ' .. keyName, 3)
+                        end
 
-                task.wait(0.1)
-                self.isSettingKeybind = false
+                        task.wait(0.1)
+                        self.isSettingKeybind = false
 
-                if connection then
-                    connection:Disconnect()
-                    connection = nil
-                end
-            end
-        end)
-    end)
+                        if connection then
+                            connection:Disconnect()
+                            connection = nil
+                        end
+                    end
+                end)
+            end,
+            pressEffect = {
+                scale = 0.95,
+                duration = 0.1
+            }
+        },
+        hover = {
+            properties = {
+                BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+            },
+            tween = {
+                duration = 0.2
+            }
+        }
+    })
 
     return frame
 end
@@ -2484,71 +2563,88 @@ function RadiantHub:addKeybind(tabName, sectionName, title, defaultKey, callback
     local listening = false
     local currentKey = defaultKey
 
-    keyBtn.MouseButton1Click:Connect(function()
-        if listening then return end
-        listening = true
+    -- UPDATED: Replace manual connection with ConnectionManager
+    self.connectionManager:autoConnect(keyBtn, {
+        click = {
+            callback = function()
+                if listening then return end
+                listening = true
 
-        self.isSettingKeybind = true
+                self.isSettingKeybind = true
 
-        keyBtn.Text = '...'
-        keyBtn.BackgroundColor3 = Config.Colors.Active
+                keyBtn.Text = '...'
+                keyBtn.BackgroundColor3 = Config.Colors.Active
 
-        local connection
-        connection = Services.UserInputService.InputBegan:Connect(function(input)
-            local newKey = nil
-            local keyName = nil
-            
-            -- ERWEITERT: Support für Keyboard UND Mouse Inputs
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                newKey = input.KeyCode
-                keyName = input.KeyCode.Name
-            elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
-                newKey = Enum.UserInputType.MouseButton1
-                keyName = "LMB" -- Left Mouse Button
-            elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
-                newKey = Enum.UserInputType.MouseButton2  
-                keyName = "RMB" -- Right Mouse Button
-            elseif input.UserInputType == Enum.UserInputType.MouseButton3 then
-                newKey = Enum.UserInputType.MouseButton3
-                keyName = "MMB" -- Middle Mouse Button
-            else
-                -- Prüfe auch auf Mausseiten-Tasten über KeyCode
-                if input.KeyCode == Enum.KeyCode.ButtonX1 then
-                    newKey = Enum.KeyCode.ButtonX1
-                    keyName = "X1" -- Side Button 1
-                elseif input.KeyCode == Enum.KeyCode.ButtonX2 then
-                    newKey = Enum.KeyCode.ButtonX2
-                    keyName = "X2" -- Side Button 2
-                end
-            end
-            
-            if newKey and keyName then
-                keyBtn.Text = keyName
-                keyBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-                listening = false
-                currentKey = keyName
-
-                -- Special handling for menu toggle key in settings
-                if tabName == 'Settings' and title == 'Menu Toggle Key' then
+                local connection
+                connection = Services.UserInputService.InputBegan:Connect(function(input)
+                    local newKey = nil
+                    local keyName = nil
+                    
+                    -- ERWEITERT: Support für Keyboard UND Mouse Inputs
                     if input.UserInputType == Enum.UserInputType.Keyboard then
-                        self.menuToggleKey = input.KeyCode
+                        newKey = input.KeyCode
+                        keyName = input.KeyCode.Name
+                    elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        newKey = Enum.UserInputType.MouseButton1
+                        keyName = "LMB" -- Left Mouse Button
+                    elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+                        newKey = Enum.UserInputType.MouseButton2  
+                        keyName = "RMB" -- Right Mouse Button
+                    elseif input.UserInputType == Enum.UserInputType.MouseButton3 then
+                        newKey = Enum.UserInputType.MouseButton3
+                        keyName = "MMB" -- Middle Mouse Button
+                    else
+                        -- Prüfe auch auf Mausseiten-Tasten über KeyCode
+                        if input.KeyCode == Enum.KeyCode.ButtonX1 then
+                            newKey = Enum.KeyCode.ButtonX1
+                            keyName = "X1" -- Side Button 1
+                        elseif input.KeyCode == Enum.KeyCode.ButtonX2 then
+                            newKey = Enum.KeyCode.ButtonX2
+                            keyName = "X2" -- Side Button 2
+                        end
                     end
-                    self.notifications:success('Keybind Updated', 'Menu key: ' .. keyName, 2)
-                else
-                    callback(newKey, keyName)
-                    self.notifications:info('Keybind Set', title .. ': ' .. keyName, 2)
-                end
+                    
+                    if newKey and keyName then
+                        keyBtn.Text = keyName
+                        keyBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+                        listening = false
+                        currentKey = keyName
 
-                task.wait(0.1)
-                self.isSettingKeybind = false
+                        -- Special handling for menu toggle key in settings
+                        if tabName == 'Settings' and title == 'Menu Toggle Key' then
+                            if input.UserInputType == Enum.UserInputType.Keyboard then
+                                self.menuToggleKey = input.KeyCode
+                            end
+                            self.notifications:success('Keybind Updated', 'Menu key: ' .. keyName, 2)
+                        else
+                            callback(newKey, keyName)
+                            self.notifications:info('Keybind Set', title .. ': ' .. keyName, 2)
+                        end
 
-                if connection then
-                    connection:Disconnect()
-                    connection = nil
-                end
-            end
-        end)
-    end)
+                        task.wait(0.1)
+                        self.isSettingKeybind = false
+
+                        if connection then
+                            connection:Disconnect()
+                            connection = nil
+                        end
+                    end
+                end)
+            end,
+            pressEffect = {
+                scale = 0.95,
+                duration = 0.1
+            }
+        },
+        hover = {
+            properties = {
+                BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+            },
+            tween = {
+                duration = 0.2
+            }
+        }
+    })
 
     -- Store element reference
     self.tabs[tabName].sections[sectionName].elements[title] = {
@@ -2578,7 +2674,6 @@ function RadiantHub:addKeybind(tabName, sectionName, title, defaultKey, callback
 
     return frame
 end
-
 function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
     if not self.tabs[tabName] or not self.tabs[tabName].sections[sectionName] then
         self.notifications:error('Element Error', 'Tab or section not found!', 3)
@@ -2682,8 +2777,13 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
     local filteredOptions = options
 
     local function updateOptions()
+        -- UPDATED: Clean up old connections and buttons
         for _, child in ipairs(optionsFrame:GetChildren()) do
             if child:IsA('TextButton') then
+                -- Disconnect old connections before destroying
+                if self.connectionManager then
+                    self.connectionManager:disconnectComponent(child)
+                end
                 child:Destroy()
             end
         end
@@ -2722,18 +2822,45 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
                 Parent = optBtn,
             })
 
-            optBtn.MouseButton1Click:Connect(function()
-                selected.Text = option
-                currentSelection = option
-                isOpen = false
-                optionsFrame.Visible = false
-                arrow.Text = '▼'
-                searchBox.Text = ''
-                filteredOptions = options
-                updateOptions()
-                callback(option)
-                self.notifications:info('Selection Changed', title .. ': ' .. option, 2)
-            end)
+            -- UPDATED: Replace manual connection with ConnectionManager
+            self.connectionManager:autoConnect(optBtn, {
+                click = {
+                    callback = function()
+                        selected.Text = option
+                        currentSelection = option
+                        isOpen = false
+                        optionsFrame.Visible = false
+                        arrow.Text = '▼'
+                        searchBox.Text = ''
+                        filteredOptions = options
+                        updateOptions()
+                        callback(option)
+                        self.notifications:info('Selection Changed', title .. ': ' .. option, 2)
+                    end,
+                    pressEffect = {
+                        scale = 0.97,
+                        duration = 0.1
+                    }
+                },
+                hover = {
+                    properties = (option ~= selected.Text) and {
+                        BackgroundTransparency = 0,
+                        BackgroundColor3 = Config.Colors.Hover
+                    } or nil,
+                    tween = { duration = 0.15 },
+                    callback = function(isHovering, component)
+                        -- Only apply hover effect if this option is not currently selected
+                        if option ~= selected.Text then
+                            if isHovering then
+                                optBtn.BackgroundTransparency = 0
+                                optBtn.BackgroundColor3 = Config.Colors.Hover
+                            else
+                                optBtn.BackgroundTransparency = 1
+                            end
+                        end
+                    end
+                }
+            })
         end
 
         optionsFrame.Size = UDim2.new(1, 0, 0, 36 + #filteredOptions * 28 + 8)
@@ -2759,6 +2886,7 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
         Parent = dropdown,
     })
 
+    -- ALREADY UPDATED: Arrow button with ConnectionManager
     self.connectionManager:autoConnect(arrowBtn, {
         click = {
             callback = function()
@@ -2822,7 +2950,7 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
     self.tabs[tabName].sections[sectionName].elements[title] = {
         type = 'dropdown',
         frame = frame,
-        callback = callback, -- CALLBACK HINZUGEFÜGT
+        callback = callback,
         getValue = function() return currentSelection end,
         setValue = function(value) 
             if table.find(options, value) then
@@ -2838,7 +2966,6 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
 
     return frame
 end
-
 function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callback)
     if not self.tabs[tabName] or not self.tabs[tabName].sections[sectionName] then
         self.notifications:error('Element Error', 'Tab or section not found!', 3)
@@ -2984,13 +3111,22 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
         end
 
         for i, option in ipairs(filteredOptions) do
+            -- Check if this option is currently selected
+            local isSelected = false
+            for _, sel in ipairs(selectedOptions) do
+                if sel == option then
+                    isSelected = true
+                    break
+                end
+            end
+
             local optBtn = create('TextButton', {
                 Size = UDim2.new(1, -8, 0, 26),
                 Position = UDim2.new(0, 4, 0, 36 + (i - 1) * 28),
-                BackgroundTransparency = (option == selected.Text) and 0 or 1,
+                BackgroundTransparency = isSelected and 0 or 1,
                 BackgroundColor3 = Color3.fromRGB(35, 35, 40),
                 Text = '',
-                ZIndex = 11,
+                ZIndex = 21,
                 Parent = optionsFrame,
             })
             addCorner(optBtn, 6)
@@ -2998,8 +3134,8 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
             local indicator = create('Frame', {
                 Size = UDim2.new(0, 3, 0.6, 0),
                 Position = UDim2.new(0, 3, 0.2, 0),
-                BackgroundColor3 = (option == selected.Text) and Config.Colors.Active or Color3.fromRGB(60, 60, 70),
-                ZIndex = 12,
+                BackgroundColor3 = isSelected and Config.Colors.Active or Color3.fromRGB(60, 60, 70),
+                ZIndex = 22,
                 Parent = optBtn,
             })
             addCorner(indicator, 2)
@@ -3009,56 +3145,36 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
                 Position = UDim2.new(0, 12, 0, 0),
                 BackgroundTransparency = 1,
                 Text = option,
-                TextColor3 = (option == selected.Text) and Config.Colors.Active or Config.Colors.Text,
+                TextColor3 = isSelected and Config.Colors.Active or Config.Colors.Text,
                 TextSize = 12,
                 Font = Enum.Font.Gotham,
                 TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = 12,
+                ZIndex = 22,
                 Parent = optBtn,
             })
 
-            -- REPLACE MANUAL OPTION BUTTON CONNECTIONS WITH AUTO CONNECTIONS:
-            --[[
-            optBtn.MouseEnter:Connect(function()
-                if option ~= selected.Text then
-                    optBtn.BackgroundTransparency = 0
-                end
-            end)
-
-            optBtn.MouseLeave:Connect(function()
-                if option ~= selected.Text then
-                    optBtn.BackgroundTransparency = 1
-                end
-            end)
-
-            optBtn.MouseButton1Click:Connect(function()
-                selected.Text = option
-                currentSelection = option
-                isOpen = false
-                optionsFrame.Visible = false
-                arrow.Text = '▼'
-                searchBox.Text = ''
-                filteredOptions = options
-                updateOptions()
-                callback(option)
-                self.notifications:info('Selection Changed', title .. ': ' .. option, 2)
-            end)
-            ]]
-
-            -- WITH AUTO CONNECTION MANAGER:
+            -- UPDATED: Multi-select logic with ConnectionManager
             self.connectionManager:autoConnect(optBtn, {
                 click = {
                     callback = function()
-                        selected.Text = option
-                        currentSelection = option
-                        isOpen = false
-                        optionsFrame.Visible = false
-                        arrow.Text = '▼'
-                        searchBox.Text = ''
-                        filteredOptions = options
+                        -- Multi-select logic: toggle selection
+                        local wasSelected = false
+                        for j, sel in ipairs(selectedOptions) do
+                            if sel == option then
+                                table.remove(selectedOptions, j)
+                                wasSelected = true
+                                break
+                            end
+                        end
+
+                        if not wasSelected then
+                            table.insert(selectedOptions, option)
+                        end
+
+                        updateSelectedText()
                         updateOptions()
-                        callback(option)
-                        self.notifications:info('Selection Changed', title .. ': ' .. option, 2)
+                        callback(selectedOptions)
+                        self.notifications:info('Multi-Selection', title .. ': ' .. table.concat(selectedOptions, ', '), 2)
                     end,
                     pressEffect = {
                         scale = 0.97,
@@ -3066,7 +3182,7 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
                     }
                 },
                 hover = {
-                    properties = (option ~= selected.Text) and {
+                    properties = (not isSelected) and {
                         BackgroundTransparency = 0,
                         BackgroundColor3 = Config.Colors.Hover
                     } or nil,
@@ -3074,8 +3190,16 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
                         duration = 0.15
                     },
                     callback = function(isHovering, component)
-                        -- Only apply hover effect if this option is not currently selected
-                        if option ~= selected.Text then
+                        -- Check current selection state
+                        local isCurrentlySelected = false
+                        for _, sel in ipairs(selectedOptions) do
+                            if sel == option then
+                                isCurrentlySelected = true
+                                break
+                            end
+                        end
+                        
+                        if not isCurrentlySelected then
                             if isHovering then
                                 optBtn.BackgroundTransparency = 0
                                 optBtn.BackgroundColor3 = Config.Colors.Hover
@@ -3111,41 +3235,70 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
         Parent = dropdown,
     })
 
-    arrowBtn.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        optionsFrame.Visible = isOpen
-        if isOpen then
-            filteredOptions = options
-            searchBox.Text = ''
-            updateOptions()
-            -- Increase scroll area when dropdown opens
-            local parent = frame.Parent
-            while parent and not parent.Name:match('Column') do
-                parent = parent.Parent
+    -- UPDATED: Replace manual connection with ConnectionManager
+    self.connectionManager:autoConnect(arrowBtn, {
+        click = {
+            callback = function()
+                isOpen = not isOpen
+                optionsFrame.Visible = isOpen
+                
+                if isOpen then
+                    filteredOptions = options
+                    searchBox.Text = ''
+                    updateOptions()
+                    
+                    -- Increase scroll area when dropdown opens
+                    local parent = frame.Parent
+                    while parent and not parent.Name:match('Column') do
+                        parent = parent.Parent
+                    end
+                    if parent then
+                        local currentCanvas = parent.CanvasSize.Y.Offset
+                        parent.CanvasSize = UDim2.new(0, 0, 0, currentCanvas + 250)
+                    end
+                else
+                    -- Reset scroll area when dropdown closes
+                    local parent = frame.Parent
+                    while parent and not parent.Name:match('Column') do
+                        parent = parent.Parent
+                    end
+                    if parent then
+                        local currentCanvas = parent.CanvasSize.Y.Offset
+                        parent.CanvasSize = UDim2.new(0, 0, 0, math.max(currentCanvas - 250, 0))
+                    end
+                end
+                
+                arrow.Text = isOpen and '▲' or '▼'
+            end,
+            pressEffect = {
+                scale = 0.95,
+                duration = 0.1
+            }
+        },
+        hover = {
+            properties = {
+                BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+            },
+            tween = { 
+                duration = 0.2 
+            },
+            callback = function(isHovering, component)
+                if not isOpen then
+                    if isHovering then
+                        dropdown.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+                    else
+                        dropdown.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+                    end
+                end
             end
-            if parent then
-                local currentCanvas = parent.CanvasSize.Y.Offset
-                parent.CanvasSize = UDim2.new(0, 0, 0, currentCanvas + 250)
-            end
-        else
-            -- Reset scroll area when dropdown closes
-            local parent = frame.Parent
-            while parent and not parent.Name:match('Column') do
-                parent = parent.Parent
-            end
-            if parent then
-                local currentCanvas = parent.CanvasSize.Y.Offset
-                parent.CanvasSize = UDim2.new(0, 0, 0, math.max(currentCanvas - 250, 0))
-            end
-        end
-        arrow.Text = isOpen and '▲' or '▼'
-    end)
+        }
+    })
 
     -- Store element reference
     self.tabs[tabName].sections[sectionName].elements[title] = {
         type = 'multidropdown',
         frame = frame,
-        callback = callback, -- CALLBACK HINZUGEFÜGT
+        callback = callback,
         getValue = function() return selectedOptions end,
         setValue = function(values) 
             selectedOptions = values or {}
@@ -3412,37 +3565,21 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         updateColor()
     end
 
-    local isDraggingCanvas = false
-
-    canvasBtn.MouseButton1Down:Connect(function()
-        isDraggingCanvas = true
-        local mousePos = Services.UserInputService:GetMouseLocation()
-        updateCanvasSelector({ X = mousePos.X, Y = mousePos.Y })
-
-        local connection
-        local endConnection
-
-        connection = Services.UserInputService.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement and isDraggingCanvas then
-                local newMousePos = Services.UserInputService:GetMouseLocation()
-                updateCanvasSelector({ X = newMousePos.X, Y = newMousePos.Y })
+    -- UPDATED: Replace manual canvas drag with ConnectionManager
+    self.connectionManager:autoConnect(canvasBtn, {
+        drag = {
+            constrainToParent = false,
+            onDragStart = function(component, position)
+                updateCanvasSelector(position)
+            end,
+            onDrag = function(component, position, delta)
+                updateCanvasSelector(position)
+            end,
+            onDragEnd = function(component, position)
+                updateCanvasSelector(position)
             end
-        end)
-
-        endConnection = Services.UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                isDraggingCanvas = false
-                if connection then
-                    connection:Disconnect()
-                    connection = nil
-                end
-                if endConnection then
-                    endConnection:Disconnect()
-                    endConnection = nil
-                end
-            end
-        end)
-    end)
+        }
+    })
 
     local hueBtn = create('TextButton', {
         Size = UDim2.new(1, 0, 1, 0),
@@ -3464,37 +3601,21 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         updateColor()
     end
 
-    local isDraggingHue = false
-
-    hueBtn.MouseButton1Down:Connect(function()
-        isDraggingHue = true
-        local mousePos = Services.UserInputService:GetMouseLocation()
-        updateHueSelector({ X = mousePos.X, Y = mousePos.Y })
-
-        local connection
-        local endConnection
-
-        connection = Services.UserInputService.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement and isDraggingHue then
-                local newMousePos = Services.UserInputService:GetMouseLocation()
-                updateHueSelector({ X = newMousePos.X, Y = newMousePos.Y })
+    -- UPDATED: Replace manual hue drag with ConnectionManager
+    self.connectionManager:autoConnect(hueBtn, {
+        drag = {
+            constrainToParent = false,
+            onDragStart = function(component, position)
+                updateHueSelector(position)
+            end,
+            onDrag = function(component, position, delta)
+                updateHueSelector(position)
+            end,
+            onDragEnd = function(component, position)
+                updateHueSelector(position)
             end
-        end)
-
-        endConnection = Services.UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                isDraggingHue = false
-                if connection then
-                    connection:Disconnect()
-                    connection = nil
-                end
-                if endConnection then
-                    endConnection:Disconnect()
-                    endConnection = nil
-                end
-            end
-        end)
-    end)
+        }
+    })
 
     local colorBtn = create('TextButton', {
         Size = UDim2.new(1, 0, 1, 0),
@@ -3503,55 +3624,66 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         Parent = colorButton,
     })
 
-    colorBtn.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        pickerFrame.Visible = isOpen
-        pickerFrame.Size = isOpen and UDim2.new(0, 250, 0, 220) or UDim2.new(0, 250, 0, 0)
+    -- UPDATED: Replace manual color button connections with ConnectionManager
+    self.connectionManager:autoConnect(colorBtn, {
+        click = {
+            callback = function()
+                isOpen = not isOpen
+                pickerFrame.Visible = isOpen
+                pickerFrame.Size = isOpen and UDim2.new(0, 250, 0, 220) or UDim2.new(0, 250, 0, 0)
 
-        if isOpen then
-            updateColor()
-            self.notifications:info('Color Picker', 'Color picker opened!', 2)
-            -- Increase scroll area when color picker opens
-            local parent = frame.Parent
-            while parent and not parent.Name:match('Column') do
-                parent = parent.Parent
+                if isOpen then
+                    updateColor()
+                    self.notifications:info('Color Picker', 'Color picker opened!', 2)
+                    -- Increase scroll area when color picker opens
+                    local parent = frame.Parent
+                    while parent and not parent.Name:match('Column') do
+                        parent = parent.Parent
+                    end
+                    if parent then
+                        local currentCanvas = parent.CanvasSize.Y.Offset
+                        parent.CanvasSize = UDim2.new(0, 0, 0, currentCanvas + 280)
+                    end
+                else
+                    -- Reset scroll area when color picker closes
+                    local parent = frame.Parent
+                    while parent and not parent.Name:match('Column') do
+                        parent = parent.Parent
+                    end
+                    if parent then
+                        local currentCanvas = parent.CanvasSize.Y.Offset
+                        parent.CanvasSize = UDim2.new(0, 0, 0, math.max(currentCanvas - 280, 0))
+                    end
+                end
+            end,
+            pressEffect = {
+                scale = 0.95,
+                duration = 0.1
+            }
+        },
+        hover = {
+            properties = {
+                BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+            },
+            tween = {
+                duration = 0.2
+            },
+            callback = function(isHovering, component)
+                if not isOpen then
+                    local stroke = colorButton:FindFirstChild('UIStroke')
+                    if stroke then
+                        if isHovering then
+                            stroke.Color = Config.Colors.Active
+                            stroke.Thickness = 2
+                        else
+                            stroke.Color = Color3.fromRGB(55, 55, 65)
+                            stroke.Thickness = 1
+                        end
+                    end
+                end
             end
-            if parent then
-                local currentCanvas = parent.CanvasSize.Y.Offset
-                parent.CanvasSize = UDim2.new(0, 0, 0, currentCanvas + 280)
-            end
-        else
-            -- Reset scroll area when color picker closes
-            local parent = frame.Parent
-            while parent and not parent.Name:match('Column') do
-                parent = parent.Parent
-            end
-            if parent then
-                local currentCanvas = parent.CanvasSize.Y.Offset
-                parent.CanvasSize = UDim2.new(0, 0, 0, math.max(currentCanvas - 280, 0))
-            end
-        end
-    end)
-
-    colorBtn.MouseEnter:Connect(function()
-        if not isOpen then
-            local stroke = colorButton:FindFirstChild('UIStroke')
-            if stroke then
-                stroke.Color = Config.Colors.Active
-                stroke.Thickness = 2
-            end
-        end
-    end)
-
-    colorBtn.MouseLeave:Connect(function()
-        if not isOpen then
-            local stroke = colorButton:FindFirstChild('UIStroke')
-            if stroke then
-                stroke.Color = Color3.fromRGB(55, 55, 65)
-                stroke.Thickness = 1
-            end
-        end
-    end)
+        }
+    })
 
     updateColor()
 
@@ -3559,7 +3691,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     self.tabs[tabName].sections[sectionName].elements[title] = {
         type = 'colorpicker',
         frame = frame,
-        callback = callback, -- CALLBACK HINZUGEFÜGT
+        callback = callback,
         getValue = function() return selectedColor end,
         setValue = function(color) 
             selectedColor = color
@@ -4124,17 +4256,15 @@ function RadiantHub:createConfigButton(parent, title, desc, pos, callback)
         Parent = button,
     })
 
-    button.MouseEnter:Connect(function()
-        button.BackgroundColor3 = Config.Colors.Hover
-    end)
-
-    button.MouseLeave:Connect(function()
-        button.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-    end)
-
-    button.MouseButton1Click:Connect(function()
-        if callback then callback() end
-    end)
+    -- UPDATED: Replace manual connections with ConnectionManager
+    self.connectionManager:setupButton(button, function()
+        if callback then 
+            callback() 
+        end
+    end, {
+        BackgroundColor3 = Config.Colors.Hover,
+        Size = UDim2.new(1.02, 0, 1.05, 0)
+    })
 
     return button
 end
@@ -4208,9 +4338,13 @@ function RadiantHub:createConfigDropdown(parent, title, options, pos)
     local dropdownWrapper -- Forward declaration
 
     local function updateOptionsDisplay()
-        -- Clear existing options
+        -- UPDATED: Clean up old connections and buttons
         for _, child in ipairs(optionsFrame:GetChildren()) do
             if child:IsA('TextButton') then
+                -- Disconnect old connections before destroying
+                if self.connectionManager then
+                    self.connectionManager:disconnectComponent(child)
+                end
                 child:Destroy()
             end
         end
@@ -4250,31 +4384,46 @@ function RadiantHub:createConfigDropdown(parent, title, options, pos)
                 Parent = optBtn,
             })
 
-            optBtn.MouseEnter:Connect(function()
-                if option ~= currentSelection then
-                    optBtn.BackgroundTransparency = 0
-                    optBtn.BackgroundColor3 = Config.Colors.Hover
-                end
-            end)
-
-            optBtn.MouseLeave:Connect(function()
-                if option ~= currentSelection then
-                    optBtn.BackgroundTransparency = 1
-                end
-            end)
-
-            optBtn.MouseButton1Click:Connect(function()
-                selected.Text = option
-                currentSelection = option
-                dropdownWrapper.selectedValue = option -- KRITISCHER FIX: selectedValue aktualisieren
-                isOpen = false
-                optionsFrame.Visible = false
-                arrow.Text = '▼'
-                updateOptionsDisplay()
-                
-                print('DEBUG Dropdown: Selected option =', option, 'dropdownWrapper.selectedValue =', dropdownWrapper.selectedValue) -- Debug output
-                self.notifications:info('Config Selected', 'Selected: ' .. option, 2)
-            end)
+            -- UPDATED: Replace manual connections with ConnectionManager
+            self.connectionManager:autoConnect(optBtn, {
+                click = {
+                    callback = function()
+                        selected.Text = option
+                        currentSelection = option
+                        dropdownWrapper.selectedValue = option -- KRITISCHER FIX: selectedValue aktualisieren
+                        isOpen = false
+                        optionsFrame.Visible = false
+                        arrow.Text = '▼'
+                        updateOptionsDisplay()
+                        
+                        print('DEBUG Dropdown: Selected option =', option, 'dropdownWrapper.selectedValue =', dropdownWrapper.selectedValue) -- Debug output
+                        self.notifications:info('Config Selected', 'Selected: ' .. option, 2)
+                    end,
+                    pressEffect = {
+                        scale = 0.97,
+                        duration = 0.1
+                    }
+                },
+                hover = {
+                    properties = (option ~= currentSelection) and {
+                        BackgroundTransparency = 0,
+                        BackgroundColor3 = Config.Colors.Hover
+                    } or nil,
+                    tween = {
+                        duration = 0.15
+                    },
+                    callback = function(isHovering, component)
+                        if option ~= currentSelection then
+                            if isHovering then
+                                optBtn.BackgroundTransparency = 0
+                                optBtn.BackgroundColor3 = Config.Colors.Hover
+                            else
+                                optBtn.BackgroundTransparency = 1
+                            end
+                        end
+                    end
+                }
+            })
         end
 
         optionsFrame.Size = UDim2.new(1, 0, 0, 36 + #options * 28 + 8)
@@ -4287,27 +4436,41 @@ function RadiantHub:createConfigDropdown(parent, title, options, pos)
         Parent = dropdown,
     })
 
-    arrowBtn.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        optionsFrame.Visible = isOpen
-        arrow.Text = isOpen and '▲' or '▼'
-        
-        if isOpen then
-            updateOptionsDisplay()
-        end
-    end)
-
-    arrowBtn.MouseEnter:Connect(function()
-        if not isOpen then
-            dropdown.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-        end
-    end)
-
-    arrowBtn.MouseLeave:Connect(function()
-        if not isOpen then
-            dropdown.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-        end
-    end)
+    -- UPDATED: Replace manual arrow connections with ConnectionManager
+    self.connectionManager:autoConnect(arrowBtn, {
+        click = {
+            callback = function()
+                isOpen = not isOpen
+                optionsFrame.Visible = isOpen
+                arrow.Text = isOpen and '▲' or '▼'
+                
+                if isOpen then
+                    updateOptionsDisplay()
+                end
+            end,
+            pressEffect = {
+                scale = 0.95,
+                duration = 0.1
+            }
+        },
+        hover = {
+            properties = {
+                BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+            },
+            tween = {
+                duration = 0.2
+            },
+            callback = function(isHovering, component)
+                if not isOpen then
+                    if isHovering then
+                        dropdown.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+                    else
+                        dropdown.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+                    end
+                end
+            end
+        }
+    })
 
     -- Create dropdown wrapper object that manages the UI
     dropdownWrapper = {
@@ -4396,21 +4559,39 @@ function RadiantHub:createConfigToggle(parent, title, desc, state, pos, callback
     })
 
     local isToggled = state
-    btn.MouseButton1Click:Connect(function()
-        isToggled = not isToggled
+    
+    -- UPDATED: Replace manual connection with ConnectionManager
+    self.connectionManager:autoConnect(btn, {
+        click = {
+            callback = function()
+                isToggled = not isToggled
 
-        tween(switch, 0.2, {
-            BackgroundColor3 = isToggled and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
-        }):Play()
+                tween(switch, 0.2, {
+                    BackgroundColor3 = isToggled and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
+                }):Play()
 
-        tween(knob, 0.2, {
-            Position = isToggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
-        }):Play()
+                tween(knob, 0.2, {
+                    Position = isToggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
+                }):Play()
 
-        if callback then
-            callback(isToggled)
-        end
-    end)
+                if callback then
+                    callback(isToggled)
+                end
+            end,
+            pressEffect = {
+                scale = 0.98,
+                duration = 0.1
+            }
+        },
+        hover = {
+            properties = {
+                BackgroundTransparency = 0.95
+            },
+            tween = {
+                duration = 0.15
+            }
+        }
+    })
 
     return frame
 end
