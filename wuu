@@ -1956,122 +1956,6 @@ function RadiantHub:addToggle(tabName, sectionName, title, desc, defaultState, c
     return frame
 end
 
-function RadiantHub:addSlider(tabName, sectionName, title, desc, min, max, defaultValue, callback)
-    if not self.tabs[tabName] or not self.tabs[tabName].sections[sectionName] then
-        self.notifications:error('Element Error', 'Tab or section not found!', 3)
-        return nil
-    end
-
-    local sectionData = self.tabs[tabName].sections[sectionName]
-    local elementsContainer = sectionData.elementsContainer or sectionData.frame
-    callback = callback or function() end
-
-    local frame = create('Frame', {
-        Size = UDim2.new(1, -2, 0, 50),
-        BackgroundTransparency = 1,
-        Parent = elementsContainer,
-    })
-
-    create('TextLabel', {
-        Size = UDim2.new(1, -65, 0, 16),
-        Position = UDim2.new(0, 0, 0, 4),
-        BackgroundTransparency = 1,
-        Text = title,
-        TextColor3 = Config.Colors.Text,
-        TextSize = 14,
-        Font = Enum.Font.GothamMedium,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = frame,
-    })
-
-    local switch = create('Frame', {
-        Size = UDim2.new(0, 45, 0, 20),
-        Position = UDim2.new(1, -47, 0.5, -10),
-        BackgroundColor3 = defaultState and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
-        Parent = frame,
-    })
-    addCorner(switch, 10)
-
-    local knob = create('Frame', {
-        Size = UDim2.new(0, 16, 0, 16),
-        Position = defaultState and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
-        BackgroundColor3 = Config.Colors.Text,
-        Parent = switch,
-    })
-    addCorner(knob, 8)
-
-    local btn = create('TextButton', {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text = '',
-        Parent = frame,
-    })
-
-    -- FIXED: Use local variable and proper scoping
-    local isToggled = defaultState
-
-    -- FIXED: Proper ConnectionManager integration
-    self.connectionManager:autoConnect(btn, {
-        click = {
-            callback = function()
-                -- FIXED: Toggle the local variable, not defaultState
-                isToggled = not isToggled
-
-                -- FIXED: Proper tween animations
-                tween(switch, 0.2, {
-                    BackgroundColor3 = isToggled and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
-                }):Play()
-
-                tween(knob, 0.2, {
-                    Position = isToggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
-                }):Play()
-
-                -- FIXED: Call callback with proper value
-                callback(isToggled)
-                
-                -- Special handling for watermark toggle in settings
-                if tabName == 'Settings' and title == 'Show Watermark' then
-                    if self.watermark then
-                        self.watermark:setVisible(isToggled)
-                    end
-                end
-
-                local status = isToggled and 'Enabled' or 'Disabled'
-                self.notifications:info(title .. ' ' .. status, desc, 2)
-            end,
-            pressEffect = {
-                scale = 0.98,
-                duration = 0.1
-            }
-        },
-        hover = {
-            properties = {
-                BackgroundTransparency = 0.95
-            },
-            tween = {
-                duration = 0.15
-            }
-        }
-    })
-
-    -- Store element reference
-    self.tabs[tabName].sections[sectionName].elements[title] = {
-        type = 'toggle',
-        frame = frame,
-        callback = callback,
-        getValue = function() return isToggled end,
-        setValue = function(value) 
-            isToggled = value
-            switch.BackgroundColor3 = isToggled and Config.Colors.Active or Color3.fromRGB(50, 50, 55)
-            knob.Position = isToggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
-        end,
-    }
-
-    task.wait()
-    self.tabs[tabName].sections[sectionName].updateSize()
-
-    return frame
-end
 
 -- Helper function for creating sections (used in settings)
 function RadiantHub:createSettingsSection(parent, title, size)
@@ -4585,7 +4469,32 @@ function RadiantHub:createConfigToggle(parent, title, desc, defaultState, pos, c
     })
 
     return frame
-end,
+end
+function RadiantHub:addSlider(tabName, sectionName, title, desc, min, max, defaultValue, callback)
+    if not self.tabs[tabName] or not self.tabs[tabName].sections[sectionName] then
+        self.notifications:error('Element Error', 'Tab or section not found!', 3)
+        return nil
+    end
+
+    local sectionData = self.tabs[tabName].sections[sectionName]
+    local elementsContainer = sectionData.elementsContainer or sectionData.frame
+    callback = callback or function() end
+
+    local frame = create('Frame', {
+        Size = UDim2.new(1, -5, 0, 50),
+        BackgroundTransparency = 1,
+        Parent = elementsContainer,
+    })
+
+    create('TextLabel', {
+        Size = UDim2.new(1, -65, 0, 16),
+        Position = UDim2.new(0, 0, 0, 4),
+        BackgroundTransparency = 1,
+        Text = title,
+        TextColor3 = Config.Colors.Text,
+        TextSize = 14,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
         Parent = frame,
     })
 
@@ -4715,7 +4624,6 @@ end,
 
     return frame
 end
-
 -- Clean up function
 function RadiantHub:destroy()
     if self.watermark then
