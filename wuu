@@ -908,10 +908,11 @@ end
 local NotificationManager = {}
 NotificationManager.__index = NotificationManager
 
-function NotificationManager.new()
+function NotificationManager.new(connectionManager)
     local self = setmetatable({}, NotificationManager)
     self.notifications = {}
     self.container = nil
+    self.connectionManager = connectionManager -- Store reference to ConnectionManager
     self:createContainer()
     return self
 end
@@ -1074,19 +1075,31 @@ function NotificationManager:createNotification(title, message, duration, notifT
         end)
     end
 
-    closeBtn.MouseButton1Click:Connect(removeNotification)
+    -- UPDATED: Replace manual connections with ConnectionManager
+    -- Check if ConnectionManager is available (for backwards compatibility)
+    if self.connectionManager then
+        -- Use ConnectionManager for mobile + PC support
+        self.connectionManager:setupButton(closeBtn, removeNotification, {
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundColor3 = Color3.fromRGB(220, 70, 70),
+            Size = UDim2.new(0, 22, 0, 22)
+        })
+    else
+        -- Fallback to manual connections if ConnectionManager not available
+        closeBtn.MouseButton1Click:Connect(removeNotification)
 
-    closeBtn.MouseEnter:Connect(function()
-        closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        closeBtn.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
-        tween(closeBtn, 0.1, { Size = UDim2.new(0, 22, 0, 22) }):Play()
-    end)
+        closeBtn.MouseEnter:Connect(function()
+            closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            closeBtn.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
+            tween(closeBtn, 0.1, { Size = UDim2.new(0, 22, 0, 22) }):Play()
+        end)
 
-    closeBtn.MouseLeave:Connect(function()
-        closeBtn.TextColor3 = Color3.fromRGB(190, 190, 200)
-        closeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
-        tween(closeBtn, 0.1, { Size = UDim2.new(0, 20, 0, 20) }):Play()
-    end)
+        closeBtn.MouseLeave:Connect(function()
+            closeBtn.TextColor3 = Color3.fromRGB(190, 190, 200)
+            closeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+            tween(closeBtn, 0.1, { Size = UDim2.new(0, 20, 0, 20) }):Play()
+        end)
+    end
 
     progressTween.Completed:Connect(removeNotification)
 
@@ -1844,8 +1857,7 @@ function RadiantHub:addToggle(tabName, sectionName, title, desc, defaultState, c
     })
 
     local isToggled = defaultState
-    
-    -- AUTO CONNECTION MANAGER - REPLACES MANUAL CONNECTIONS
+
     self.connectionManager:autoConnect(btn, {
         click = {
             callback = function()
@@ -2160,25 +2172,48 @@ function RadiantHub:createToggle(parent, title, desc, state, pos)
         Parent = frame,
     })
 
-    local isToggled = state
-    btn.MouseButton1Click:Connect(function()
-        isToggled = not isToggled
+    local isToggled = defaultState
 
-        tween(switch, 0.2, {
-            BackgroundColor3 = isToggled and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
-        }):Play()
+    -- USE CONNECTION MANAGER INSTEAD OF MANUAL CONNECTIONS
+    self.connectionManager:autoConnect(btn, {
+        click = {
+            callback = function()
+                isToggled = not isToggled
 
-        tween(knob, 0.2, {
-            Position = isToggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
-        }):Play()
+                tween(switch, 0.2, {
+                    BackgroundColor3 = isToggled and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
+                }):Play()
 
-        if title == 'Show Watermark' and self.watermark then
-            self.watermark:setVisible(isToggled)
-        end
+                tween(knob, 0.2, {
+                    Position = isToggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
+                }):Play()
 
-        local status = isToggled and 'Enabled' or 'Disabled'
-        self.notifications:info(title .. ' ' .. status, desc, 3)
-    end)
+                callback(isToggled)
+                
+                -- Special handling for watermark toggle in settings
+                if tabName == 'Settings' and title == 'Show Watermark' then
+                    if self.watermark then
+                        self.watermark:setVisible(isToggled)
+                    end
+                end
+
+                local status = isToggled and 'Enabled' or 'Disabled'
+                self.notifications:info(title .. ' ' .. status, desc, 2)
+            end,
+            pressEffect = {
+                scale = 0.98,
+                duration = 0.1
+            }
+        },
+        hover = {
+            properties = {
+                BackgroundTransparency = 0.95
+            },
+            tween = {
+                duration = 0.15
+            }
+        }
+    })
 
     return frame
 end
@@ -2322,7 +2357,8 @@ function RadiantHub:setupMenuToggle()
 end
 
 function RadiantHub:initializeNotifications()
-    self.notifications = NotificationManager.new()
+    -- Pass the ConnectionManager to NotificationManager
+    self.notifications = NotificationManager.new(self.connectionManager)
 end
 
 function RadiantHub:initializeWatermark()
