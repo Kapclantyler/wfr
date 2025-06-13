@@ -279,7 +279,7 @@ function ConnectionManager:connectDrag(component, dragConfig, componentId)
     table.insert(self.componentData[componentId].connections, inputEnded)
 end
 
--- COMPLETELY FIXED: Slider with perfect isolation and mouse calculations
+-- COMPLETELY FIXED: Slider with PERFECT mouse calculations
 function ConnectionManager:connectSlider(component, sliderConfig, componentId)
     local UserInputService = game:GetService('UserInputService')
     
@@ -299,12 +299,17 @@ function ConnectionManager:connectSlider(component, sliderConfig, componentId)
             return
         end
         
-        -- FIXED: Precise mouse position calculation
+        -- CRITICAL FIX: Use EXACT component bounds with GuiInset compensation
         local componentPos = component.AbsolutePosition
         local componentSize = component.AbsoluteSize
         
-        -- Calculate relative position within the component
-        local relativeX = (mousePos.X - componentPos.X) / componentSize.X
+        -- FIXED: Account for GuiInset (topbar offset)
+        local guiInset = game:GetService("GuiService"):GetGuiInset()
+        local adjustedMouseX = mousePos.X
+        local adjustedMouseY = mousePos.Y - guiInset.Y
+        
+        -- PRECISE: Calculate relative position within the component
+        local relativeX = (adjustedMouseX - componentPos.X) / componentSize.X
         relativeX = math.max(0, math.min(1, relativeX))
         
         local newValue = sliderData.minValue + (sliderData.maxValue - sliderData.minValue) * relativeX
@@ -346,9 +351,18 @@ function ConnectionManager:connectSlider(component, sliderConfig, componentId)
             local componentPos = component.AbsolutePosition
             local componentSize = component.AbsoluteSize
             
-            -- FIXED: Precise bounds checking
-            if mousePos.X >= componentPos.X and mousePos.X <= componentPos.X + componentSize.X and
-               mousePos.Y >= componentPos.Y and mousePos.Y <= componentPos.Y + componentSize.Y then
+            -- CRITICAL FIX: Account for GuiInset in bounds checking too
+            local guiInset = game:GetService("GuiService"):GetGuiInset()
+            local adjustedMouseX = mousePos.X
+            local adjustedMouseY = mousePos.Y - guiInset.Y
+            
+            -- ULTRA-PRECISE: Bounds checking with exact pixel accuracy
+            if adjustedMouseX >= componentPos.X and adjustedMouseX <= componentPos.X + componentSize.X and
+               adjustedMouseY >= componentPos.Y and adjustedMouseY <= componentPos.Y + componentSize.Y then
+                
+                -- DEBUG: Print which slider is being activated
+                print("SLIDER ACTIVATED:", sliderConfig.elementId, "at position:", adjustedMouseX, adjustedMouseY)
+                print("Component bounds:", componentPos.X, componentPos.Y, "to", componentPos.X + componentSize.X, componentPos.Y + componentSize.Y)
                 
                 sliderData.isDragging = true
                 self.activeInteractions[componentId] = true
@@ -367,6 +381,7 @@ function ConnectionManager:connectSlider(component, sliderConfig, componentId)
         if input.UserInputType == Enum.UserInputType.MouseButton1 and sliderData.isDragging then
             sliderData.isDragging = false
             self.activeInteractions[componentId] = nil
+            print("SLIDER RELEASED:", sliderConfig.elementId)
         end
     end)
     
@@ -3510,6 +3525,55 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     return frame
 end
 
+-- 4. COMPLETELY FIXED: Tab switching with proper cleanup
+function RadiantHub:switchTab(tabName)
+    if self.currentTab == tabName then return end
+
+    -- Close all color pickers when switching tabs
+    if self.currentTab then
+        local currentTabData = self.tabs[self.currentTab]
+        if currentTabData then
+            for _, section in pairs(currentTabData.sections) do
+                for _, element in pairs(section.elements) do
+                    if element.type == 'colorpicker' and element.setOpen then
+                        element.setOpen(false)
+                    end
+                end
+            end
+        end
+    end
+
+    -- Deactivate all tabs
+    for name, btn in pairs(self.tabButtons) do
+        btn.BackgroundColor3 = Config.Colors.Inactive
+        local indicator = btn:FindFirstChild('ActiveIndicator')
+        if indicator then
+            indicator:Destroy()
+        end
+        local icon = btn:FindFirstChildOfClass('ImageLabel')
+        if icon then
+            icon.ImageColor3 = Config.Colors.SubText
+        end
+    end
+
+    -- Hide all content
+    for name, content in pairs(self.tabContents) do
+        content.Visible = false
+    end
+
+    -- Activate new tab
+    if self.tabButtons[tabName] then
+        self:setActiveTab(self.tabButtons[tabName])
+    end
+
+    -- Show new content
+    if self.tabContents[tabName] then
+        self.tabContents[tabName].Visible = true
+    end
+
+    self.currentTab = tabName
+    self.title.Text = tabName
+end
 -- Button creation function
 function RadiantHub:addButton(tabName, sectionName, title, desc, callback)
     if not self.tabs[tabName] or not self.tabs[tabName].sections[sectionName] then
@@ -4579,5 +4643,5 @@ local Library = {}
 function Library:CreateWindow()
     return RadiantHub.new()
 end
-print("scooby doo")
+
 return Library
