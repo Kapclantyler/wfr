@@ -1837,13 +1837,13 @@ function RadiantHub:addToggle(tabName, sectionName, title, desc, defaultState, c
     callback = callback or function() end
 
     local frame = create('Frame', {
-        Size = UDim2.new(1, -2, 0, 32), -- Weniger rechter Abstand (von -5 zu -2)
+        Size = UDim2.new(1, -2, 0, 32),
         BackgroundTransparency = 1,
         Parent = elementsContainer,
     })
 
     create('TextLabel', {
-        Size = UDim2.new(1, -50, 0, 16), -- Mehr Platz für Text (von -55 zu -50)
+        Size = UDim2.new(1, -50, 0, 16),
         Position = UDim2.new(0, 0, 0, 4),
         BackgroundTransparency = 1,
         Text = title,
@@ -1855,7 +1855,7 @@ function RadiantHub:addToggle(tabName, sectionName, title, desc, defaultState, c
     })
 
     create('TextLabel', {
-        Size = UDim2.new(1, -50, 0, 12), -- Mehr Platz für Text (von -55 zu -50)
+        Size = UDim2.new(1, -50, 0, 12),
         Position = UDim2.new(0, 0, 0, 18),
         BackgroundTransparency = 1,
         Text = desc,
@@ -1868,7 +1868,7 @@ function RadiantHub:addToggle(tabName, sectionName, title, desc, defaultState, c
 
     local switch = create('Frame', {
         Size = UDim2.new(0, 45, 0, 20),
-        Position = UDim2.new(1, -47, 0.5, -10), -- Näher zum Rand (von -50 zu -47)
+        Position = UDim2.new(1, -47, 0.5, -10),
         BackgroundColor3 = defaultState and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
         Parent = frame,
     })
@@ -1889,13 +1889,17 @@ function RadiantHub:addToggle(tabName, sectionName, title, desc, defaultState, c
         Parent = frame,
     })
 
+    -- FIXED: Use local variable and proper scoping
     local isToggled = defaultState
 
+    -- FIXED: Proper ConnectionManager integration
     self.connectionManager:autoConnect(btn, {
         click = {
             callback = function()
+                -- FIXED: Toggle the local variable, not defaultState
                 isToggled = not isToggled
 
+                -- FIXED: Proper tween animations
                 tween(switch, 0.2, {
                     BackgroundColor3 = isToggled and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
                 }):Play()
@@ -1904,6 +1908,7 @@ function RadiantHub:addToggle(tabName, sectionName, title, desc, defaultState, c
                     Position = isToggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
                 }):Play()
 
+                -- FIXED: Call callback with proper value
                 callback(isToggled)
                 
                 -- Special handling for watermark toggle in settings
@@ -1935,7 +1940,7 @@ function RadiantHub:addToggle(tabName, sectionName, title, desc, defaultState, c
     self.tabs[tabName].sections[sectionName].elements[title] = {
         type = 'toggle',
         frame = frame,
-        callback = callback, -- CALLBACK HINZUGEFÜGT
+        callback = callback,
         getValue = function() return isToggled end,
         setValue = function(value) 
             isToggled = value
@@ -2150,7 +2155,7 @@ function RadiantHub:createSettingsSection(parent, title, size)
 end
 
 -- Helper functions for settings elements
-function RadiantHub:createToggle(parent, title, desc, state, pos)
+function RadiantHub:createToggle(parent, title, desc, defaultState, pos)
     local frame = create('Frame', {
         Size = UDim2.new(1, -5, 0, 32),
         Position = pos or UDim2.new(0, 25, 0, 35),
@@ -2185,14 +2190,14 @@ function RadiantHub:createToggle(parent, title, desc, state, pos)
     local switch = create('Frame', {
         Size = UDim2.new(0, 45, 0, 20),
         Position = UDim2.new(1, -50, 0.5, -10),
-        BackgroundColor3 = state and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
+        BackgroundColor3 = defaultState and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
         Parent = frame,
     })
     addCorner(switch, 10)
 
     local knob = create('Frame', {
         Size = UDim2.new(0, 16, 0, 16),
-        Position = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
+        Position = defaultState and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
         BackgroundColor3 = Config.Colors.Text,
         Parent = switch,
     })
@@ -2205,9 +2210,10 @@ function RadiantHub:createToggle(parent, title, desc, state, pos)
         Parent = frame,
     })
 
+    -- FIXED: Use local variable properly
     local isToggled = defaultState
 
-    -- USE CONNECTION MANAGER INSTEAD OF MANUAL CONNECTIONS
+    -- FIXED: Use ConnectionManager for settings toggle too
     self.connectionManager:autoConnect(btn, {
         click = {
             callback = function()
@@ -2221,10 +2227,8 @@ function RadiantHub:createToggle(parent, title, desc, state, pos)
                     Position = isToggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
                 }):Play()
 
-                callback(isToggled)
-                
                 -- Special handling for watermark toggle in settings
-                if tabName == 'Settings' and title == 'Show Watermark' then
+                if title == 'Show Watermark' then
                     if self.watermark then
                         self.watermark:setVisible(isToggled)
                     end
@@ -4503,7 +4507,7 @@ function RadiantHub:createConfigDropdown(parent, title, options, pos)
     return dropdownWrapper
 end
 
-function RadiantHub:createConfigToggle(parent, title, desc, state, pos, callback)
+function RadiantHub:createConfigToggle(parent, title, desc, defaultState, pos, callback)
     local frame = create('Frame', {
         Size = UDim2.new(1, -5, 0, 32),
         Position = pos,
@@ -4538,14 +4542,14 @@ function RadiantHub:createConfigToggle(parent, title, desc, state, pos, callback
     local switch = create('Frame', {
         Size = UDim2.new(0, 45, 0, 20),
         Position = UDim2.new(1, -50, 0.5, -10),
-        BackgroundColor3 = state and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
+        BackgroundColor3 = defaultState and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
         Parent = frame,
     })
     addCorner(switch, 10)
 
     local knob = create('Frame', {
         Size = UDim2.new(0, 16, 0, 16),
-        Position = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
+        Position = defaultState and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
         BackgroundColor3 = Config.Colors.Text,
         Parent = switch,
     })
@@ -4558,9 +4562,9 @@ function RadiantHub:createConfigToggle(parent, title, desc, state, pos, callback
         Parent = frame,
     })
 
-    local isToggled = state
+    local isToggled = defaultState
     
-    -- UPDATED: Replace manual connection with ConnectionManager
+    -- FIXED: Proper ConnectionManager integration
     self.connectionManager:autoConnect(btn, {
         click = {
             callback = function()
@@ -4619,5 +4623,5 @@ local Library = {}
 function Library:CreateWindow()
     return RadiantHub.new()
 end
-print("loaded")
+print("yurrrr")
 return Library
