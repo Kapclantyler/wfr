@@ -2266,23 +2266,28 @@ function RadiantHub:toggleVisibility()
 end
 
 function RadiantHub:setupEvents()
-    -- FIXED: Proper header dragging with ConnectionManager
-    self.connectionManager:autoConnect(self.header, {
+    -- FIXED: Make the entire header draggable EXCEPT the close button
+    
+    -- Create a transparent overlay for dragging that covers the header minus the close button area
+    local dragArea = create('Frame', {
+        Size = UDim2.new(1, -50, 1, 0), -- Exclude the 50px where close button is
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Parent = self.header,
+    })
+
+    self.connectionManager:autoConnect(dragArea, {
         drag = {
             constrainToParent = false,
             onDragStart = function(component, position)
                 self.isDragging = true
             end,
             onDrag = function(component, position, delta)
-                -- FIXED: Calculate new position properly
-                local newPosX = self.main.Position.X.Offset + delta.X
-                local newPosY = self.main.Position.Y.Offset + delta.Y
-                
                 self.main.Position = UDim2.new(
                     self.main.Position.X.Scale,
-                    newPosX,
+                    self.main.Position.X.Offset + delta.X,
                     self.main.Position.Y.Scale,
-                    newPosY
+                    self.main.Position.Y.Offset + delta.Y
                 )
             end,
             onDragEnd = function(component, position)
@@ -2291,7 +2296,7 @@ function RadiantHub:setupEvents()
         }
     })
 
-    -- FIXED: Close button with proper ConnectionManager
+    -- Close button setup (unchanged)
     self.connectionManager:setupButton(self.closeBtn, function()
         self:destroy()
     end, {
@@ -2299,7 +2304,6 @@ function RadiantHub:setupEvents()
         TextSize = 34
     })
 end
-
 -- Cleanup Function
 function RadiantHub:destroy()
     -- FIXED: Clean up all element connections properly
