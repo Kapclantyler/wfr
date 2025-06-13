@@ -3208,7 +3208,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         Position = UDim2.new(0, -185, 1, 4),
         BackgroundColor3 = Color3.fromRGB(25, 25, 30),
         Visible = false,
-        ZIndex = 1000,
+        ZIndex = 30,
         Parent = colorButton,
     })
     addCorner(pickerFrame, 8)
