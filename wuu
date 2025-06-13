@@ -389,7 +389,7 @@ function ConnectionManager:connectSlider(component, sliderConfig, componentId)
     table.insert(self.componentData[componentId].connections, inputChanged)
     table.insert(self.componentData[componentId].connections, inputEnded)
 end
-
+print("hi")
 -- COMPLETELY FIXED: Color Picker with PERFECT mouse calculations AND mobile support
 function ConnectionManager:connectColorPicker(component, colorConfig, componentId)
     local UserInputService = game:GetService('UserInputService')
