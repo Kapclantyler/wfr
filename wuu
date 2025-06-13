@@ -11,6 +11,7 @@ local Services = {
 local Player = Services.Players.LocalPlayer
 -- Connection Manager Class
 -- FIXED CONNECTION MANAGER - Simplified and Working
+-- COMPLETELY FIXED CONNECTION MANAGER - All Interactions Working
 local ConnectionManager = {}
 ConnectionManager.__index = ConnectionManager
 
@@ -18,14 +19,15 @@ function ConnectionManager.new()
     local self = setmetatable({}, ConnectionManager)
     self.connections = {}
     self.componentData = {}
+    self.dragData = {} -- Separate drag data storage
     return self
 end
 
--- Simplified autoConnect that actually works in Roblox
+-- Main autoConnect function
 function ConnectionManager:autoConnect(component, config)
     if not component or not component:IsA('GuiObject') then
         warn('Invalid component provided to autoConnect')
-        return
+        return self
     end
 
     config = config or {}
@@ -38,22 +40,19 @@ function ConnectionManager:autoConnect(component, config)
         connections = {}
     }
 
-    -- Connect hover effects if specified
+    -- Connect different interaction types
     if config.hover then
         self:connectHover(component, config.hover, componentId)
     end
 
-    -- Connect click effects if specified
     if config.click then
         self:connectClick(component, config.click, componentId)
     end
 
-    -- Connect drag effects if specified
     if config.drag then
         self:connectDrag(component, config.drag, componentId)
     end
 
-    -- Connect slider effects if specified
     if config.slider then
         self:connectSlider(component, config.slider, componentId)
     end
@@ -61,9 +60,10 @@ function ConnectionManager:autoConnect(component, config)
     return self
 end
 
--- FIXED: Simple hover implementation
+-- FIXED: Hover implementation
 function ConnectionManager:connectHover(component, hoverConfig, componentId)
     local originalProps = {}
+    local isHovering = false
     
     -- Store original properties
     if hoverConfig.properties then
@@ -74,43 +74,23 @@ function ConnectionManager:connectHover(component, hoverConfig, componentId)
         end
     end
 
-    local mouseEnter = component.MouseEnter:Connect(function()
-        if hoverConfig.properties then
-            if hoverConfig.tween then
-                local tweenInfo = TweenInfo.new(
-                    hoverConfig.tween.duration or 0.2,
-                    hoverConfig.tween.easingStyle or Enum.EasingStyle.Quad,
-                    hoverConfig.tween.easingDirection or Enum.EasingDirection.Out
-                )
-                local Services = game:GetService('TweenService')
-                local tween = Services:Create(component, tweenInfo, hoverConfig.properties)
-                tween:Play()
-            else
-                for prop, value in pairs(hoverConfig.properties) do
-                    if component[prop] then
-                        component[prop] = value
-                    end
-                end
-            end
-        end
+    local function applyHover(hovering)
+        if hovering == isHovering then return end
+        isHovering = hovering
         
-        if hoverConfig.callback then
-            hoverConfig.callback(true, component)
-        end
-    end)
-
-    local mouseLeave = component.MouseLeave:Connect(function()
-        if hoverConfig.tween then
+        local targetProps = hovering and (hoverConfig.properties or {}) or originalProps
+        
+        if hoverConfig.tween and next(targetProps) then
+            local TweenService = game:GetService('TweenService')
             local tweenInfo = TweenInfo.new(
                 hoverConfig.tween.duration or 0.2,
                 hoverConfig.tween.easingStyle or Enum.EasingStyle.Quad,
                 hoverConfig.tween.easingDirection or Enum.EasingDirection.Out
             )
-            local Services = game:GetService('TweenService')
-            local tween = Services:Create(component, tweenInfo, originalProps)
+            local tween = TweenService:Create(component, tweenInfo, targetProps)
             tween:Play()
         else
-            for prop, value in pairs(originalProps) do
+            for prop, value in pairs(targetProps) do
                 if component[prop] then
                     component[prop] = value
                 end
@@ -118,126 +98,173 @@ function ConnectionManager:connectHover(component, hoverConfig, componentId)
         end
         
         if hoverConfig.callback then
-            hoverConfig.callback(false, component)
+            hoverConfig.callback(hovering, component)
         end
+    end
+
+    local mouseEnter = component.MouseEnter:Connect(function()
+        applyHover(true)
     end)
 
-    -- Store connections for cleanup
+    local mouseLeave = component.MouseLeave:Connect(function()
+        applyHover(false)
+    end)
+
     table.insert(self.componentData[componentId].connections, mouseEnter)
     table.insert(self.componentData[componentId].connections, mouseLeave)
 end
 
--- FIXED: Simple click implementation
+-- FIXED: Click implementation
 function ConnectionManager:connectClick(component, clickConfig, componentId)
     local connection
     
-    if component:IsA('TextButton') or component:IsA('ImageButton') then
-        -- Use built-in button events
-        connection = component.MouseButton1Click:Connect(function()
-            if clickConfig.pressEffect then
-                local effect = clickConfig.pressEffect
-                if effect.scale then
-                    local originalSize = component.Size
-                    local Services = game:GetService('TweenService')
-                    
-                    local shrinkTween = Services:Create(component, 
+    local function handleClick()
+        -- Press effect
+        if clickConfig.pressEffect then
+            local effect = clickConfig.pressEffect
+            if effect.scale then
+                local originalSize = component.Size
+                local TweenService = game:GetService('TweenService')
+                
+                local shrinkTween = TweenService:Create(component, 
+                    TweenInfo.new(effect.duration or 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), 
+                    {Size = UDim2.new(
+                        originalSize.X.Scale * effect.scale,
+                        originalSize.X.Offset * effect.scale,
+                        originalSize.Y.Scale * effect.scale,
+                        originalSize.Y.Offset * effect.scale
+                    )}
+                )
+                
+                shrinkTween:Play()
+                shrinkTween.Completed:Connect(function()
+                    local expandTween = TweenService:Create(component, 
                         TweenInfo.new(effect.duration or 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), 
-                        {Size = UDim2.new(
-                            originalSize.X.Scale * effect.scale,
-                            originalSize.X.Offset * effect.scale,
-                            originalSize.Y.Scale * effect.scale,
-                            originalSize.Y.Offset * effect.scale
-                        )}
+                        {Size = originalSize}
                     )
-                    
-                    shrinkTween:Play()
-                    shrinkTween.Completed:Connect(function()
-                        local expandTween = Services:Create(component, 
-                            TweenInfo.new(effect.duration or 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), 
-                            {Size = originalSize}
-                        )
-                        expandTween:Play()
-                    end)
-                end
+                    expandTween:Play()
+                end)
             end
-            
-            if clickConfig.callback then
-                clickConfig.callback(component)
-            end
-        end)
+        end
+        
+        -- Execute callback
+        if clickConfig.callback then
+            clickConfig.callback(component)
+        end
+    end
+    
+    if component:IsA('TextButton') or component:IsA('ImageButton') then
+        connection = component.MouseButton1Click:Connect(handleClick)
     else
-        -- For non-button elements, create a TextButton overlay
+        -- Create invisible button overlay for non-button elements
         local overlay = Instance.new('TextButton')
         overlay.Size = UDim2.new(1, 0, 1, 0)
+        overlay.Position = UDim2.new(0, 0, 0, 0)
         overlay.BackgroundTransparency = 1
         overlay.Text = ''
+        overlay.ZIndex = component.ZIndex + 1
         overlay.Parent = component
         
-        connection = overlay.MouseButton1Click:Connect(function()
-            if clickConfig.callback then
-                clickConfig.callback(component)
-            end
-        end)
+        connection = overlay.MouseButton1Click:Connect(handleClick)
+        
+        -- Store overlay for cleanup
+        self.componentData[componentId].overlay = overlay
     end
 
     table.insert(self.componentData[componentId].connections, connection)
 end
 
--- FIXED: Simple drag implementation
+-- COMPLETELY FIXED: Drag implementation
 function ConnectionManager:connectDrag(component, dragConfig, componentId)
-    local isDragging = false
-    local dragStart = nil
-    local startPos = nil
-    
     local UserInputService = game:GetService('UserInputService')
+    local TweenService = game:GetService('TweenService')
     
-    local inputBegan = UserInputService.InputBegan:Connect(function(input)
+    local dragData = {
+        isDragging = false,
+        dragStart = nil,
+        startPosition = nil,
+        component = component,
+        config = dragConfig
+    }
+    
+    self.dragData[componentId] = dragData
+    
+    -- Mouse button down - start drag
+    local inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local mouse = UserInputService:GetMouseLocation()
+            local mousePos = UserInputService:GetMouseLocation()
             local componentPos = component.AbsolutePosition
             local componentSize = component.AbsoluteSize
             
-            -- Check if mouse is over component
-            if mouse.X >= componentPos.X and mouse.X <= componentPos.X + componentSize.X and
-               mouse.Y >= componentPos.Y and mouse.Y <= componentPos.Y + componentSize.Y then
-                isDragging = true
-                dragStart = mouse
-                startPos = component.Position
+            -- Check if mouse is within component bounds
+            if mousePos.X >= componentPos.X and mousePos.X <= componentPos.X + componentSize.X and
+               mousePos.Y >= componentPos.Y and mousePos.Y <= componentPos.Y + componentSize.Y then
+                
+                dragData.isDragging = true
+                dragData.dragStart = mousePos
+                dragData.startPosition = component.Position
                 
                 if dragConfig.onDragStart then
-                    dragConfig.onDragStart(component, mouse)
+                    dragConfig.onDragStart(component, mousePos)
                 end
             end
         end
     end)
     
-    local inputChanged = UserInputService.InputChanged:Connect(function(input)
-        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local mouse = UserInputService:GetMouseLocation()
-            local delta = mouse - dragStart
+    -- Mouse move - update drag
+    local inputChanged = UserInputService.InputChanged:Connect(function(input, gameProcessed)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and dragData.isDragging then
+            local mousePos = UserInputService:GetMouseLocation()
+            local delta = Vector2.new(
+                mousePos.X - dragData.dragStart.X,
+                mousePos.Y - dragData.dragStart.Y
+            )
             
             if dragConfig.onDrag then
-                dragConfig.onDrag(component, mouse, delta)
+                -- Custom drag handler
+                dragConfig.onDrag(component, mousePos, delta)
             else
                 -- Default drag behavior - move the component
-                local newPos = UDim2.new(
-                    startPos.X.Scale,
-                    startPos.X.Offset + delta.X,
-                    startPos.Y.Scale,
-                    startPos.Y.Offset + delta.Y
+                local newPosition = UDim2.new(
+                    dragData.startPosition.X.Scale,
+                    dragData.startPosition.X.Offset + delta.X,
+                    dragData.startPosition.Y.Scale,
+                    dragData.startPosition.Y.Offset + delta.Y
                 )
-                component.Position = newPos
+                
+                -- Apply constraints if specified
+                if dragConfig.constrainToParent and component.Parent then
+                    local parent = component.Parent
+                    local parentSize = parent.AbsoluteSize
+                    local componentSize = component.AbsoluteSize
+                    
+                    local maxX = parentSize.X - componentSize.X
+                    local maxY = parentSize.Y - componentSize.Y
+                    
+                    newPosition = UDim2.new(
+                        0, math.max(0, math.min(maxX, newPosition.X.Offset)),
+                        0, math.max(0, math.min(maxY, newPosition.Y.Offset))
+                    )
+                end
+                
+                component.Position = newPosition
             end
         end
     end)
     
-    local inputEnded = UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 and isDragging then
-            isDragging = false
+    -- Mouse button up - end drag
+    local inputEnded = UserInputService.InputEnded:Connect(function(input, gameProcessed)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and dragData.isDragging then
+            dragData.isDragging = false
             
             if dragConfig.onDragEnd then
                 dragConfig.onDragEnd(component, UserInputService:GetMouseLocation())
             end
+            
+            dragData.dragStart = nil
+            dragData.startPosition = nil
         end
     end)
     
@@ -246,14 +273,14 @@ function ConnectionManager:connectDrag(component, dragConfig, componentId)
     table.insert(self.componentData[componentId].connections, inputEnded)
 end
 
--- FIXED: Simple slider implementation
+-- FIXED: Slider implementation
 function ConnectionManager:connectSlider(component, sliderConfig, componentId)
+    local UserInputService = game:GetService('UserInputService')
+    
     local isDragging = false
     local minValue = sliderConfig.min or 0
     local maxValue = sliderConfig.max or 100
     local currentValue = sliderConfig.defaultValue or minValue
-    
-    local UserInputService = game:GetService('UserInputService')
     
     local function updateSlider(mousePos)
         local componentPos = component.AbsolutePosition
@@ -281,27 +308,29 @@ function ConnectionManager:connectSlider(component, sliderConfig, componentId)
         end
     end
     
-    local inputBegan = UserInputService.InputBegan:Connect(function(input)
+    local inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local mouse = UserInputService:GetMouseLocation()
+            local mousePos = UserInputService:GetMouseLocation()
             local componentPos = component.AbsolutePosition
             local componentSize = component.AbsoluteSize
             
-            if mouse.X >= componentPos.X and mouse.X <= componentPos.X + componentSize.X and
-               mouse.Y >= componentPos.Y and mouse.Y <= componentPos.Y + componentSize.Y then
+            if mousePos.X >= componentPos.X and mousePos.X <= componentPos.X + componentSize.X and
+               mousePos.Y >= componentPos.Y and mousePos.Y <= componentPos.Y + componentSize.Y then
                 isDragging = true
-                updateSlider(mouse)
+                updateSlider(mousePos)
             end
         end
     end)
     
-    local inputChanged = UserInputService.InputChanged:Connect(function(input)
-        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+    local inputChanged = UserInputService.InputChanged:Connect(function(input, gameProcessed)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and isDragging then
             updateSlider(UserInputService:GetMouseLocation())
         end
     end)
     
-    local inputEnded = UserInputService.InputEnded:Connect(function(input)
+    local inputEnded = UserInputService.InputEnded:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDragging = false
         end
@@ -332,15 +361,42 @@ function ConnectionManager:setupButton(button, callback, hoverEffect)
     })
 end
 
+-- Helper function for draggable frames
+function ConnectionManager:setupDraggableFrame(frame, constrainToParent)
+    return self:autoConnect(frame, {
+        drag = {
+            constrainToParent = constrainToParent or false,
+            onDragStart = function(component)
+                component.ZIndex = component.ZIndex + 10
+            end,
+            onDragEnd = function(component)
+                component.ZIndex = component.ZIndex - 10
+            end
+        }
+    })
+end
+
 -- Cleanup functions
 function ConnectionManager:disconnectComponent(component)
     for componentId, data in pairs(self.componentData) do
         if data.component == component then
+            -- Disconnect all connections
             for _, connection in ipairs(data.connections) do
                 if connection and connection.Connected then
                     connection:Disconnect()
                 end
             end
+            
+            -- Clean up overlay if it exists
+            if data.overlay then
+                data.overlay:Destroy()
+            end
+            
+            -- Clean up drag data
+            if self.dragData[componentId] then
+                self.dragData[componentId] = nil
+            end
+            
             self.componentData[componentId] = nil
             break
         end
@@ -354,10 +410,15 @@ function ConnectionManager:disconnectAll()
                 connection:Disconnect()
             end
         end
+        
+        if data.overlay then
+            data.overlay:Destroy()
+        end
     end
+    
     self.componentData = {}
+    self.dragData = {}
 end
-
 
 
 
