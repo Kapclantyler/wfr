@@ -2266,28 +2266,23 @@ function RadiantHub:toggleVisibility()
 end
 
 function RadiantHub:setupEvents()
-    -- FIXED: Make the entire header draggable EXCEPT the close button
-    
-    -- Create a transparent overlay for dragging that covers the header minus the close button area
-    local dragArea = create('Frame', {
-        Size = UDim2.new(1, -50, 1, 0), -- Exclude the 50px where close button is
-        Position = UDim2.new(0, 0, 0, 0),
-        BackgroundTransparency = 1,
-        Parent = self.header,
-    })
-
-    self.connectionManager:autoConnect(dragArea, {
+    -- FIXED: Proper header dragging with ConnectionManager
+    self.connectionManager:autoConnect(self.header, {
         drag = {
             constrainToParent = false,
             onDragStart = function(component, position)
                 self.isDragging = true
             end,
             onDrag = function(component, position, delta)
+                -- FIXED: Calculate new position properly
+                local newPosX = self.main.Position.X.Offset + delta.X
+                local newPosY = self.main.Position.Y.Offset + delta.Y
+                
                 self.main.Position = UDim2.new(
                     self.main.Position.X.Scale,
-                    self.main.Position.X.Offset + delta.X,
+                    newPosX,
                     self.main.Position.Y.Scale,
-                    self.main.Position.Y.Offset + delta.Y
+                    newPosY
                 )
             end,
             onDragEnd = function(component, position)
@@ -2295,8 +2290,7 @@ function RadiantHub:setupEvents()
             end
         }
     })
-
-    -- Close button setup (unchanged)
+    -- FIXED: Close button with proper ConnectionManager
     self.connectionManager:setupButton(self.closeBtn, function()
         self:destroy()
     end, {
@@ -2304,6 +2298,7 @@ function RadiantHub:setupEvents()
         TextSize = 34
     })
 end
+
 -- Cleanup Function
 function RadiantHub:destroy()
     -- FIXED: Clean up all element connections properly
@@ -3208,7 +3203,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         Position = UDim2.new(0, -185, 1, 4),
         BackgroundColor3 = Color3.fromRGB(25, 25, 30),
         Visible = false,
-        ZIndex = 30,
+        ZIndex = 1,
         Parent = colorButton,
     })
     addCorner(pickerFrame, 8)
