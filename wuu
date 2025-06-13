@@ -401,7 +401,7 @@ end
 function ConnectionManager:connectColorPicker(component, colorConfig, componentId)
     local UserInputService = game:GetService('UserInputService')
     
-    local colorPickerId = "colorpicker_" + componentId
+    local colorPickerId = "colorpicker_" .. componentId
     local pickerData = {
         isDragging = false,
         component = component,
@@ -415,13 +415,11 @@ function ConnectionManager:connectColorPicker(component, colorConfig, componentI
     self.activeColorPickers[colorPickerId] = pickerData
     
     local function updateColorPicker(mousePos, targetComponent)
-        -- Check if this specific color picker should be active
         local data = self.componentData[componentId]
         if data and not data.isVisible() then
             return
         end
         
-        -- Only update if this is the correct component being dragged
         if targetComponent ~= component and not targetComponent:IsDescendantOf(component) then
             return
         end
@@ -429,7 +427,6 @@ function ConnectionManager:connectColorPicker(component, colorConfig, componentI
         local componentPos = targetComponent.AbsolutePosition
         local componentSize = targetComponent.AbsoluteSize
         
-        -- FIXED: Proper relative position calculation for color picker
         local relativeX = math.max(0, math.min(1, (mousePos.X - componentPos.X) / componentSize.X))
         local relativeY = math.max(0, math.min(1, (mousePos.Y - componentPos.Y) / componentSize.Y))
         
@@ -446,7 +443,6 @@ function ConnectionManager:connectColorPicker(component, colorConfig, componentI
     end
     
     local inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        -- FIXED: High priority for color pickers
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             local data = self.componentData[componentId]
             if data and not data.isVisible() then
@@ -457,11 +453,9 @@ function ConnectionManager:connectColorPicker(component, colorConfig, componentI
             local componentPos = component.AbsolutePosition
             local componentSize = component.AbsoluteSize
             
-            -- Check if mouse is over this specific color picker component
             if mousePos.X >= componentPos.X and mousePos.X <= componentPos.X + componentSize.X and
                mousePos.Y >= componentPos.Y and mousePos.Y <= componentPos.Y + componentSize.Y then
                 
-                -- Deactivate all other color pickers
                 for otherId, otherData in pairs(self.activeColorPickers) do
                     if otherId ~= colorPickerId then
                         otherData.isDragging = false
@@ -3157,6 +3151,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     local sectionData = self.tabs[tabName].sections[sectionName]
     local elementsContainer = sectionData.elementsContainer or sectionData.frame
     callback = callback or function() end
+    defaultColor = defaultColor or Color3.fromRGB(255, 255, 255)
 
     local frame = create('Frame', {
         Size = UDim2.new(1, -2, 0, 32),
@@ -3179,13 +3174,12 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     local colorButton = create('Frame', {
         Size = UDim2.new(0, 55, 0, 26),
         Position = UDim2.new(1, -57, 0.5, -13),
-        BackgroundColor3 = defaultColor or Color3.fromRGB(255, 255, 255),
+        BackgroundColor3 = defaultColor,
         Parent = frame,
     })
     addCorner(colorButton, 8)
     addStroke(colorButton)
 
-    -- Each color picker gets unique ID to prevent interference
     local uniqueId = tostring(colorButton) .. "_" .. tick() .. "_" .. tabName .. "_" .. title
     local pickerFrame = create('Frame', {
         Name = 'ColorPicker_' .. uniqueId,
@@ -3200,10 +3194,9 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     addStroke(pickerFrame)
 
     local isOpen = false
-    local selectedColor = defaultColor or Color3.fromRGB(255, 255, 255)
+    local selectedColor = defaultColor
     local currentHue, currentSat, currentVal = 0, 1, 1
 
-    -- Create picker UI elements
     create('TextLabel', {
         Size = UDim2.new(1, 0, 0, 30),
         Position = UDim2.new(0, 0, 0, 5),
@@ -3379,14 +3372,12 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         callback(selectedColor)
     end
 
-    -- FIXED: Canvas dragging with proper ConnectionManager and tab checking
     self.connectionManager:autoConnect(valFrame, {
         tabName = tabName,
         library = self,
         colorPicker = {
             isHueSlider = false,
             onValueChanged = function(hue, sat, val, component)
-                -- Only update if this is the correct color picker and tab is active
                 if component == valFrame and self.currentTab == tabName and isOpen then
                     currentSat = sat
                     currentVal = val
@@ -3397,14 +3388,12 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         }
     })
 
-    -- FIXED: Hue dragging with proper ConnectionManager and tab checking  
     self.connectionManager:autoConnect(hueGradientFrame, {
         tabName = tabName,
         library = self,
         colorPicker = {
             isHueSlider = true,
             onValueChanged = function(hue, sat, val, component)
-                -- Only update if this is the correct color picker and tab is active
                 if component == hueGradientFrame and self.currentTab == tabName and isOpen then
                     currentHue = hue
                     hueSelector.Position = UDim2.new(0, -2, hue, -2)
@@ -3414,7 +3403,6 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         }
     })
 
-    -- FIXED: Color button with unique handling to prevent interference
     local colorBtn = create('TextButton', {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
@@ -3422,9 +3410,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         Parent = colorButton,
     })
 
-    -- FIXED: Use direct connection with tab checking to prevent interference
     colorBtn.MouseButton1Click:Connect(function()
-        -- Only allow opening if we're in the correct tab
         if self.currentTab ~= tabName then
             return
         end
@@ -3434,7 +3420,6 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         pickerFrame.Size = isOpen and UDim2.new(0, 250, 0, 220) or UDim2.new(0, 250, 0, 0)
 
         if isOpen then
-            -- Close all other color pickers when opening this one
             for otherTabName, tab in pairs(self.tabs) do
                 if otherTabName ~= tabName then
                     for _, section in pairs(tab.sections) do
@@ -3454,7 +3439,6 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
             updateColor()
             self.notifications:info('Color Picker', 'Color picker opened: ' .. title, 2)
             
-            -- Increase scroll area when color picker opens
             local parent = frame.Parent
             while parent and not parent.Name:match('Column') do
                 parent = parent.Parent
@@ -3464,7 +3448,6 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
                 parent.CanvasSize = UDim2.new(0, 0, 0, currentCanvas + 280)
             end
         else
-            -- Reset scroll area when color picker closes
             local parent = frame.Parent
             while parent and not parent.Name:match('Column') do
                 parent = parent.Parent
@@ -3476,7 +3459,6 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         end
     end)
 
-    -- Simple hover effect without ConnectionManager to prevent conflicts
     colorBtn.MouseEnter:Connect(function()
         if self.currentTab == tabName then
             local stroke = colorButton:FindFirstChild('UIStroke')
@@ -3499,7 +3481,6 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
 
     updateColor()
 
-    -- Store element reference
     self.tabs[tabName].sections[sectionName].elements[title] = {
         type = 'colorpicker',
         frame = frame,
@@ -4370,7 +4351,6 @@ function RadiantHub:createConfigToggle(parent, title, desc, defaultState, pos, c
 
     local isToggled = defaultState
     
-    -- FIXED: Proper ConnectionManager integration
     self.connectionManager:autoConnect(btn, {
         click = {
             callback = function()
@@ -4414,6 +4394,9 @@ function RadiantHub:addSlider(tabName, sectionName, title, desc, min, max, defau
     local sectionData = self.tabs[tabName].sections[sectionName]
     local elementsContainer = sectionData.elementsContainer or sectionData.frame
     callback = callback or function() end
+    min = min or 0
+    max = max or 100
+    defaultValue = defaultValue or min
 
     local frame = create('Frame', {
         Size = UDim2.new(1, -5, 0, 50),
@@ -4479,7 +4462,6 @@ function RadiantHub:addSlider(tabName, sectionName, title, desc, min, max, defau
     })
     addCorner(sliderFill, 3)
 
-    -- Proper slider state management
     local currentValue = defaultValue
 
     local function updateSliderFromValue(value, triggerCallback)
@@ -4495,7 +4477,6 @@ function RadiantHub:addSlider(tabName, sectionName, title, desc, min, max, defau
         end
     end
 
-    -- TextBox input handling with proper connections
     valueBox.FocusLost:Connect(function()
         local inputValue = tonumber(valueBox.Text)
         if inputValue then
@@ -4522,10 +4503,9 @@ function RadiantHub:addSlider(tabName, sectionName, title, desc, min, max, defau
         end
     end)
 
-    -- FIXED: Use ConnectionManager with proper tab checking and isolation
     self.connectionManager:autoConnect(sliderTrack, {
-        tabName = tabName, -- Pass tab name for visibility checking
-        library = self, -- Pass library reference for tab checking
+        tabName = tabName,
+        library = self,
         slider = {
             min = min,
             max = max,
@@ -4547,7 +4527,6 @@ function RadiantHub:addSlider(tabName, sectionName, title, desc, min, max, defau
         }
     })
 
-    -- Store element reference
     self.tabs[tabName].sections[sectionName].elements[title] = {
         type = 'slider',
         frame = frame,
