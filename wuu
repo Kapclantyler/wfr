@@ -389,7 +389,7 @@ function ConnectionManager:connectSlider(component, sliderConfig, componentId)
     table.insert(self.componentData[componentId].connections, inputChanged)
     table.insert(self.componentData[componentId].connections, inputEnded)
 end
-print("hi")
+
 -- COMPLETELY FIXED: Color Picker with PERFECT mouse calculations AND mobile support
 function ConnectionManager:connectColorPicker(component, colorConfig, componentId)
     local UserInputService = game:GetService('UserInputService')
@@ -3208,7 +3208,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         Position = UDim2.new(0, -185, 1, 4),
         BackgroundColor3 = Color3.fromRGB(25, 25, 30),
         Visible = false,
-        ZIndex = 30,
+        ZIndex = 1000,
         Parent = colorButton,
     })
     addCorner(pickerFrame, 8)
