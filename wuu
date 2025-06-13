@@ -1,4 +1,4 @@
-print("hii")
+
 local Services = {
     Players = game:GetService('Players'),
     UserInputService = game:GetService('UserInputService'),
@@ -4739,5 +4739,5 @@ local Library = {}
 function Library:CreateWindow()
     return RadiantHub.new()
 end
-print("i hav no dad")
+
 return Library
