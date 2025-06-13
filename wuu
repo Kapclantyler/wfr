@@ -390,7 +390,7 @@ function ConnectionManager:connectSlider(component, sliderConfig, componentId)
     table.insert(self.componentData[componentId].connections, inputEnded)
 end
 
--- COMPLETELY FIXED: Color Picker with perfect isolation
+-- COMPLETELY FIXED: Color Picker with PERFECT mouse calculations AND mobile support
 function ConnectionManager:connectColorPicker(component, colorConfig, componentId)
     local UserInputService = game:GetService('UserInputService')
     
@@ -411,12 +411,18 @@ function ConnectionManager:connectColorPicker(component, colorConfig, componentI
             return
         end
         
-        -- FIXED: Precise mouse position calculation
+        -- CRITICAL FIX: Account for GuiInset AND use exact component calculations
         local componentPos = component.AbsolutePosition
         local componentSize = component.AbsoluteSize
         
-        local relativeX = (mousePos.X - componentPos.X) / componentSize.X
-        local relativeY = (mousePos.Y - componentPos.Y) / componentSize.Y
+        -- FIXED: Same GuiInset compensation as sliders + extra precision
+        local guiInset = game:GetService("GuiService"):GetGuiInset()
+        local adjustedMouseX = mousePos.X
+        local adjustedMouseY = mousePos.Y - guiInset.Y
+        
+        -- ULTRA-PRECISE: Calculate relative position with exact bounds
+        local relativeX = (adjustedMouseX - componentPos.X) / componentSize.X
+        local relativeY = (adjustedMouseY - componentPos.Y) / componentSize.Y
         
         relativeX = math.max(0, math.min(1, relativeX))
         relativeY = math.max(0, math.min(1, relativeY))
@@ -434,7 +440,8 @@ function ConnectionManager:connectColorPicker(component, colorConfig, componentI
     end
     
     local inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        -- Support both mouse and touch
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local data = self.componentData[componentId]
             if not data or not data.isVisible() or not pickerData.isOpen then
                 return
@@ -447,30 +454,52 @@ function ConnectionManager:connectColorPicker(component, colorConfig, componentI
                 end
             end
             
-            local mousePos = UserInputService:GetMouseLocation()
+            local mousePos
+            if input.UserInputType == Enum.UserInputType.Touch then
+                mousePos = input.Position
+            else
+                mousePos = UserInputService:GetMouseLocation()
+            end
+            
             local componentPos = component.AbsolutePosition
             local componentSize = component.AbsoluteSize
             
-            if mousePos.X >= componentPos.X and mousePos.X <= componentPos.X + componentSize.X and
-               mousePos.Y >= componentPos.Y and mousePos.Y <= componentPos.Y + componentSize.Y then
+            -- FIXED: Use same GuiInset compensation for bounds checking
+            local guiInset = game:GetService("GuiService"):GetGuiInset()
+            local adjustedMouseX = mousePos.X
+            local adjustedMouseY = mousePos.Y - guiInset.Y
+            
+            -- PRECISE bounds checking
+            if adjustedMouseX >= componentPos.X and adjustedMouseX <= componentPos.X + componentSize.X and
+               adjustedMouseY >= componentPos.Y and adjustedMouseY <= componentPos.Y + componentSize.Y then
                 
                 pickerData.isDragging = true
                 self.activeInteractions[componentId] = true
                 updateColorPicker(mousePos)
+                
+                print("COLOR PICKER ACTIVATED:", colorConfig.elementId, "at position:", adjustedMouseX, adjustedMouseY)
+                print("Component bounds:", componentPos.X, componentPos.Y, "to", componentPos.X + componentSize.X, componentPos.Y + componentSize.Y)
             end
         end
     end)
     
     local inputChanged = UserInputService.InputChanged:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseMovement and pickerData.isDragging then
-            updateColorPicker(UserInputService:GetMouseLocation())
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and pickerData.isDragging then
+            local mousePos
+            if input.UserInputType == Enum.UserInputType.Touch then
+                mousePos = input.Position
+            else
+                mousePos = UserInputService:GetMouseLocation()
+            end
+            updateColorPicker(mousePos)
         end
     end)
     
     local inputEnded = UserInputService.InputEnded:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 and pickerData.isDragging then
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and pickerData.isDragging then
             pickerData.isDragging = false
             self.activeInteractions[componentId] = nil
+            print("COLOR PICKER RELEASED:", colorConfig.elementId)
         end
     end)
     
@@ -3364,7 +3393,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     local canvasElementId = elementId .. "_canvas"
     local hueElementId = elementId .. "_hue"
 
-    -- FIXED: Canvas dragging with perfect isolation
+    -- FIXED: Canvas dragging with mobile-compatible ConnectionManager
     self.connectionManager:autoConnect(valFrame, {
         tabName = tabName,
         library = self,
@@ -3384,7 +3413,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         }
     })
 
-    -- FIXED: Hue dragging with perfect isolation
+    -- FIXED: Hue dragging with mobile-compatible ConnectionManager
     self.connectionManager:autoConnect(hueGradientFrame, {
         tabName = tabName,
         library = self,
@@ -3403,6 +3432,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         }
     })
 
+    -- FIXED: Color button using ConnectionManager for mobile support
     local colorBtn = create('TextButton', {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
@@ -3410,88 +3440,101 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         Parent = colorButton,
     })
 
-    -- FIXED: Color button with perfect tab checking and state management
-    colorBtn.MouseButton1Click:Connect(function()
-        -- Only allow interaction if we're in the correct tab
-        if self.currentTab ~= tabName then
-            return
-        end
-        
-        -- Close ALL other color pickers first
-        for otherTabName, tab in pairs(self.tabs) do
-            for _, section in pairs(tab.sections) do
-                for _, element in pairs(section.elements) do
-                    if element.type == 'colorpicker' and element.elementId ~= elementId then
-                        -- Close this color picker
-                        if element.setOpen then
-                            element.setOpen(false)
+    -- FIXED: Replace manual mouse events with ConnectionManager
+    self.connectionManager:autoConnect(colorBtn, {
+        tabName = tabName,
+        library = self,
+        elementId = elementId .. "_button",
+        click = {
+            callback = function()
+                -- Only allow interaction if we're in the correct tab
+                if self.currentTab ~= tabName then
+                    return
+                end
+                
+                -- Close ALL other color pickers first
+                for otherTabName, tab in pairs(self.tabs) do
+                    for _, section in pairs(tab.sections) do
+                        for _, element in pairs(section.elements) do
+                            if element.type == 'colorpicker' and element.elementId ~= elementId then
+                                -- Close this color picker
+                                if element.setOpen then
+                                    element.setOpen(false)
+                                end
+                                -- Find and close picker frame
+                                local otherPickerFrame = element.frame:FindFirstChild('ColorPicker_', true)
+                                if otherPickerFrame then
+                                    otherPickerFrame.Visible = false
+                                    otherPickerFrame.Size = UDim2.new(0, 250, 0, 0)
+                                end
+                            end
                         end
-                        -- Find and close picker frame
-                        local otherPickerFrame = element.frame:FindFirstChild('ColorPicker_', true)
-                        if otherPickerFrame then
-                            otherPickerFrame.Visible = false
-                            otherPickerFrame.Size = UDim2.new(0, 250, 0, 0)
+                    end
+                end
+                
+                -- Toggle this color picker
+                isOpen = not isOpen
+                pickerFrame.Visible = isOpen
+                pickerFrame.Size = isOpen and UDim2.new(0, 250, 0, 220) or UDim2.new(0, 250, 0, 0)
+
+                -- Update ConnectionManager about picker state
+                self.connectionManager:setColorPickerOpen(canvasElementId, isOpen)
+                self.connectionManager:setColorPickerOpen(hueElementId, isOpen)
+
+                if isOpen then
+                    updateColor()
+                    self.notifications:info('Color Picker', 'Color picker opened: ' .. title, 2)
+                    
+                    -- Increase scroll area
+                    local parent = frame.Parent
+                    while parent and not parent.Name:match('Column') do
+                        parent = parent.Parent
+                    end
+                    if parent then
+                        local currentCanvas = parent.CanvasSize.Y.Offset
+                        parent.CanvasSize = UDim2.new(0, 0, 0, currentCanvas + 280)
+                    end
+                else
+                    -- Reset scroll area
+                    local parent = frame.Parent
+                    while parent and not parent.Name:match('Column') do
+                        parent = parent.Parent
+                    end
+                    if parent then
+                        local currentCanvas = parent.CanvasSize.Y.Offset
+                        parent.CanvasSize = UDim2.new(0, 0, 0, math.max(currentCanvas - 280, 0))
+                    end
+                end
+            end,
+            pressEffect = {
+                scale = 0.95,
+                duration = 0.1
+            }
+        },
+        hover = {
+            properties = {
+                BackgroundTransparency = 0.95,
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            },
+            tween = {
+                duration = 0.2
+            },
+            callback = function(isHovering, component)
+                if self.currentTab == tabName then
+                    local stroke = colorButton:FindFirstChild('UIStroke')
+                    if stroke then
+                        if isHovering then
+                            stroke.Color = Config.Colors.Active
+                            stroke.Thickness = 2
+                        elseif not isOpen then
+                            stroke.Color = Color3.fromRGB(55, 55, 65)
+                            stroke.Thickness = 1
                         end
                     end
                 end
             end
-        end
-        
-        -- Toggle this color picker
-        isOpen = not isOpen
-        pickerFrame.Visible = isOpen
-        pickerFrame.Size = isOpen and UDim2.new(0, 250, 0, 220) or UDim2.new(0, 250, 0, 0)
-
-        -- Update ConnectionManager about picker state
-        self.connectionManager:setColorPickerOpen(canvasElementId, isOpen)
-        self.connectionManager:setColorPickerOpen(hueElementId, isOpen)
-
-        if isOpen then
-            updateColor()
-            self.notifications:info('Color Picker', 'Color picker opened: ' .. title, 2)
-            
-            -- Increase scroll area
-            local parent = frame.Parent
-            while parent and not parent.Name:match('Column') do
-                parent = parent.Parent
-            end
-            if parent then
-                local currentCanvas = parent.CanvasSize.Y.Offset
-                parent.CanvasSize = UDim2.new(0, 0, 0, currentCanvas + 280)
-            end
-        else
-            -- Reset scroll area
-            local parent = frame.Parent
-            while parent and not parent.Name:match('Column') do
-                parent = parent.Parent
-            end
-            if parent then
-                local currentCanvas = parent.CanvasSize.Y.Offset
-                parent.CanvasSize = UDim2.new(0, 0, 0, math.max(currentCanvas - 280, 0))
-            end
-        end
-    end)
-
-    -- Simple hover effects
-    colorBtn.MouseEnter:Connect(function()
-        if self.currentTab == tabName then
-            local stroke = colorButton:FindFirstChild('UIStroke')
-            if stroke then
-                stroke.Color = Config.Colors.Active
-                stroke.Thickness = 2
-            end
-        end
-    end)
-
-    colorBtn.MouseLeave:Connect(function()
-        if not isOpen then
-            local stroke = colorButton:FindFirstChild('UIStroke')
-            if stroke then
-                stroke.Color = Color3.fromRGB(55, 55, 65)
-                stroke.Thickness = 1
-            end
-        end
-    end)
+        }
+    })
 
     updateColor()
 
@@ -3525,55 +3568,6 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     return frame
 end
 
--- 4. COMPLETELY FIXED: Tab switching with proper cleanup
-function RadiantHub:switchTab(tabName)
-    if self.currentTab == tabName then return end
-
-    -- Close all color pickers when switching tabs
-    if self.currentTab then
-        local currentTabData = self.tabs[self.currentTab]
-        if currentTabData then
-            for _, section in pairs(currentTabData.sections) do
-                for _, element in pairs(section.elements) do
-                    if element.type == 'colorpicker' and element.setOpen then
-                        element.setOpen(false)
-                    end
-                end
-            end
-        end
-    end
-
-    -- Deactivate all tabs
-    for name, btn in pairs(self.tabButtons) do
-        btn.BackgroundColor3 = Config.Colors.Inactive
-        local indicator = btn:FindFirstChild('ActiveIndicator')
-        if indicator then
-            indicator:Destroy()
-        end
-        local icon = btn:FindFirstChildOfClass('ImageLabel')
-        if icon then
-            icon.ImageColor3 = Config.Colors.SubText
-        end
-    end
-
-    -- Hide all content
-    for name, content in pairs(self.tabContents) do
-        content.Visible = false
-    end
-
-    -- Activate new tab
-    if self.tabButtons[tabName] then
-        self:setActiveTab(self.tabButtons[tabName])
-    end
-
-    -- Show new content
-    if self.tabContents[tabName] then
-        self.tabContents[tabName].Visible = true
-    end
-
-    self.currentTab = tabName
-    self.title.Text = tabName
-end
 -- Button creation function
 function RadiantHub:addButton(tabName, sectionName, title, desc, callback)
     if not self.tabs[tabName] or not self.tabs[tabName].sections[sectionName] then
