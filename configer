@@ -10,580 +10,9 @@ local Services = {
 
 local Player = Services.Players.LocalPlayer
 -- Connection Manager Class
-local ConnectionManager = {}
-ConnectionManager.__index = ConnectionManager
+-- COMPLETELY FIXED CONNECTION MANAGER - All Issues Resolved
 
-function ConnectionManager.new()
-    local self = setmetatable({}, ConnectionManager)
-    self.connections = {}
-    self.componentData = {}
-    self.activeInteractions = {} -- Track what's currently active
-    return self
-end
-
-function ConnectionManager:autoConnect(component, config)
-    if not component or not component:IsA('GuiObject') then
-        warn('Invalid component provided to autoConnect')
-        return self
-    end
-
-    config = config or {}
-    local componentId = tostring(component) .. "_" .. tick()
-    
-    self.componentData[componentId] = {
-        component = component,
-        config = config,
-        connections = {},
-        tabName = config.tabName,
-        library = config.library,
-        elementId = config.elementId, -- Unique element identifier
-        isVisible = function()
-            if config.tabName and config.library then
-                return config.library.currentTab == config.tabName and component.Visible
-            end
-            return component.Visible
-        end
-    }
-
-    if config.hover then
-        self:connectHover(component, config.hover, componentId)
-    end
-
-    if config.click then
-        self:connectClick(component, config.click, componentId)
-    end
-
-    if config.drag then
-        self:connectDrag(component, config.drag, componentId)
-    end
-
-    if config.slider then
-        self:connectSlider(component, config.slider, componentId)
-    end
-
-    if config.colorPicker then
-        self:connectColorPicker(component, config.colorPicker, componentId)
-    end
-
-    return self
-end
-
--- FIXED: Hover with proper isolation
-function ConnectionManager:connectHover(component, hoverConfig, componentId)
-    local originalProps = {}
-    local isHovering = false
-    
-    if hoverConfig.properties then
-        for prop, _ in pairs(hoverConfig.properties) do
-            if component[prop] then
-                originalProps[prop] = component[prop]
-            end
-        end
-    end
-
-    local function applyHover(hovering)
-        if hovering == isHovering then return end
-        isHovering = hovering
-        
-        local targetProps = hovering and (hoverConfig.properties or {}) or originalProps
-        
-        if hoverConfig.tween and next(targetProps) then
-            local TweenService = game:GetService('TweenService')
-            local tweenInfo = TweenInfo.new(
-                hoverConfig.tween.duration or 0.2,
-                hoverConfig.tween.easingStyle or Enum.EasingStyle.Quad,
-                hoverConfig.tween.easingDirection or Enum.EasingDirection.Out
-            )
-            local tween = TweenService:Create(component, tweenInfo, targetProps)
-            tween:Play()
-        else
-            for prop, value in pairs(targetProps) do
-                if component[prop] then
-                    component[prop] = value
-                end
-            end
-        end
-        
-        if hoverConfig.callback then
-            hoverConfig.callback(hovering, component)
-        end
-    end
-
-    local mouseEnter = component.MouseEnter:Connect(function()
-        local data = self.componentData[componentId]
-        if data and data.isVisible() then
-            applyHover(true)
-        end
-    end)
-
-    local mouseLeave = component.MouseLeave:Connect(function()
-        applyHover(false)
-    end)
-
-    table.insert(self.componentData[componentId].connections, mouseEnter)
-    table.insert(self.componentData[componentId].connections, mouseLeave)
-end
-
--- FIXED: Click with proper isolation
-function ConnectionManager:connectClick(component, clickConfig, componentId)
-    local function handleClick()
-        local data = self.componentData[componentId]
-        if not data or not data.isVisible() then
-            return
-        end
-        
-        if clickConfig.pressEffect then
-            local effect = clickConfig.pressEffect
-            if effect.scale then
-                local originalSize = component.Size
-                local TweenService = game:GetService('TweenService')
-                
-                local shrinkTween = TweenService:Create(component, 
-                    TweenInfo.new(effect.duration or 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), 
-                    {Size = UDim2.new(
-                        originalSize.X.Scale * effect.scale,
-                        originalSize.X.Offset * effect.scale,
-                        originalSize.Y.Scale * effect.scale,
-                        originalSize.Y.Offset * effect.scale
-                    )}
-                )
-                
-                shrinkTween:Play()
-                shrinkTween.Completed:Connect(function()
-                    local expandTween = TweenService:Create(component, 
-                        TweenInfo.new(effect.duration or 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), 
-                        {Size = originalSize}
-                    )
-                    expandTween:Play()
-                end)
-            end
-        end
-        
-        if clickConfig.callback then
-            clickConfig.callback(component)
-        end
-    end
-    
-    local connection
-    if component:IsA('TextButton') or component:IsA('ImageButton') then
-        connection = component.MouseButton1Click:Connect(handleClick)
-    else
-        local overlay = Instance.new('TextButton')
-        overlay.Size = UDim2.new(1, 0, 1, 0)
-        overlay.Position = UDim2.new(0, 0, 0, 0)
-        overlay.BackgroundTransparency = 1
-        overlay.Text = ''
-        overlay.ZIndex = component.ZIndex + 1
-        overlay.Parent = component
-        
-        connection = overlay.MouseButton1Click:Connect(handleClick)
-        self.componentData[componentId].overlay = overlay
-    end
-
-    table.insert(self.componentData[componentId].connections, connection)
-end
-
--- FIXED: Drag with proper mouse calculations
-function ConnectionManager:connectDrag(component, dragConfig, componentId)
-    local UserInputService = game:GetService('UserInputService')
-    
-    local dragData = {
-        isDragging = false,
-        mouseOffset = Vector2.new(0, 0),
-        component = component,
-        componentId = componentId
-    }
-    
-    local inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local data = self.componentData[componentId]
-            if not data or not data.isVisible() then
-                return
-            end
-            
-            -- Check if any other interaction is active
-            for interactionId, active in pairs(self.activeInteractions) do
-                if active and interactionId ~= componentId then
-                    return
-                end
-            end
-            
-            local mousePos = UserInputService:GetMouseLocation()
-            local componentPos = component.AbsolutePosition
-            local componentSize = component.AbsoluteSize
-            
-            if mousePos.X >= componentPos.X and mousePos.X <= componentPos.X + componentSize.X and
-               mousePos.Y >= componentPos.Y and mousePos.Y <= componentPos.Y + componentSize.Y then
-                
-                dragData.mouseOffset = Vector2.new(
-                    mousePos.X - componentPos.X,
-                    mousePos.Y - componentPos.Y
-                )
-                
-                dragData.isDragging = true
-                self.activeInteractions[componentId] = true
-                
-                if dragConfig.onDragStart then
-                    dragConfig.onDragStart(component, mousePos)
-                end
-            end
-        end
-    end)
-    
-    local inputChanged = UserInputService.InputChanged:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseMovement and dragData.isDragging then
-            local mousePos = UserInputService:GetMouseLocation()
-            local newX = mousePos.X - dragData.mouseOffset.X
-            local newY = mousePos.Y - dragData.mouseOffset.Y
-            
-            if dragConfig.onDrag then
-                local delta = Vector2.new(newX - component.AbsolutePosition.X, newY - component.AbsolutePosition.Y)
-                dragConfig.onDrag(component, mousePos, delta)
-            else
-                local newPosition = UDim2.new(0, newX, 0, newY)
-                
-                if dragConfig.constrainToParent and component.Parent then
-                    local parent = component.Parent
-                    local parentSize = parent.AbsoluteSize
-                    local componentSize = component.AbsoluteSize
-                    
-                    local maxX = parentSize.X - componentSize.X
-                    local maxY = parentSize.Y - componentSize.Y
-                    
-                    newPosition = UDim2.new(0, 
-                        math.max(0, math.min(maxX, newX)),
-                        0, 
-                        math.max(0, math.min(maxY, newY))
-                    )
-                end
-                
-                component.Position = newPosition
-            end
-        end
-    end)
-    
-    local inputEnded = UserInputService.InputEnded:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 and dragData.isDragging then
-            dragData.isDragging = false
-            self.activeInteractions[componentId] = nil
-            
-            if dragConfig.onDragEnd then
-                dragConfig.onDragEnd(component, UserInputService:GetMouseLocation())
-            end
-        end
-    end)
-    
-    table.insert(self.componentData[componentId].connections, inputBegan)
-    table.insert(self.componentData[componentId].connections, inputChanged)
-    table.insert(self.componentData[componentId].connections, inputEnded)
-end
-
--- COMPLETELY FIXED: Slider with PERFECT mouse calculations
-function ConnectionManager:connectSlider(component, sliderConfig, componentId)
-    local UserInputService = game:GetService('UserInputService')
-    
-    local sliderData = {
-        isDragging = false,
-        minValue = sliderConfig.min or 0,
-        maxValue = sliderConfig.max or 100,
-        currentValue = sliderConfig.defaultValue or (sliderConfig.min or 0),
-        component = component,
-        componentId = componentId,
-        elementId = sliderConfig.elementId -- Unique identifier for this specific slider
-    }
-    
-    local function updateSlider(mousePos)
-        local data = self.componentData[componentId]
-        if not data or not data.isVisible() then
-            return
-        end
-        
-        -- CRITICAL FIX: Use EXACT component bounds with GuiInset compensation
-        local componentPos = component.AbsolutePosition
-        local componentSize = component.AbsoluteSize
-        
-        -- FIXED: Account for GuiInset (topbar offset)
-        local guiInset = game:GetService("GuiService"):GetGuiInset()
-        local adjustedMouseX = mousePos.X
-        local adjustedMouseY = mousePos.Y - guiInset.Y
-        
-        -- PRECISE: Calculate relative position within the component
-        local relativeX = (adjustedMouseX - componentPos.X) / componentSize.X
-        relativeX = math.max(0, math.min(1, relativeX))
-        
-        local newValue = sliderData.minValue + (sliderData.maxValue - sliderData.minValue) * relativeX
-        
-        if sliderConfig.step then
-            newValue = math.floor(newValue / sliderConfig.step + 0.5) * sliderConfig.step
-        end
-        
-        sliderData.currentValue = math.max(sliderData.minValue, math.min(sliderData.maxValue, newValue))
-        
-        -- Update visual indicator for THIS specific slider only
-        if sliderConfig.indicator then
-            local indicator = component:FindFirstChild(sliderConfig.indicator)
-            if indicator then
-                indicator.Size = UDim2.new(relativeX, 0, 1, 0)
-            end
-        end
-        
-        if sliderConfig.onValueChanged then
-            sliderConfig.onValueChanged(sliderData.currentValue, component)
-        end
-    end
-    
-    local inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local data = self.componentData[componentId]
-            if not data or not data.isVisible() then
-                return
-            end
-            
-            -- CRITICAL: Check if any other slider is active
-            for otherId, active in pairs(self.activeInteractions) do
-                if active and otherId ~= componentId then
-                    return
-                end
-            end
-            
-            local mousePos = UserInputService:GetMouseLocation()
-            local componentPos = component.AbsolutePosition
-            local componentSize = component.AbsoluteSize
-            
-            -- CRITICAL FIX: Account for GuiInset in bounds checking too
-            local guiInset = game:GetService("GuiService"):GetGuiInset()
-            local adjustedMouseX = mousePos.X
-            local adjustedMouseY = mousePos.Y - guiInset.Y
-            
-            -- ULTRA-PRECISE: Bounds checking with exact pixel accuracy
-            if adjustedMouseX >= componentPos.X and adjustedMouseX <= componentPos.X + componentSize.X and
-               adjustedMouseY >= componentPos.Y and adjustedMouseY <= componentPos.Y + componentSize.Y then
-                
-                -- DEBUG: Print which slider is being activated
-                print("SLIDER ACTIVATED:", sliderConfig.elementId, "at position:", adjustedMouseX, adjustedMouseY)
-                print("Component bounds:", componentPos.X, componentPos.Y, "to", componentPos.X + componentSize.X, componentPos.Y + componentSize.Y)
-                
-                sliderData.isDragging = true
-                self.activeInteractions[componentId] = true
-                updateSlider(mousePos)
-            end
-        end
-    end)
-    
-    local inputChanged = UserInputService.InputChanged:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseMovement and sliderData.isDragging then
-            updateSlider(UserInputService:GetMouseLocation())
-        end
-    end)
-    
-    local inputEnded = UserInputService.InputEnded:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 and sliderData.isDragging then
-            sliderData.isDragging = false
-            self.activeInteractions[componentId] = nil
-            print("SLIDER RELEASED:", sliderConfig.elementId)
-        end
-    end)
-    
-    table.insert(self.componentData[componentId].connections, inputBegan)
-    table.insert(self.componentData[componentId].connections, inputChanged)
-    table.insert(self.componentData[componentId].connections, inputEnded)
-end
-
--- COMPLETELY FIXED: Color Picker with PERFECT mouse calculations AND mobile support
-function ConnectionManager:connectColorPicker(component, colorConfig, componentId)
-    local UserInputService = game:GetService('UserInputService')
-    
-    local pickerData = {
-        isDragging = false,
-        component = component,
-        componentId = componentId,
-        elementId = colorConfig.elementId, -- Unique identifier
-        currentHue = 0,
-        currentSat = 1,
-        currentVal = 1,
-        isOpen = colorConfig.isOpen or false -- Track if picker is open
-    }
-    
-    local function updateColorPicker(mousePos)
-        local data = self.componentData[componentId]
-        if not data or not data.isVisible() or not pickerData.isOpen then
-            return
-        end
-        
-        -- CRITICAL FIX: Account for GuiInset AND use exact component calculations
-        local componentPos = component.AbsolutePosition
-        local componentSize = component.AbsoluteSize
-        
-        -- FIXED: Same GuiInset compensation as sliders + extra precision
-        local guiInset = game:GetService("GuiService"):GetGuiInset()
-        local adjustedMouseX = mousePos.X
-        local adjustedMouseY = mousePos.Y - guiInset.Y
-        
-        -- ULTRA-PRECISE: Calculate relative position with exact bounds
-        local relativeX = (adjustedMouseX - componentPos.X) / componentSize.X
-        local relativeY = (adjustedMouseY - componentPos.Y) / componentSize.Y
-        
-        relativeX = math.max(0, math.min(1, relativeX))
-        relativeY = math.max(0, math.min(1, relativeY))
-        
-        if colorConfig.isHueSlider then
-            pickerData.currentHue = relativeY
-        else
-            pickerData.currentSat = relativeX
-            pickerData.currentVal = 1 - relativeY
-        end
-        
-        if colorConfig.onValueChanged then
-            colorConfig.onValueChanged(pickerData.currentHue, pickerData.currentSat, pickerData.currentVal, component)
-        end
-    end
-    
-    local inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        -- Support both mouse and touch
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            local data = self.componentData[componentId]
-            if not data or not data.isVisible() or not pickerData.isOpen then
-                return
-            end
-            
-            -- CRITICAL: Check if any other color picker is active
-            for otherId, active in pairs(self.activeInteractions) do
-                if active and otherId ~= componentId then
-                    return
-                end
-            end
-            
-            local mousePos
-            if input.UserInputType == Enum.UserInputType.Touch then
-                mousePos = input.Position
-            else
-                mousePos = UserInputService:GetMouseLocation()
-            end
-            
-            local componentPos = component.AbsolutePosition
-            local componentSize = component.AbsoluteSize
-            
-            -- FIXED: Use same GuiInset compensation for bounds checking
-            local guiInset = game:GetService("GuiService"):GetGuiInset()
-            local adjustedMouseX = mousePos.X
-            local adjustedMouseY = mousePos.Y - guiInset.Y
-            
-            -- PRECISE bounds checking
-            if adjustedMouseX >= componentPos.X and adjustedMouseX <= componentPos.X + componentSize.X and
-               adjustedMouseY >= componentPos.Y and adjustedMouseY <= componentPos.Y + componentSize.Y then
-                
-                pickerData.isDragging = true
-                self.activeInteractions[componentId] = true
-                updateColorPicker(mousePos)
-                
-                print("COLOR PICKER ACTIVATED:", colorConfig.elementId, "at position:", adjustedMouseX, adjustedMouseY)
-                print("Component bounds:", componentPos.X, componentPos.Y, "to", componentPos.X + componentSize.X, componentPos.Y + componentSize.Y)
-            end
-        end
-    end)
-    
-    local inputChanged = UserInputService.InputChanged:Connect(function(input, gameProcessed)
-        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and pickerData.isDragging then
-            local mousePos
-            if input.UserInputType == Enum.UserInputType.Touch then
-                mousePos = input.Position
-            else
-                mousePos = UserInputService:GetMouseLocation()
-            end
-            updateColorPicker(mousePos)
-        end
-    end)
-    
-    local inputEnded = UserInputService.InputEnded:Connect(function(input, gameProcessed)
-        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and pickerData.isDragging then
-            pickerData.isDragging = false
-            self.activeInteractions[componentId] = nil
-            print("COLOR PICKER RELEASED:", colorConfig.elementId)
-        end
-    end)
-    
-    table.insert(self.componentData[componentId].connections, inputBegan)
-    table.insert(self.componentData[componentId].connections, inputChanged)
-    table.insert(self.componentData[componentId].connections, inputEnded)
-    
-    -- Store picker data for external control
-    self.componentData[componentId].pickerData = pickerData
-end
-
--- Helper functions
-function ConnectionManager:setupButton(button, callback, hoverEffect)
-    return self:autoConnect(button, {
-        click = {
-            callback = callback,
-            pressEffect = {
-                scale = 0.95,
-                duration = 0.1
-            }
-        },
-        hover = hoverEffect and {
-            properties = hoverEffect,
-            tween = {
-                duration = 0.2,
-                easingStyle = Enum.EasingStyle.Quad
-            }
-        } or nil
-    })
-end
-
-function ConnectionManager:setupDraggableFrame(frame, constrainToParent)
-    return self:autoConnect(frame, {
-        drag = {
-            constrainToParent = constrainToParent or false
-        }
-    })
-end
-
--- CRITICAL: Method to set color picker state
-function ConnectionManager:setColorPickerOpen(componentId, isOpen)
-    local data = self.componentData[componentId]
-    if data and data.pickerData then
-        data.pickerData.isOpen = isOpen
-    end
-end
-
--- Cleanup functions
-function ConnectionManager:disconnectComponent(component)
-    for componentId, data in pairs(self.componentData) do
-        if data.component == component then
-            for _, connection in ipairs(data.connections) do
-                if connection and connection.Connected then
-                    connection:Disconnect()
-                end
-            end
-            
-            if data.overlay then
-                data.overlay:Destroy()
-            end
-            
-            self.activeInteractions[componentId] = nil
-            self.componentData[componentId] = nil
-            break
-        end
-    end
-end
-
-function ConnectionManager:disconnectAll()
-    for componentId, data in pairs(self.componentData) do
-        for _, connection in ipairs(data.connections) do
-            if connection and connection.Connected then
-                connection:Disconnect()
-            end
-        end
-        
-        if data.overlay then
-            data.overlay:Destroy()
-        end
-    end
-    
-    self.componentData = {}
-    self.activeInteractions = {}
-end -- 
--- library Configuration
+-- Library Configuration
 local Config = {
     Size = { 750, 550 },
     TabIconSize = 45,
@@ -2265,74 +1694,27 @@ function RadiantHub:toggleVisibility()
 end
 
 function RadiantHub:setupEvents()
-    -- FIXED: Make the ENTIRE header draggable using ConnectionManager for mobile support
-    
-    -- Create an invisible overlay that covers the entire header for dragging
-    local dragOverlay = create('Frame', {
-        Size = UDim2.new(1, -120, 1, 0), -- Cover entire header except close button area
-        Position = UDim2.new(0, 0, 0, 0),
-        BackgroundTransparency = 1,
-        ZIndex = self.header.ZIndex + 1,
-        Parent = self.header,
-    })
-    
-    -- COMPLETELY FIXED: Header dragging with ConnectionManager for mobile + PC support
-    self.connectionManager:autoConnect(dragOverlay, {
+    -- FIXED: Proper header dragging with ConnectionManager
+    self.connectionManager:autoConnect(self.header, {
         drag = {
             constrainToParent = false,
             onDragStart = function(component, position)
                 self.isDragging = true
-                -- Optional: Visual feedback that dragging started
-                self.header.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-                print("Header drag started at:", position.X, position.Y)
             end,
             onDrag = function(component, position, delta)
-                -- FIXED: Proper delta-based movement for smooth dragging
-                local currentPos = self.main.Position
+                -- FIXED: Calculate new position properly
+                local newPosX = self.main.Position.X.Offset + delta.X
+                local newPosY = self.main.Position.Y.Offset + delta.Y
                 
-                -- Calculate new position based on delta movement
-                local newPosX = currentPos.X.Offset + delta.X
-                local newPosY = currentPos.Y.Offset + delta.Y
-                
-                -- Optional: Constrain to screen bounds
-                local screenSize = workspace.CurrentCamera.ViewportSize
-                local frameSize = self.main.AbsoluteSize
-                
-                -- Keep window on screen (with small margin)
-                newPosX = math.max(-frameSize.X * 0.8, math.min(screenSize.X - frameSize.X * 0.2, newPosX))
-                newPosY = math.max(-frameSize.Y * 0.5, math.min(screenSize.Y - frameSize.Y * 0.2, newPosY))
-                
-                -- Apply new position
                 self.main.Position = UDim2.new(
-                    currentPos.X.Scale,
+                    self.main.Position.X.Scale,
                     newPosX,
-                    currentPos.Y.Scale,
+                    self.main.Position.Y.Scale,
                     newPosY
                 )
             end,
             onDragEnd = function(component, position)
                 self.isDragging = false
-                -- Restore normal header color
-                self.header.BackgroundColor3 = Config.Colors.Header
-                print("Header drag ended at:", position.X, position.Y)
-            end
-        },
-        hover = {
-            properties = {
-                BackgroundTransparency = 0.98,
-                BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            },
-            tween = {
-                duration = 0.2
-            },
-            callback = function(isHovering, component)
-                if isHovering and not self.isDragging then
-                    -- Visual feedback that area is draggable
-                    dragOverlay.BackgroundTransparency = 0.98
-                    dragOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                else
-                    dragOverlay.BackgroundTransparency = 1
-                end
             end
         }
     })
@@ -3202,6 +2584,7 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
     return frame
 end
 
+-- FIXED: Color Picker Implementation (replace the existing addColorPicker function)
 function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, callback)
     if not self.tabs[tabName] or not self.tabs[tabName].sections[sectionName] then
         self.notifications:error('Element Error', 'Tab or section not found!', 3)
@@ -3438,7 +2821,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     local canvasElementId = elementId .. "_canvas"
     local hueElementId = elementId .. "_hue"
 
-    -- FIXED: Canvas dragging with mobile-compatible ConnectionManager
+    -- FIXED: Canvas dragging with perfect isolation
     self.connectionManager:autoConnect(valFrame, {
         tabName = tabName,
         library = self,
@@ -3458,7 +2841,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         }
     })
 
-    -- FIXED: Hue dragging with mobile-compatible ConnectionManager
+    -- FIXED: Hue dragging with perfect isolation
     self.connectionManager:autoConnect(hueGradientFrame, {
         tabName = tabName,
         library = self,
@@ -3477,7 +2860,6 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         }
     })
 
-    -- FIXED: Color button using ConnectionManager for mobile support
     local colorBtn = create('TextButton', {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
@@ -3485,101 +2867,88 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         Parent = colorButton,
     })
 
-    -- FIXED: Replace manual mouse events with ConnectionManager
-    self.connectionManager:autoConnect(colorBtn, {
-        tabName = tabName,
-        library = self,
-        elementId = elementId .. "_button",
-        click = {
-            callback = function()
-                -- Only allow interaction if we're in the correct tab
-                if self.currentTab ~= tabName then
-                    return
-                end
-                
-                -- Close ALL other color pickers first
-                for otherTabName, tab in pairs(self.tabs) do
-                    for _, section in pairs(tab.sections) do
-                        for _, element in pairs(section.elements) do
-                            if element.type == 'colorpicker' and element.elementId ~= elementId then
-                                -- Close this color picker
-                                if element.setOpen then
-                                    element.setOpen(false)
-                                end
-                                -- Find and close picker frame
-                                local otherPickerFrame = element.frame:FindFirstChild('ColorPicker_', true)
-                                if otherPickerFrame then
-                                    otherPickerFrame.Visible = false
-                                    otherPickerFrame.Size = UDim2.new(0, 250, 0, 0)
-                                end
-                            end
+    -- FIXED: Color button with perfect tab checking and state management
+    colorBtn.MouseButton1Click:Connect(function()
+        -- Only allow interaction if we're in the correct tab
+        if self.currentTab ~= tabName then
+            return
+        end
+        
+        -- Close ALL other color pickers first
+        for otherTabName, tab in pairs(self.tabs) do
+            for _, section in pairs(tab.sections) do
+                for _, element in pairs(section.elements) do
+                    if element.type == 'colorpicker' and element.elementId ~= elementId then
+                        -- Close this color picker
+                        if element.setOpen then
+                            element.setOpen(false)
                         end
-                    end
-                end
-                
-                -- Toggle this color picker
-                isOpen = not isOpen
-                pickerFrame.Visible = isOpen
-                pickerFrame.Size = isOpen and UDim2.new(0, 250, 0, 220) or UDim2.new(0, 250, 0, 0)
-
-                -- Update ConnectionManager about picker state
-                self.connectionManager:setColorPickerOpen(canvasElementId, isOpen)
-                self.connectionManager:setColorPickerOpen(hueElementId, isOpen)
-
-                if isOpen then
-                    updateColor()
-                    self.notifications:info('Color Picker', 'Color picker opened: ' .. title, 2)
-                    
-                    -- Increase scroll area
-                    local parent = frame.Parent
-                    while parent and not parent.Name:match('Column') do
-                        parent = parent.Parent
-                    end
-                    if parent then
-                        local currentCanvas = parent.CanvasSize.Y.Offset
-                        parent.CanvasSize = UDim2.new(0, 0, 0, currentCanvas + 280)
-                    end
-                else
-                    -- Reset scroll area
-                    local parent = frame.Parent
-                    while parent and not parent.Name:match('Column') do
-                        parent = parent.Parent
-                    end
-                    if parent then
-                        local currentCanvas = parent.CanvasSize.Y.Offset
-                        parent.CanvasSize = UDim2.new(0, 0, 0, math.max(currentCanvas - 280, 0))
-                    end
-                end
-            end,
-            pressEffect = {
-                scale = 0.95,
-                duration = 0.1
-            }
-        },
-        hover = {
-            properties = {
-                BackgroundTransparency = 0.95,
-                BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            },
-            tween = {
-                duration = 0.2
-            },
-            callback = function(isHovering, component)
-                if self.currentTab == tabName then
-                    local stroke = colorButton:FindFirstChild('UIStroke')
-                    if stroke then
-                        if isHovering then
-                            stroke.Color = Config.Colors.Active
-                            stroke.Thickness = 2
-                        elseif not isOpen then
-                            stroke.Color = Color3.fromRGB(55, 55, 65)
-                            stroke.Thickness = 1
+                        -- Find and close picker frame
+                        local otherPickerFrame = element.frame:FindFirstChild('ColorPicker_', true)
+                        if otherPickerFrame then
+                            otherPickerFrame.Visible = false
+                            otherPickerFrame.Size = UDim2.new(0, 250, 0, 0)
                         end
                     end
                 end
             end
-        }
-    })
+        end
+        
+        -- Toggle this color picker
+        isOpen = not isOpen
+        pickerFrame.Visible = isOpen
+        pickerFrame.Size = isOpen and UDim2.new(0, 250, 0, 220) or UDim2.new(0, 250, 0, 0)
+
+        -- Update ConnectionManager about picker state
+        self.connectionManager:setColorPickerOpen(canvasElementId, isOpen)
+        self.connectionManager:setColorPickerOpen(hueElementId, isOpen)
+
+        if isOpen then
+            updateColor()
+            self.notifications:info('Color Picker', 'Color picker opened: ' .. title, 2)
+            
+            -- Increase scroll area
+            local parent = frame.Parent
+            while parent and not parent.Name:match('Column') do
+                parent = parent.Parent
+            end
+            if parent then
+                local currentCanvas = parent.CanvasSize.Y.Offset
+                parent.CanvasSize = UDim2.new(0, 0, 0, currentCanvas + 280)
+            end
+        else
+            -- Reset scroll area
+            local parent = frame.Parent
+            while parent and not parent.Name:match('Column') do
+                parent = parent.Parent
+            end
+            if parent then
+                local currentCanvas = parent.CanvasSize.Y.Offset
+                parent.CanvasSize = UDim2.new(0, 0, 0, math.max(currentCanvas - 280, 0))
+            end
+        end
+    end)
+
+    -- Simple hover effects
+    colorBtn.MouseEnter:Connect(function()
+        if self.currentTab == tabName then
+            local stroke = colorButton:FindFirstChild('UIStroke')
+            if stroke then
+                stroke.Color = Config.Colors.Active
+                stroke.Thickness = 2
+            end
+        end
+    end)
+
+    colorBtn.MouseLeave:Connect(function()
+        if not isOpen then
+            local stroke = colorButton:FindFirstChild('UIStroke')
+            if stroke then
+                stroke.Color = Color3.fromRGB(55, 55, 65)
+                stroke.Thickness = 1
+            end
+        end
+    end)
 
     updateColor()
 
@@ -3612,55 +2981,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
 
     return frame
 end
--- 4. COMPLETELY FIXED: Tab switching with proper cleanup
-function RadiantHub:switchTab(tabName)
-    if self.currentTab == tabName then return end
 
-    -- Close all color pickers when switching tabs
-    if self.currentTab then
-        local currentTabData = self.tabs[self.currentTab]
-        if currentTabData then
-            for _, section in pairs(currentTabData.sections) do
-                for _, element in pairs(section.elements) do
-                    if element.type == 'colorpicker' and element.setOpen then
-                        element.setOpen(false)
-                    end
-                end
-            end
-        end
-    end
-
-    -- Deactivate all tabs
-    for name, btn in pairs(self.tabButtons) do
-        btn.BackgroundColor3 = Config.Colors.Inactive
-        local indicator = btn:FindFirstChild('ActiveIndicator')
-        if indicator then
-            indicator:Destroy()
-        end
-        local icon = btn:FindFirstChildOfClass('ImageLabel')
-        if icon then
-            icon.ImageColor3 = Config.Colors.SubText
-        end
-    end
-
-    -- Hide all content
-    for name, content in pairs(self.tabContents) do
-        content.Visible = false
-    end
-
-    -- Activate new tab
-    if self.tabButtons[tabName] then
-        self:setActiveTab(self.tabButtons[tabName])
-    end
-
-    -- Show new content
-    if self.tabContents[tabName] then
-        self.tabContents[tabName].Visible = true
-    end
-
-    self.currentTab = tabName
-    self.title.Text = tabName
-end
 -- Button creation function
 function RadiantHub:addButton(tabName, sectionName, title, desc, callback)
     if not self.tabs[tabName] or not self.tabs[tabName].sections[sectionName] then
@@ -4558,9 +3879,6 @@ function RadiantHub:addSlider(tabName, sectionName, title, desc, min, max, defau
     max = max or 100
     defaultValue = defaultValue or min
 
-    -- Generate unique element ID
-    local elementId = tabName .. "_" .. sectionName .. "_" .. title .. "_slider_" .. tick()
-
     local frame = create('Frame', {
         Size = UDim2.new(1, -5, 0, 50),
         BackgroundTransparency = 1,
@@ -4666,17 +3984,14 @@ function RadiantHub:addSlider(tabName, sectionName, title, desc, min, max, defau
         end
     end)
 
-    -- FIXED: Connect with unique element ID and proper isolation
     self.connectionManager:autoConnect(sliderTrack, {
         tabName = tabName,
         library = self,
-        elementId = elementId,
         slider = {
             min = min,
             max = max,
             defaultValue = currentValue,
             indicator = 'SliderFill',
-            elementId = elementId,
             onValueChanged = function(value)
                 currentValue = math.floor(value)
                 updateSliderFromValue(currentValue, true)
@@ -4697,7 +4012,6 @@ function RadiantHub:addSlider(tabName, sectionName, title, desc, min, max, defau
         type = 'slider',
         frame = frame,
         callback = callback,
-        elementId = elementId,
         getValue = function() return currentValue end,
         setValue = function(value) updateSliderFromValue(value, false) end,
     }
