@@ -12,6 +12,7 @@ local Player = Services.Players.LocalPlayer
 -- Connection Manager Class
 -- FIXED CONNECTION MANAGER - Simplified and Working
 -- COMPLETELY FIXED CONNECTION MANAGER - All Interactions Working
+-- COMPLETELY FIXED CONNECTION MANAGER - Proper Mouse Calculations & Dragging
 local ConnectionManager = {}
 ConnectionManager.__index = ConnectionManager
 
@@ -20,6 +21,7 @@ function ConnectionManager.new()
     self.connections = {}
     self.componentData = {}
     self.dragData = {} -- Separate drag data storage
+    self.globalDragActive = false -- Prevent multiple drags
     return self
 end
 
@@ -114,7 +116,7 @@ function ConnectionManager:connectHover(component, hoverConfig, componentId)
     table.insert(self.componentData[componentId].connections, mouseLeave)
 end
 
--- FIXED: Click implementation
+-- FIXED: Click implementation with better event handling
 function ConnectionManager:connectClick(component, clickConfig, componentId)
     local connection
     
@@ -174,24 +176,22 @@ function ConnectionManager:connectClick(component, clickConfig, componentId)
     table.insert(self.componentData[componentId].connections, connection)
 end
 
--- COMPLETELY FIXED: Drag implementation
+-- COMPLETELY FIXED: Drag implementation with proper mouse offset
 function ConnectionManager:connectDrag(component, dragConfig, componentId)
     local UserInputService = game:GetService('UserInputService')
-    local TweenService = game:GetService('TweenService')
     
     local dragData = {
         isDragging = false,
-        dragStart = nil,
-        startPosition = nil,
+        mouseOffset = Vector2.new(0, 0), -- FIXED: Store mouse offset from component corner
         component = component,
         config = dragConfig
     }
     
     self.dragData[componentId] = dragData
     
-    -- Mouse button down - start drag
+    -- FIXED: Mouse button down - calculate proper offset
     local inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
+        if gameProcessed or self.globalDragActive then return end
         
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             local mousePos = UserInputService:GetMouseLocation()
@@ -202,9 +202,14 @@ function ConnectionManager:connectDrag(component, dragConfig, componentId)
             if mousePos.X >= componentPos.X and mousePos.X <= componentPos.X + componentSize.X and
                mousePos.Y >= componentPos.Y and mousePos.Y <= componentPos.Y + componentSize.Y then
                 
+                -- FIXED: Calculate mouse offset from component's top-left corner
+                dragData.mouseOffset = Vector2.new(
+                    mousePos.X - componentPos.X,
+                    mousePos.Y - componentPos.Y
+                )
+                
                 dragData.isDragging = true
-                dragData.dragStart = mousePos
-                dragData.startPosition = component.Position
+                self.globalDragActive = true
                 
                 if dragConfig.onDragStart then
                     dragConfig.onDragStart(component, mousePos)
@@ -213,26 +218,23 @@ function ConnectionManager:connectDrag(component, dragConfig, componentId)
         end
     end)
     
-    -- Mouse move - update drag
+    -- FIXED: Mouse move - use proper offset calculation
     local inputChanged = UserInputService.InputChanged:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseMovement and dragData.isDragging then
             local mousePos = UserInputService:GetMouseLocation()
-            local delta = Vector2.new(
-                mousePos.X - dragData.dragStart.X,
-                mousePos.Y - dragData.dragStart.Y
-            )
+            
+            -- FIXED: Calculate new position using mouse offset
+            local newX = mousePos.X - dragData.mouseOffset.X
+            local newY = mousePos.Y - dragData.mouseOffset.Y
             
             if dragConfig.onDrag then
-                -- Custom drag handler
-                dragConfig.onDrag(component, mousePos, delta)
+                -- Custom drag handler with corrected mouse position
+                local correctedMousePos = Vector2.new(mousePos.X, mousePos.Y)
+                local delta = Vector2.new(newX - component.AbsolutePosition.X, newY - component.AbsolutePosition.Y)
+                dragConfig.onDrag(component, correctedMousePos, delta)
             else
-                -- Default drag behavior - move the component
-                local newPosition = UDim2.new(
-                    dragData.startPosition.X.Scale,
-                    dragData.startPosition.X.Offset + delta.X,
-                    dragData.startPosition.Y.Scale,
-                    dragData.startPosition.Y.Offset + delta.Y
-                )
+                -- FIXED: Default drag behavior with proper positioning
+                local newPosition = UDim2.new(0, newX, 0, newY)
                 
                 -- Apply constraints if specified
                 if dragConfig.constrainToParent and component.Parent then
@@ -243,9 +245,10 @@ function ConnectionManager:connectDrag(component, dragConfig, componentId)
                     local maxX = parentSize.X - componentSize.X
                     local maxY = parentSize.Y - componentSize.Y
                     
-                    newPosition = UDim2.new(
-                        0, math.max(0, math.min(maxX, newPosition.X.Offset)),
-                        0, math.max(0, math.min(maxY, newPosition.Y.Offset))
+                    newPosition = UDim2.new(0, 
+                        math.max(0, math.min(maxX, newX)),
+                        0, 
+                        math.max(0, math.min(maxY, newY))
                     )
                 end
                 
@@ -254,17 +257,15 @@ function ConnectionManager:connectDrag(component, dragConfig, componentId)
         end
     end)
     
-    -- Mouse button up - end drag
+    -- FIXED: Mouse button up - end drag
     local inputEnded = UserInputService.InputEnded:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseButton1 and dragData.isDragging then
             dragData.isDragging = false
+            self.globalDragActive = false
             
             if dragConfig.onDragEnd then
                 dragConfig.onDragEnd(component, UserInputService:GetMouseLocation())
             end
-            
-            dragData.dragStart = nil
-            dragData.startPosition = nil
         end
     end)
     
@@ -273,7 +274,7 @@ function ConnectionManager:connectDrag(component, dragConfig, componentId)
     table.insert(self.componentData[componentId].connections, inputEnded)
 end
 
--- FIXED: Slider implementation
+-- FIXED: Slider implementation with better bounds checking
 function ConnectionManager:connectSlider(component, sliderConfig, componentId)
     local UserInputService = game:GetService('UserInputService')
     
@@ -341,6 +342,29 @@ function ConnectionManager:connectSlider(component, sliderConfig, componentId)
     table.insert(self.componentData[componentId].connections, inputEnded)
 end
 
+-- SPECIAL: Color picker click handler (prevents interference)
+function ConnectionManager:setupColorPickerButton(button, callback)
+    -- Use MouseButton1Down/Up instead of Click to prevent interference
+    local connections = {}
+    
+    local mouseDown = button.MouseButton1Down:Connect(function()
+        if callback then
+            callback()
+        end
+    end)
+    
+    table.insert(connections, mouseDown)
+    
+    -- Store connections for this specific color picker
+    local componentId = tostring(button) .. "_colorpicker_" .. tick()
+    self.componentData[componentId] = {
+        component = button,
+        connections = connections
+    }
+    
+    return self
+end
+
 -- Helper function for easy button setup
 function ConnectionManager:setupButton(button, callback, hoverEffect)
     return self:autoConnect(button, {
@@ -361,16 +385,16 @@ function ConnectionManager:setupButton(button, callback, hoverEffect)
     })
 end
 
--- Helper function for draggable frames
+-- FIXED: Helper function for draggable frames (header dragging)
 function ConnectionManager:setupDraggableFrame(frame, constrainToParent)
     return self:autoConnect(frame, {
         drag = {
             constrainToParent = constrainToParent or false,
             onDragStart = function(component)
-                component.ZIndex = component.ZIndex + 10
+                -- Don't change ZIndex during drag to prevent visual glitches
             end,
             onDragEnd = function(component)
-                component.ZIndex = component.ZIndex - 10
+                -- Restore normal state
             end
         }
     })
@@ -418,8 +442,8 @@ function ConnectionManager:disconnectAll()
     
     self.componentData = {}
     self.dragData = {}
+    self.globalDragActive = false
 end
-
 
 
 -- Library Configuration
@@ -2981,6 +3005,7 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
     return frame
 end
 
+-- FIXED: Color Picker Implementation (replace the existing addColorPicker function)
 function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, callback)
     if not self.tabs[tabName] or not self.tabs[tabName].sections[sectionName] then
         self.notifications:error('Element Error', 'Tab or section not found!', 3)
@@ -3018,7 +3043,10 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     addCorner(colorButton, 8)
     addStroke(colorButton)
 
+    -- FIXED: Each color picker gets unique ID to prevent interference
+    local uniqueId = tostring(colorButton) .. "_" .. tick()
     local pickerFrame = create('Frame', {
+        Name = 'ColorPicker_' .. uniqueId,
         Size = UDim2.new(0, 250, 0, 0),
         Position = UDim2.new(0, -185, 1, 4),
         BackgroundColor3 = Color3.fromRGB(25, 25, 30),
@@ -3033,12 +3061,12 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     local selectedColor = defaultColor or Color3.fromRGB(255, 255, 255)
     local currentHue, currentSat, currentVal = 0, 1, 1
 
-    -- Create picker UI elements (same as before)
+    -- Create picker UI elements
     create('TextLabel', {
         Size = UDim2.new(1, 0, 0, 30),
         Position = UDim2.new(0, 0, 0, 5),
         BackgroundTransparency = 1,
-        Text = 'Color Picker',
+        Text = 'Color Picker - ' .. title, -- Make each picker identifiable
         TextColor3 = Config.Colors.Text,
         TextSize = 14,
         Font = Enum.Font.GothamBold,
@@ -3097,7 +3125,6 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         ZIndex = 31,
         Parent = pickerFrame,
     })
-    addCorner(hueSlider, 6)
 
     local hueGradientFrame = create('Frame', {
         Size = UDim2.new(1, 0, 1, 0),
@@ -3210,80 +3237,57 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         callback(selectedColor)
     end
 
-    -- FIXED: Canvas dragging with proper position calculation
-    local canvasBtn = create('TextButton', {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text = '',
-        ZIndex = 34,
-        Parent = valFrame,
-    })
-
-    local function updateCanvasSelector(position)
-        local framePos = colorCanvas.AbsolutePosition
-        local frameSize = colorCanvas.AbsoluteSize
-
-        local relativeX = math.max(0, math.min(1, (position.X - framePos.X) / frameSize.X))
-        local relativeY = math.max(0, math.min(1, (position.Y - framePos.Y) / frameSize.Y))
-
-        currentSat = relativeX
-        currentVal = 1 - relativeY
-
-        canvasSelector.Position = UDim2.new(relativeX, -4, relativeY, -4)
-        updateColor()
-    end
-
-    -- FIXED: Use ConnectionManager for canvas dragging
-    self.connectionManager:autoConnect(canvasBtn, {
+    -- FIXED: Canvas dragging with proper ConnectionManager
+    self.connectionManager:autoConnect(valFrame, {
         drag = {
             constrainToParent = false,
             onDragStart = function(component, position)
-                updateCanvasSelector(position)
+                local framePos = colorCanvas.AbsolutePosition
+                local frameSize = colorCanvas.AbsoluteSize
+                local relativeX = math.max(0, math.min(1, (position.X - framePos.X) / frameSize.X))
+                local relativeY = math.max(0, math.min(1, (position.Y - framePos.Y) / frameSize.Y))
+                currentSat = relativeX
+                currentVal = 1 - relativeY
+                canvasSelector.Position = UDim2.new(relativeX, -4, relativeY, -4)
+                updateColor()
             end,
             onDrag = function(component, position, delta)
-                updateCanvasSelector(position)
-            end,
-            onDragEnd = function(component, position)
-                updateCanvasSelector(position)
+                local framePos = colorCanvas.AbsolutePosition
+                local frameSize = colorCanvas.AbsoluteSize
+                local relativeX = math.max(0, math.min(1, (position.X - framePos.X) / frameSize.X))
+                local relativeY = math.max(0, math.min(1, (position.Y - framePos.Y) / frameSize.Y))
+                currentSat = relativeX
+                currentVal = 1 - relativeY
+                canvasSelector.Position = UDim2.new(relativeX, -4, relativeY, -4)
+                updateColor()
             end
         }
     })
 
-    local hueBtn = create('TextButton', {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text = '',
-        ZIndex = 34,
-        Parent = hueGradientFrame,
-    })
-
-    local function updateHueSelector(position)
-        local framePos = hueSlider.AbsolutePosition
-        local frameSize = hueSlider.AbsoluteSize
-
-        local relativeY = math.max(0, math.min(1, (position.Y - framePos.Y) / frameSize.Y))
-        currentHue = relativeY
-
-        hueSelector.Position = UDim2.new(0, -2, relativeY, -2)
-        updateColor()
-    end
-
-    -- FIXED: Use ConnectionManager for hue dragging
-    self.connectionManager:autoConnect(hueBtn, {
+    -- FIXED: Hue dragging with proper ConnectionManager
+    self.connectionManager:autoConnect(hueGradientFrame, {
         drag = {
             constrainToParent = false,
             onDragStart = function(component, position)
-                updateHueSelector(position)
+                local framePos = hueSlider.AbsolutePosition
+                local frameSize = hueSlider.AbsoluteSize
+                local relativeY = math.max(0, math.min(1, (position.Y - framePos.Y) / frameSize.Y))
+                currentHue = relativeY
+                hueSelector.Position = UDim2.new(0, -2, relativeY, -2)
+                updateColor()
             end,
             onDrag = function(component, position, delta)
-                updateHueSelector(position)
-            end,
-            onDragEnd = function(component, position)
-                updateHueSelector(position)
+                local framePos = hueSlider.AbsolutePosition
+                local frameSize = hueSlider.AbsoluteSize
+                local relativeY = math.max(0, math.min(1, (position.Y - framePos.Y) / frameSize.Y))
+                currentHue = relativeY
+                hueSelector.Position = UDim2.new(0, -2, relativeY, -2)
+                updateColor()
             end
         }
     })
 
+    -- FIXED: Color button with unique handling to prevent interference
     local colorBtn = create('TextButton', {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
@@ -3291,66 +3295,36 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         Parent = colorButton,
     })
 
-    -- FIXED: Color button toggle with proper scroll management
-    self.connectionManager:autoConnect(colorBtn, {
-        click = {
-            callback = function()
-                isOpen = not isOpen
-                pickerFrame.Visible = isOpen
-                pickerFrame.Size = isOpen and UDim2.new(0, 250, 0, 220) or UDim2.new(0, 250, 0, 0)
+    -- FIXED: Use direct connection to prevent color picker interference
+    colorBtn.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        pickerFrame.Visible = isOpen
+        pickerFrame.Size = isOpen and UDim2.new(0, 250, 0, 220) or UDim2.new(0, 250, 0, 0)
 
-                if isOpen then
-                    updateColor()
-                    self.notifications:info('Color Picker', 'Color picker opened!', 2)
-                    -- Increase scroll area when color picker opens
-                    local parent = frame.Parent
-                    while parent and not parent.Name:match('Column') do
-                        parent = parent.Parent
-                    end
-                    if parent then
-                        local currentCanvas = parent.CanvasSize.Y.Offset
-                        parent.CanvasSize = UDim2.new(0, 0, 0, currentCanvas + 280)
-                    end
-                else
-                    -- Reset scroll area when color picker closes
-                    local parent = frame.Parent
-                    while parent and not parent.Name:match('Column') do
-                        parent = parent.Parent
-                    end
-                    if parent then
-                        local currentCanvas = parent.CanvasSize.Y.Offset
-                        parent.CanvasSize = UDim2.new(0, 0, 0, math.max(currentCanvas - 280, 0))
-                    end
-                end
-            end,
-            pressEffect = {
-                scale = 0.95,
-                duration = 0.1
-            }
-        },
-        hover = {
-            properties = {
-                BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-            },
-            tween = {
-                duration = 0.2
-            },
-            callback = function(isHovering, component)
-                if not isOpen then
-                    local stroke = colorButton:FindFirstChild('UIStroke')
-                    if stroke then
-                        if isHovering then
-                            stroke.Color = Config.Colors.Active
-                            stroke.Thickness = 2
-                        else
-                            stroke.Color = Color3.fromRGB(55, 55, 65)
-                            stroke.Thickness = 1
-                        end
-                    end
-                end
+        if isOpen then
+            updateColor()
+            self.notifications:info('Color Picker', 'Color picker opened: ' .. title, 2)
+        end
+    end)
+
+    -- Simple hover effect without ConnectionManager to prevent conflicts
+    colorBtn.MouseEnter:Connect(function()
+        local stroke = colorButton:FindFirstChild('UIStroke')
+        if stroke then
+            stroke.Color = Config.Colors.Active
+            stroke.Thickness = 2
+        end
+    end)
+
+    colorBtn.MouseLeave:Connect(function()
+        if not isOpen then
+            local stroke = colorButton:FindFirstChild('UIStroke')
+            if stroke then
+                stroke.Color = Color3.fromRGB(55, 55, 65)
+                stroke.Thickness = 1
             end
-        }
-    })
+        end
+    end)
 
     updateColor()
 
