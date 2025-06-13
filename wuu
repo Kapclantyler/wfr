@@ -1967,13 +1967,13 @@ function RadiantHub:addSlider(tabName, sectionName, title, desc, min, max, defau
     callback = callback or function() end
 
     local frame = create('Frame', {
-        Size = UDim2.new(1, -2, 0, 50), -- Weniger rechter Abstand
+        Size = UDim2.new(1, -2, 0, 50),
         BackgroundTransparency = 1,
         Parent = elementsContainer,
     })
 
     create('TextLabel', {
-        Size = UDim2.new(1, -65, 0, 16), -- Mehr Platz für Text (von -75 zu -65)
+        Size = UDim2.new(1, -65, 0, 16),
         Position = UDim2.new(0, 0, 0, 4),
         BackgroundTransparency = 1,
         Text = title,
@@ -1984,145 +1984,89 @@ function RadiantHub:addSlider(tabName, sectionName, title, desc, min, max, defau
         Parent = frame,
     })
 
-    create('TextLabel', {
-        Size = UDim2.new(1, -65, 0, 12), -- Mehr Platz für Text (von -75 zu -65)
-        Position = UDim2.new(0, 0, 0, 18),
-        BackgroundTransparency = 1,
-        Text = desc,
-        TextColor3 = Config.Colors.SubText,
-        TextSize = 11,
-        Font = Enum.Font.Gotham,
-        TextXAlignment = Enum.TextXAlignment.Left,
+    local switch = create('Frame', {
+        Size = UDim2.new(0, 45, 0, 20),
+        Position = UDim2.new(1, -47, 0.5, -10),
+        BackgroundColor3 = defaultState and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
         Parent = frame,
     })
+    addCorner(switch, 10)
 
-    local valueBox = create('TextBox', {
-        Size = UDim2.new(0, 60, 0, 20), -- Kleinere ValueBox (von 70 zu 60)
-        Position = UDim2.new(1, -62, 0, 2), -- Näher zum Rand (von -75 zu -62)
-        BackgroundColor3 = Color3.fromRGB(35, 35, 40),
-        Text = tostring(defaultValue),
-        TextColor3 = Config.Colors.Text,
-        TextSize = 12,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Center,
-        ClearTextOnFocus = false,
-        Parent = frame,
+    local knob = create('Frame', {
+        Size = UDim2.new(0, 16, 0, 16),
+        Position = defaultState and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
+        BackgroundColor3 = Config.Colors.Text,
+        Parent = switch,
     })
-    addCorner(valueBox, 6)
-    addStroke(valueBox)
+    addCorner(knob, 8)
 
-    local sliderTrack = create('Frame', {
-        Size = UDim2.new(1, -72, 0, 6), -- Angepasst für kleinere ValueBox (von -85 zu -72)
-        Position = UDim2.new(0, 0, 0, 37),
-        BackgroundColor3 = Color3.fromRGB(45, 45, 55),
-        BorderSizePixel = 0,
-        Parent = frame,
-    })
-    addCorner(sliderTrack, 3)
-
-    local sliderFill = create('Frame', {
-        Name = 'SliderFill', -- ADD THIS NAME
-        Size = UDim2.new((defaultValue - min) / (max - min), 0, 1, 0),
-        Position = UDim2.new(0, 0, 0, 0),
-        BackgroundColor3 = Config.Colors.Active,
-        BorderSizePixel = 0,
-        Parent = sliderTrack,
-    })
-    addCorner(sliderFill, 3)
-
-    local sliderButton = create('TextButton', {
-        Size = UDim2.new(1, 20, 1, 20),
-        Position = UDim2.new(0, -10, 0, -10),
+    local btn = create('TextButton', {
+        Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         Text = '',
-        Parent = sliderTrack,
+        Parent = frame,
     })
 
-    local currentValue = defaultValue
-    local isDragging = false
+    -- FIXED: Use local variable and proper scoping
+    local isToggled = defaultState
 
-    local function updateSliderFromValue(value, triggerCallback)
-        value = math.max(min, math.min(max, value))
-        currentValue = value
-        local normalizedPos = (currentValue - min) / (max - min)
+    -- FIXED: Proper ConnectionManager integration
+    self.connectionManager:autoConnect(btn, {
+        click = {
+            callback = function()
+                -- FIXED: Toggle the local variable, not defaultState
+                isToggled = not isToggled
 
-        sliderFill.Size = UDim2.new(normalizedPos, 0, 1, 0)
-        valueBox.Text = tostring(currentValue)
+                -- FIXED: Proper tween animations
+                tween(switch, 0.2, {
+                    BackgroundColor3 = isToggled and Config.Colors.Active or Color3.fromRGB(50, 50, 55),
+                }):Play()
 
-        if triggerCallback then
-            callback(currentValue)
-        end
-    end
+                tween(knob, 0.2, {
+                    Position = isToggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8),
+                }):Play()
 
-    local function updateSlider(mouseX)
-        local trackPos = sliderTrack.AbsolutePosition.X
-        local trackSize = sliderTrack.AbsoluteSize.X
-        local relativeX = math.max(0, math.min(1, (mouseX - trackPos) / trackSize))
+                -- FIXED: Call callback with proper value
+                callback(isToggled)
+                
+                -- Special handling for watermark toggle in settings
+                if tabName == 'Settings' and title == 'Show Watermark' then
+                    if self.watermark then
+                        self.watermark:setVisible(isToggled)
+                    end
+                end
 
-        local newValue = math.floor(min + (max - min) * relativeX)
-        updateSliderFromValue(newValue, false)
-    end
-
-    valueBox.FocusLost:Connect(function()
-        local inputValue = tonumber(valueBox.Text)
-        if inputValue then
-            updateSliderFromValue(inputValue, true)
-            self.notifications:info('Slider Updated', title .. ' set to: ' .. currentValue, 2)
-        else
-            valueBox.Text = tostring(currentValue)
-        end
-        
-        -- Reset styling
-        valueBox.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-        local stroke = valueBox:FindFirstChild('UIStroke')
-        if stroke then
-            stroke.Color = Color3.fromRGB(55, 55, 65)
-            stroke.Thickness = 1
-        end
-    end)
-
-    valueBox.Focused:Connect(function()
-        valueBox.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-        local stroke = valueBox:FindFirstChild('UIStroke')
-        if stroke then
-            stroke.Color = Config.Colors.Active
-            stroke.Thickness = 2
-        end
-    end)
-
-    -- AUTO CONNECTION MANAGER FOR SLIDER - REPLACES MANUAL DRAG LOGIC
-    self.connectionManager:autoConnect(sliderTrack, {
-        slider = {
-            min = min,
-            max = max,
-            defaultValue = currentValue,
-            indicator = 'SliderFill',
-            onValueChanged = function(value)
-                currentValue = math.floor(value)
-                updateSliderFromValue(currentValue, true)
-                self.notifications:info('Slider Updated', title .. ' set to: ' .. currentValue, 2)
-            end
+                local status = isToggled and 'Enabled' or 'Disabled'
+                self.notifications:info(title .. ' ' .. status, desc, 2)
+            end,
+            pressEffect = {
+                scale = 0.98,
+                duration = 0.1
+            }
         },
         hover = {
             properties = {
-                BackgroundColor3 = Color3.fromRGB(55, 55, 65)
+                BackgroundTransparency = 0.95
             },
             tween = {
-                duration = 0.2
+                duration = 0.15
             }
         }
     })
 
     -- Store element reference
     self.tabs[tabName].sections[sectionName].elements[title] = {
-        type = 'slider',
+        type = 'toggle',
         frame = frame,
-        callback = callback, -- CALLBACK HINZUGEFÜGT
-        getValue = function() return currentValue end,
-        setValue = function(value) updateSliderFromValue(value, false) end,
+        callback = callback,
+        getValue = function() return isToggled end,
+        setValue = function(value) 
+            isToggled = value
+            switch.BackgroundColor3 = isToggled and Config.Colors.Active or Color3.fromRGB(50, 50, 55)
+            knob.Position = isToggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+        end,
     }
 
-    -- Update section size
     task.wait()
     self.tabs[tabName].sections[sectionName].updateSize()
 
@@ -2473,6 +2417,7 @@ function RadiantHub:toggleVisibility()
 end
 
 function RadiantHub:setupEvents()
+    -- FIXED: Proper header dragging with ConnectionManager
     self.connectionManager:autoConnect(self.header, {
         drag = {
             constrainToParent = false,
@@ -2480,11 +2425,15 @@ function RadiantHub:setupEvents()
                 self.isDragging = true
             end,
             onDrag = function(component, position, delta)
+                -- FIXED: Calculate new position properly
+                local newPosX = self.main.Position.X.Offset + delta.X
+                local newPosY = self.main.Position.Y.Offset + delta.Y
+                
                 self.main.Position = UDim2.new(
                     self.main.Position.X.Scale,
-                    self.main.Position.X.Offset + delta.X,
+                    newPosX,
                     self.main.Position.Y.Scale,
-                    self.main.Position.Y.Offset + delta.Y
+                    newPosY
                 )
             end,
             onDragEnd = function(component, position)
@@ -2493,7 +2442,7 @@ function RadiantHub:setupEvents()
         }
     })
 
-    -- AUTO CONNECTION MANAGER FOR CLOSE BUTTON
+    -- FIXED: Close button with proper ConnectionManager
     self.connectionManager:setupButton(self.closeBtn, function()
         self:destroy()
     end, {
@@ -2504,7 +2453,23 @@ end
 
 -- Cleanup Function
 function RadiantHub:destroy()
-    -- CLEAN UP ALL AUTO CONNECTIONS
+    -- FIXED: Clean up all element connections properly
+    for tabName, tab in pairs(self.tabs) do
+        if tab.sections then
+            for sectionName, section in pairs(tab.sections) do
+                if section.elements then
+                    for elementName, element in pairs(section.elements) do
+                        -- Clean up any element-specific connections
+                        if element.cleanup then
+                            element.cleanup()
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- Clean up all ConnectionManager connections
     if self.connectionManager then
         self.connectionManager:disconnectAll()
     end
@@ -2534,13 +2499,13 @@ function RadiantHub:addKeybind(tabName, sectionName, title, defaultKey, callback
     callback = callback or function() end
 
     local frame = create('Frame', {
-        Size = UDim2.new(1, -2, 0, 32), -- Weniger rechter Abstand
+        Size = UDim2.new(1, -2, 0, 32),
         BackgroundTransparency = 1,
         Parent = elementsContainer,
     })
 
     create('TextLabel', {
-        Size = UDim2.new(1, -65, 0, 16), -- Mehr Platz für Text (von -75 zu -65)
+        Size = UDim2.new(1, -65, 0, 16),
         Position = UDim2.new(0, 0, 0, 4),
         BackgroundTransparency = 1,
         Text = title,
@@ -2552,8 +2517,8 @@ function RadiantHub:addKeybind(tabName, sectionName, title, defaultKey, callback
     })
 
     local keyBtn = create('TextButton', {
-        Size = UDim2.new(0, 62, 0, 24), -- Kleinerer Button (von 70 zu 62)
-        Position = UDim2.new(1, -64, 0.5, -12), -- Näher zum Rand (von -75 zu -64)
+        Size = UDim2.new(0, 62, 0, 24),
+        Position = UDim2.new(1, -64, 0.5, -12),
         BackgroundColor3 = Color3.fromRGB(35, 35, 40),
         Text = defaultKey,
         TextColor3 = Config.Colors.Text,
@@ -2566,8 +2531,9 @@ function RadiantHub:addKeybind(tabName, sectionName, title, defaultKey, callback
 
     local listening = false
     local currentKey = defaultKey
+    local inputConnection = nil -- FIXED: Track connection for cleanup
 
-    -- UPDATED: Replace manual connection with ConnectionManager
+    -- FIXED: Proper keybind detection with connection management
     self.connectionManager:autoConnect(keyBtn, {
         click = {
             callback = function()
@@ -2579,32 +2545,34 @@ function RadiantHub:addKeybind(tabName, sectionName, title, defaultKey, callback
                 keyBtn.Text = '...'
                 keyBtn.BackgroundColor3 = Config.Colors.Active
 
-                local connection
-                connection = Services.UserInputService.InputBegan:Connect(function(input)
+                -- FIXED: Properly manage input connection
+                if inputConnection then
+                    inputConnection:Disconnect()
+                end
+
+                inputConnection = Services.UserInputService.InputBegan:Connect(function(input)
                     local newKey = nil
                     local keyName = nil
                     
-                    -- ERWEITERT: Support für Keyboard UND Mouse Inputs
                     if input.UserInputType == Enum.UserInputType.Keyboard then
                         newKey = input.KeyCode
                         keyName = input.KeyCode.Name
                     elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
                         newKey = Enum.UserInputType.MouseButton1
-                        keyName = "LMB" -- Left Mouse Button
+                        keyName = "LMB"
                     elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
-                        newKey = Enum.UserInputType.MouseButton2  
-                        keyName = "RMB" -- Right Mouse Button
+                        newKey = Enum.UserInputType.MouseButton2
+                        keyName = "RMB"
                     elseif input.UserInputType == Enum.UserInputType.MouseButton3 then
                         newKey = Enum.UserInputType.MouseButton3
-                        keyName = "MMB" -- Middle Mouse Button
+                        keyName = "MMB"
                     else
-                        -- Prüfe auch auf Mausseiten-Tasten über KeyCode
                         if input.KeyCode == Enum.KeyCode.ButtonX1 then
                             newKey = Enum.KeyCode.ButtonX1
-                            keyName = "X1" -- Side Button 1
+                            keyName = "X1"
                         elseif input.KeyCode == Enum.KeyCode.ButtonX2 then
                             newKey = Enum.KeyCode.ButtonX2
-                            keyName = "X2" -- Side Button 2
+                            keyName = "X2"
                         end
                     end
                     
@@ -2614,7 +2582,6 @@ function RadiantHub:addKeybind(tabName, sectionName, title, defaultKey, callback
                         listening = false
                         currentKey = keyName
 
-                        -- Special handling for menu toggle key in settings
                         if tabName == 'Settings' and title == 'Menu Toggle Key' then
                             if input.UserInputType == Enum.UserInputType.Keyboard then
                                 self.menuToggleKey = input.KeyCode
@@ -2628,9 +2595,10 @@ function RadiantHub:addKeybind(tabName, sectionName, title, defaultKey, callback
                         task.wait(0.1)
                         self.isSettingKeybind = false
 
-                        if connection then
-                            connection:Disconnect()
-                            connection = nil
+                        -- FIXED: Clean up connection
+                        if inputConnection then
+                            inputConnection:Disconnect()
+                            inputConnection = nil
                         end
                     end
                 end)
@@ -2654,15 +2622,13 @@ function RadiantHub:addKeybind(tabName, sectionName, title, defaultKey, callback
     self.tabs[tabName].sections[sectionName].elements[title] = {
         type = 'keybind',
         frame = frame,
-        callback = callback, -- CALLBACK HINZUGEFÜGT
+        callback = callback,
         getValue = function() return currentKey end,
         setValue = function(key) 
-            -- Handle both string and EnumItem input, plus mouse buttons
             if typeof(key) == "EnumItem" then
                 currentKey = key.Name
                 keyBtn.Text = key.Name
             elseif type(key) == "string" and (key == 'RMB' or key == 'LMB' or key == 'MMB' or key == 'X1' or key == 'X2') then
-                -- Mouse buttons - keep as string
                 currentKey = key
                 keyBtn.Text = key
             else
@@ -2670,9 +2636,15 @@ function RadiantHub:addKeybind(tabName, sectionName, title, defaultKey, callback
                 keyBtn.Text = tostring(key)
             end
         end,
+        -- FIXED: Add cleanup function
+        cleanup = function()
+            if inputConnection then
+                inputConnection:Disconnect()
+                inputConnection = nil
+            end
+        end
     }
 
-    -- Update section size
     task.wait()
     self.tabs[tabName].sections[sectionName].updateSize()
 
@@ -2689,13 +2661,13 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
     callback = callback or function() end
 
     local frame = create('Frame', {
-        Size = UDim2.new(1, -2, 0, 32), -- Weniger rechter Abstand
+        Size = UDim2.new(1, -2, 0, 32),
         BackgroundTransparency = 1,
         Parent = elementsContainer,
     })
 
     create('TextLabel', {
-        Size = UDim2.new(1, -95, 0, 16), -- Mehr Platz für Text (von -115 zu -95)
+        Size = UDim2.new(1, -95, 0, 16),
         Position = UDim2.new(0, 0, 0, 4),
         BackgroundTransparency = 1,
         Text = title,
@@ -2707,8 +2679,8 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
     })
 
     local dropdown = create('Frame', {
-        Size = UDim2.new(0, 92, 0, 26), -- Kleineres Dropdown (von 110 zu 92)
-        Position = UDim2.new(1, -94, 0.5, -13), -- Näher zum Rand (von -115 zu -94)
+        Size = UDim2.new(0, 92, 0, 26),
+        Position = UDim2.new(1, -94, 0.5, -13),
         BackgroundColor3 = Color3.fromRGB(35, 35, 40),
         Parent = frame,
     })
@@ -2780,11 +2752,21 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
     local isOpen = false
     local filteredOptions = options
 
+    -- FIXED: Keep track of option button connections for cleanup
+    local optionConnections = {}
+
     local function updateOptions()
-        -- UPDATED: Clean up old connections and buttons
+        -- FIXED: Properly clean up old connections and buttons
+        for connection in pairs(optionConnections) do
+            if connection and connection.Connected then
+                connection:Disconnect()
+            end
+        end
+        optionConnections = {}
+
         for _, child in ipairs(optionsFrame:GetChildren()) do
             if child:IsA('TextButton') then
-                -- Disconnect old connections before destroying
+                -- Disconnect from ConnectionManager
                 if self.connectionManager then
                     self.connectionManager:disconnectComponent(child)
                 end
@@ -2826,7 +2808,7 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
                 Parent = optBtn,
             })
 
-            -- UPDATED: Replace manual connection with ConnectionManager
+            -- FIXED: Use ConnectionManager for option buttons
             self.connectionManager:autoConnect(optBtn, {
                 click = {
                     callback = function()
@@ -2853,7 +2835,6 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
                     } or nil,
                     tween = { duration = 0.15 },
                     callback = function(isHovering, component)
-                        -- Only apply hover effect if this option is not currently selected
                         if option ~= selected.Text then
                             if isHovering then
                                 optBtn.BackgroundTransparency = 0
@@ -2870,7 +2851,8 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
         optionsFrame.Size = UDim2.new(1, 0, 0, 36 + #filteredOptions * 28 + 8)
     end
 
-    searchBox:GetPropertyChangedSignal('Text'):Connect(function()
+    -- FIXED: Search functionality
+    local searchConnection = searchBox:GetPropertyChangedSignal('Text'):Connect(function()
         local searchText = searchBox.Text:lower()
         filteredOptions = {}
         for _, option in ipairs(options) do
@@ -2890,7 +2872,7 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
         Parent = dropdown,
     })
 
-    -- ALREADY UPDATED: Arrow button with ConnectionManager
+    -- FIXED: Arrow button with proper ConnectionManager
     self.connectionManager:autoConnect(arrowBtn, {
         click = {
             callback = function()
@@ -2938,7 +2920,6 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
                 duration = 0.2 
             },
             callback = function(isHovering, component)
-                -- Only apply hover effect when dropdown is closed
                 if not isOpen then
                     if isHovering then
                         dropdown.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
@@ -2962,9 +2943,19 @@ function RadiantHub:addDropdown(tabName, sectionName, title, options, callback)
                 currentSelection = value
             end
         end,
+        -- FIXED: Add cleanup function
+        cleanup = function()
+            if searchConnection then
+                searchConnection:Disconnect()
+            end
+            for connection in pairs(optionConnections) do
+                if connection and connection.Connected then
+                    connection:Disconnect()
+                end
+            end
+        end
     }
 
-    -- Update section size
     task.wait()
     self.tabs[tabName].sections[sectionName].updateSize()
 
@@ -3103,10 +3094,9 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
     end
 
     local function updateOptions()
-        -- Clean up old connections and buttons
+        -- FIXED: Clean up old connections and buttons properly
         for _, child in ipairs(optionsFrame:GetChildren()) do
             if child:IsA('TextButton') then
-                -- Disconnect old connections before destroying
                 if self.connectionManager then
                     self.connectionManager:disconnectComponent(child)
                 end
@@ -3115,7 +3105,6 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
         end
 
         for i, option in ipairs(filteredOptions) do
-            -- Check if this option is currently selected
             local isSelected = false
             for _, sel in ipairs(selectedOptions) do
                 if sel == option then
@@ -3157,11 +3146,10 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
                 Parent = optBtn,
             })
 
-            -- UPDATED: Multi-select logic with ConnectionManager
+            -- FIXED: Multi-select logic with ConnectionManager
             self.connectionManager:autoConnect(optBtn, {
                 click = {
                     callback = function()
-                        -- Multi-select logic: toggle selection
                         local wasSelected = false
                         for j, sel in ipairs(selectedOptions) do
                             if sel == option then
@@ -3194,7 +3182,6 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
                         duration = 0.15
                     },
                     callback = function(isHovering, component)
-                        -- Check current selection state
                         local isCurrentlySelected = false
                         for _, sel in ipairs(selectedOptions) do
                             if sel == option then
@@ -3219,7 +3206,7 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
         optionsFrame.Size = UDim2.new(1, 0, 0, 36 + #filteredOptions * 28 + 8)
     end
 
-    searchBox:GetPropertyChangedSignal('Text'):Connect(function()
+    local searchConnection = searchBox:GetPropertyChangedSignal('Text'):Connect(function()
         local searchText = searchBox.Text:lower()
         filteredOptions = {}
         for _, option in ipairs(options) do
@@ -3239,7 +3226,7 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
         Parent = dropdown,
     })
 
-    -- UPDATED: Replace manual connection with ConnectionManager
+    -- FIXED: Use ConnectionManager for arrow button
     self.connectionManager:autoConnect(arrowBtn, {
         click = {
             callback = function()
@@ -3251,7 +3238,6 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
                     searchBox.Text = ''
                     updateOptions()
                     
-                    -- Increase scroll area when dropdown opens
                     local parent = frame.Parent
                     while parent and not parent.Name:match('Column') do
                         parent = parent.Parent
@@ -3261,7 +3247,6 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
                         parent.CanvasSize = UDim2.new(0, 0, 0, currentCanvas + 250)
                     end
                 else
-                    -- Reset scroll area when dropdown closes
                     local parent = frame.Parent
                     while parent and not parent.Name:match('Column') do
                         parent = parent.Parent
@@ -3309,9 +3294,13 @@ function RadiantHub:addMultiDropdown(tabName, sectionName, title, options, callb
             updateSelectedText()
             updateOptions()
         end,
+        cleanup = function()
+            if searchConnection then
+                searchConnection:Disconnect()
+            end
+        end
     }
 
-    -- Update section size
     task.wait()
     self.tabs[tabName].sections[sectionName].updateSize()
 
@@ -3329,13 +3318,13 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     callback = callback or function() end
 
     local frame = create('Frame', {
-        Size = UDim2.new(1, -2, 0, 32), -- Weniger rechter Abstand
+        Size = UDim2.new(1, -2, 0, 32),
         BackgroundTransparency = 1,
         Parent = elementsContainer,
     })
 
     create('TextLabel', {
-        Size = UDim2.new(1, -60, 0, 16), -- Mehr Platz für Text (von -75 zu -60)
+        Size = UDim2.new(1, -60, 0, 16),
         Position = UDim2.new(0, 0, 0, 4),
         BackgroundTransparency = 1,
         Text = title,
@@ -3347,8 +3336,8 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     })
 
     local colorButton = create('Frame', {
-        Size = UDim2.new(0, 55, 0, 26), -- Kleinerer Button (von 60 zu 55)
-        Position = UDim2.new(1, -57, 0.5, -13), -- Näher zum Rand (von -65 zu -57)
+        Size = UDim2.new(0, 55, 0, 26),
+        Position = UDim2.new(1, -57, 0.5, -13),
         BackgroundColor3 = defaultColor or Color3.fromRGB(255, 255, 255),
         Parent = frame,
     })
@@ -3370,6 +3359,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     local selectedColor = defaultColor or Color3.fromRGB(255, 255, 255)
     local currentHue, currentSat, currentVal = 0, 1, 1
 
+    -- Create picker UI elements (same as before)
     create('TextLabel', {
         Size = UDim2.new(1, 0, 0, 30),
         Position = UDim2.new(0, 0, 0, 5),
@@ -3546,6 +3536,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         callback(selectedColor)
     end
 
+    -- FIXED: Canvas dragging with proper position calculation
     local canvasBtn = create('TextButton', {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
@@ -3557,10 +3548,9 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     local function updateCanvasSelector(position)
         local framePos = colorCanvas.AbsolutePosition
         local frameSize = colorCanvas.AbsoluteSize
-        local adjustedY = position.Y - 50
 
         local relativeX = math.max(0, math.min(1, (position.X - framePos.X) / frameSize.X))
-        local relativeY = math.max(0, math.min(1, (adjustedY - framePos.Y) / frameSize.Y))
+        local relativeY = math.max(0, math.min(1, (position.Y - framePos.Y) / frameSize.Y))
 
         currentSat = relativeX
         currentVal = 1 - relativeY
@@ -3569,7 +3559,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         updateColor()
     end
 
-    -- UPDATED: Replace manual canvas drag with ConnectionManager
+    -- FIXED: Use ConnectionManager for canvas dragging
     self.connectionManager:autoConnect(canvasBtn, {
         drag = {
             constrainToParent = false,
@@ -3596,16 +3586,15 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
     local function updateHueSelector(position)
         local framePos = hueSlider.AbsolutePosition
         local frameSize = hueSlider.AbsoluteSize
-        local adjustedY = position.Y - 50
 
-        local relativeY = math.max(0, math.min(1, (adjustedY - framePos.Y) / frameSize.Y))
+        local relativeY = math.max(0, math.min(1, (position.Y - framePos.Y) / frameSize.Y))
         currentHue = relativeY
 
         hueSelector.Position = UDim2.new(0, -2, relativeY, -2)
         updateColor()
     end
 
-    -- UPDATED: Replace manual hue drag with ConnectionManager
+    -- FIXED: Use ConnectionManager for hue dragging
     self.connectionManager:autoConnect(hueBtn, {
         drag = {
             constrainToParent = false,
@@ -3628,7 +3617,7 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         Parent = colorButton,
     })
 
-    -- UPDATED: Replace manual color button connections with ConnectionManager
+    -- FIXED: Color button toggle with proper scroll management
     self.connectionManager:autoConnect(colorBtn, {
         click = {
             callback = function()
@@ -3706,7 +3695,6 @@ function RadiantHub:addColorPicker(tabName, sectionName, title, defaultColor, ca
         end,
     }
 
-    -- Update section size
     task.wait()
     self.tabs[tabName].sections[sectionName].updateSize()
 
@@ -3725,7 +3713,7 @@ function RadiantHub:addButton(tabName, sectionName, title, desc, callback)
     callback = callback or function() end
 
     local frame = create('Frame', {
-        Size = UDim2.new(1, -2, 0, 36), -- Weniger rechter Abstand
+        Size = UDim2.new(1, -2, 0, 36),
         BackgroundTransparency = 1,
         Parent = elementsContainer,
     })
@@ -3763,7 +3751,7 @@ function RadiantHub:addButton(tabName, sectionName, title, desc, callback)
         Parent = button,
     })
 
-    -- AUTO CONNECTION MANAGER FOR BUTTON - REPLACES MANUAL CONNECTIONS
+    -- FIXED: Use ConnectionManager for consistent behavior
     self.connectionManager:setupButton(button, function()
         callback()
         self.notifications:success('Button Clicked', title, 2)
@@ -3776,12 +3764,11 @@ function RadiantHub:addButton(tabName, sectionName, title, desc, callback)
     self.tabs[tabName].sections[sectionName].elements[title] = {
         type = 'button',
         frame = frame,
-        callback = callback, -- CALLBACK HINZUGEFÜGT
+        callback = callback,
         getValue = function() return true end,
         setValue = function() end,
     }
 
-    -- Update section size
     task.wait()
     self.tabs[tabName].sections[sectionName].updateSize()
 
@@ -4598,6 +4585,135 @@ function RadiantHub:createConfigToggle(parent, title, desc, defaultState, pos, c
     })
 
     return frame
+end,
+        Parent = frame,
+    })
+
+    create('TextLabel', {
+        Size = UDim2.new(1, -65, 0, 12),
+        Position = UDim2.new(0, 0, 0, 18),
+        BackgroundTransparency = 1,
+        Text = desc,
+        TextColor3 = Config.Colors.SubText,
+        TextSize = 11,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = frame,
+    })
+
+    local valueBox = create('TextBox', {
+        Size = UDim2.new(0, 60, 0, 20),
+        Position = UDim2.new(1, -62, 0, 2),
+        BackgroundColor3 = Color3.fromRGB(35, 35, 40),
+        Text = tostring(defaultValue),
+        TextColor3 = Config.Colors.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        ClearTextOnFocus = false,
+        Parent = frame,
+    })
+    addCorner(valueBox, 6)
+    addStroke(valueBox)
+
+    local sliderTrack = create('Frame', {
+        Size = UDim2.new(1, -72, 0, 6),
+        Position = UDim2.new(0, 0, 0, 37),
+        BackgroundColor3 = Color3.fromRGB(45, 45, 55),
+        BorderSizePixel = 0,
+        Parent = frame,
+    })
+    addCorner(sliderTrack, 3)
+
+    local sliderFill = create('Frame', {
+        Name = 'SliderFill',
+        Size = UDim2.new((defaultValue - min) / (max - min), 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = Config.Colors.Active,
+        BorderSizePixel = 0,
+        Parent = sliderTrack,
+    })
+    addCorner(sliderFill, 3)
+
+    -- FIXED: Proper slider state management
+    local currentValue = defaultValue
+
+    local function updateSliderFromValue(value, triggerCallback)
+        value = math.max(min, math.min(max, value))
+        currentValue = value
+        local normalizedPos = (currentValue - min) / (max - min)
+
+        sliderFill.Size = UDim2.new(normalizedPos, 0, 1, 0)
+        valueBox.Text = tostring(currentValue)
+
+        if triggerCallback then
+            callback(currentValue)
+        end
+    end
+
+    -- FIXED: TextBox input handling with proper connections
+    valueBox.FocusLost:Connect(function()
+        local inputValue = tonumber(valueBox.Text)
+        if inputValue then
+            updateSliderFromValue(inputValue, true)
+            self.notifications:info('Slider Updated', title .. ' set to: ' .. currentValue, 2)
+        else
+            valueBox.Text = tostring(currentValue)
+        end
+        
+        valueBox.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+        local stroke = valueBox:FindFirstChild('UIStroke')
+        if stroke then
+            stroke.Color = Color3.fromRGB(55, 55, 65)
+            stroke.Thickness = 1
+        end
+    end)
+
+    valueBox.Focused:Connect(function()
+        valueBox.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+        local stroke = valueBox:FindFirstChild('UIStroke')
+        if stroke then
+            stroke.Color = Config.Colors.Active
+            stroke.Thickness = 2
+        end
+    end)
+
+    -- FIXED: Use ConnectionManager for slider dragging
+    self.connectionManager:autoConnect(sliderTrack, {
+        slider = {
+            min = min,
+            max = max,
+            defaultValue = currentValue,
+            indicator = 'SliderFill',
+            onValueChanged = function(value)
+                currentValue = math.floor(value)
+                updateSliderFromValue(currentValue, true)
+                self.notifications:info('Slider Updated', title .. ' set to: ' .. currentValue, 2)
+            end
+        },
+        hover = {
+            properties = {
+                BackgroundColor3 = Color3.fromRGB(55, 55, 65)
+            },
+            tween = {
+                duration = 0.2
+            }
+        }
+    })
+
+    -- Store element reference
+    self.tabs[tabName].sections[sectionName].elements[title] = {
+        type = 'slider',
+        frame = frame,
+        callback = callback,
+        getValue = function() return currentValue end,
+        setValue = function(value) updateSliderFromValue(value, false) end,
+    }
+
+    task.wait()
+    self.tabs[tabName].sections[sectionName].updateSize()
+
+    return frame
 end
 
 -- Clean up function
@@ -4623,5 +4739,5 @@ local Library = {}
 function Library:CreateWindow()
     return RadiantHub.new()
 end
-print("yurrrr")
+print("i hav no dad")
 return Library
