@@ -6,6 +6,13 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
+local settings = {
+    ["Aimbot Color"] = Color3.new(1,1,1)
+}
+
+
+
+
 local player = Players.LocalPlayer
 local playerGui = game:GetService("CoreGui")
 
@@ -243,6 +250,959 @@ local accentCorner = Instance.new("UICorner")
 accentCorner.CornerRadius = UDim.new(0, 3)
 accentCorner.Parent = accentLine
 
+
+-- Notification System
+local notificationContainer = Instance.new("Frame")
+notificationContainer.Name = "NotificationContainer"
+notificationContainer.Size = UDim2.new(0, 300, 0, 200)
+notificationContainer.Position = UDim2.new(1, -310, 1, -210)
+notificationContainer.BackgroundTransparency = 1
+notificationContainer.Parent = watermarkGui
+
+local notificationQueue = {}
+
+local function createNotification(title, message, duration)
+    local notification = Instance.new("Frame")
+    notification.Size = UDim2.new(1, 0, 0, 60)
+    notification.Position = UDim2.new(1, 0, 1, -60 * (#notificationQueue + 1))
+    notification.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    notification.BorderSizePixel = 0
+    notification.Parent = notificationContainer
+    
+    table.insert(notificationQueue, notification)
+    
+    local notifCorner = Instance.new("UICorner")
+    notifCorner.CornerRadius = UDim.new(0, 6)
+    notifCorner.Parent = notification
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -10, 0, 20)
+    titleLabel.Position = UDim2.new(0, 8, 0, 8)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 12
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = notification
+    local messageLabel = Instance.new("TextLabel")
+    messageLabel.Size = UDim2.new(1, -10, 0, 25)
+    messageLabel.Position = UDim2.new(0, 8, 0, 28)
+    messageLabel.BackgroundTransparency = 1
+    messageLabel.Text = message
+    messageLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    messageLabel.TextSize = 10
+    messageLabel.Font = Enum.Font.Gotham
+    messageLabel.TextXAlignment = Enum.TextXAlignment.Left
+    messageLabel.TextWrapped = true
+    messageLabel.Parent = notification
+    local slideIn = TweenService:Create(notification, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0, 0, 1, -60 * #notificationQueue)
+    })
+    slideIn:Play()
+    
+    spawn(function()
+        wait(duration or 3)
+        for i, notif in ipairs(notificationQueue) do
+            if notif == notification then
+                table.remove(notificationQueue, i)
+                break
+            end
+        end
+        
+        local slideOut = TweenService:Create(notification, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Position = UDim2.new(1, 0, notification.Position.Y.Scale, notification.Position.Y.Offset)
+        })
+        slideOut:Play()
+        slideOut.Completed:Connect(function()
+            notification:Destroy()
+        end)
+    end)
+end
+
+
+-- start
+-- Mobile-Compatible Color Picker for RadiantHub
+-- Add this to your existing RadiantHub script after the main UI creation
+-- Mobile-Compatible Color Picker for RadiantHub
+-- Add this to your existing RadiantHub script after the main UI creation
+
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+-- Color picker state
+local colorPickerOpen = false
+local selectedColor = Color3.fromRGB(255, 255, 255)
+local currentColorButton = nil
+
+-- Create color picker overlay (separate ScreenGui for proper layering)
+local colorPickerGui = Instance.new("ScreenGui")
+colorPickerGui.Name = "ColorPickerGui"
+colorPickerGui.ResetOnSpawn = false
+colorPickerGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+colorPickerGui.Parent = playerGui
+
+local colorPickerOverlay = Instance.new("Frame")
+colorPickerOverlay.Name = "ColorPickerOverlay"
+colorPickerOverlay.Size = UDim2.new(1, 0, 1, 0)
+colorPickerOverlay.Position = UDim2.new(0, 0, 0, 0)
+colorPickerOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+colorPickerOverlay.BackgroundTransparency = 0.3
+colorPickerOverlay.BorderSizePixel = 0
+colorPickerOverlay.Visible = false
+colorPickerOverlay.ZIndex = 200
+colorPickerOverlay.Parent = colorPickerGui
+
+-- Main color picker frame
+local colorPickerFrame = Instance.new("Frame")
+colorPickerFrame.Name = "ColorPickerFrame"
+colorPickerFrame.Size = UDim2.new(0, 350, 0, 420)
+colorPickerFrame.Position = UDim2.new(0.5, -175, 0.5, -210)
+colorPickerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+colorPickerFrame.BorderSizePixel = 2
+colorPickerFrame.BorderColor3 = Color3.fromRGB(70, 70, 70)
+colorPickerFrame.ZIndex = 201
+colorPickerFrame.Parent = colorPickerOverlay
+
+local pickerCorner = Instance.new("UICorner")
+pickerCorner.CornerRadius = UDim.new(0, 8)
+pickerCorner.Parent = colorPickerFrame
+
+-- Title bar for color picker
+local pickerTitleBar = Instance.new("Frame")
+pickerTitleBar.Name = "PickerTitleBar"
+pickerTitleBar.Size = UDim2.new(1, 0, 0, 40)
+pickerTitleBar.Position = UDim2.new(0, 0, 0, 0)
+pickerTitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+pickerTitleBar.BorderSizePixel = 0
+pickerTitleBar.ZIndex = 202
+pickerTitleBar.Parent = colorPickerFrame
+
+local pickerTitleCorner = Instance.new("UICorner")
+pickerTitleCorner.CornerRadius = UDim.new(0, 8)
+pickerTitleCorner.Parent = pickerTitleBar
+
+-- Fix corner clipping
+local titleClip = Instance.new("Frame")
+titleClip.Size = UDim2.new(1, 0, 0, 20)
+titleClip.Position = UDim2.new(0, 0, 1, -20)
+titleClip.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+titleClip.BorderSizePixel = 0
+titleClip.ZIndex = 202
+titleClip.Parent = pickerTitleBar
+
+-- Title text
+local pickerTitle = Instance.new("TextLabel")
+pickerTitle.Size = UDim2.new(1, -40, 1, 0)
+pickerTitle.Position = UDim2.new(0, 10, 0, 0)
+pickerTitle.BackgroundTransparency = 1
+pickerTitle.Text = "Color Picker"
+pickerTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+pickerTitle.TextSize = 16
+pickerTitle.Font = Enum.Font.GothamBold
+pickerTitle.TextXAlignment = Enum.TextXAlignment.Left
+pickerTitle.TextYAlignment = Enum.TextYAlignment.Center
+pickerTitle.ZIndex = 203
+pickerTitle.Parent = pickerTitleBar
+
+-- Close button for color picker
+local pickerCloseButton = Instance.new("TextButton")
+pickerCloseButton.Name = "CloseButton"
+pickerCloseButton.Size = UDim2.new(0, 30, 0, 30)
+pickerCloseButton.Position = UDim2.new(1, -35, 0, 5)
+pickerCloseButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+pickerCloseButton.BorderSizePixel = 0
+pickerCloseButton.Text = "×"
+pickerCloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+pickerCloseButton.TextSize = 18
+pickerCloseButton.Font = Enum.Font.GothamBold
+pickerCloseButton.ZIndex = 203
+pickerCloseButton.Parent = pickerTitleBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 4)
+closeCorner.Parent = pickerCloseButton
+
+-- Hue/Saturation picker (main color area)
+local hueSatFrame = Instance.new("TextButton")
+hueSatFrame.Name = "HueSatFrame"
+hueSatFrame.Size = UDim2.new(1, -20, 0, 220)
+hueSatFrame.Position = UDim2.new(0, 10, 0, 50)
+hueSatFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+hueSatFrame.BorderSizePixel = 1
+hueSatFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
+hueSatFrame.Text = ""
+hueSatFrame.ZIndex = 202
+hueSatFrame.Parent = colorPickerFrame
+
+-- White to transparent overlay (saturation)
+local saturationOverlay = Instance.new("Frame")
+saturationOverlay.Size = UDim2.new(1, 0, 1, 0)
+saturationOverlay.Position = UDim2.new(0, 0, 0, 0)
+saturationOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+saturationOverlay.BorderSizePixel = 0
+saturationOverlay.ZIndex = 203
+saturationOverlay.Parent = hueSatFrame
+
+local satGradient = Instance.new("UIGradient")
+satGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+    ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1))
+})
+satGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0),
+    NumberSequenceKeypoint.new(1, 1)
+})
+satGradient.Rotation = 0
+satGradient.Parent = saturationOverlay
+
+-- Black overlay (brightness)
+local brightnessOverlay = Instance.new("Frame")
+brightnessOverlay.Size = UDim2.new(1, 0, 1, 0)
+brightnessOverlay.Position = UDim2.new(0, 0, 0, 0)
+brightnessOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+brightnessOverlay.BorderSizePixel = 0
+brightnessOverlay.ZIndex = 204
+brightnessOverlay.Parent = hueSatFrame
+
+local brightGradient = Instance.new("UIGradient")
+brightGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.new(0, 0, 0)),
+    ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0))
+})
+brightGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(1, 0)
+})
+brightGradient.Rotation = 90
+brightGradient.Parent = brightnessOverlay
+
+-- Color selector circle
+local colorSelector = Instance.new("Frame")
+colorSelector.Name = "ColorSelector"
+colorSelector.Size = UDim2.new(0, 14, 0, 14)
+colorSelector.Position = UDim2.new(1, -7, 0, -7)
+colorSelector.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+colorSelector.BorderSizePixel = 2
+colorSelector.BorderColor3 = Color3.fromRGB(0, 0, 0)
+colorSelector.ZIndex = 205
+colorSelector.Parent = hueSatFrame
+
+local selectorCorner = Instance.new("UICorner")
+selectorCorner.CornerRadius = UDim.new(0.5, 0)
+selectorCorner.Parent = colorSelector
+
+-- Hue slider
+local hueSliderFrame = Instance.new("TextButton")
+hueSliderFrame.Name = "HueSliderFrame"
+hueSliderFrame.Size = UDim2.new(1, -20, 0, 25)
+hueSliderFrame.Position = UDim2.new(0, 10, 0, 280)
+hueSliderFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+hueSliderFrame.BorderSizePixel = 1
+hueSliderFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
+hueSliderFrame.Text = ""
+hueSliderFrame.ZIndex = 202
+hueSliderFrame.Parent = colorPickerFrame
+
+-- Hue gradient
+local hueGradient = Instance.new("UIGradient")
+hueGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+    ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+    ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
+    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+})
+hueGradient.Rotation = 0
+hueGradient.Parent = hueSliderFrame
+
+-- Hue slider handle
+local hueSliderHandle = Instance.new("Frame")
+hueSliderHandle.Name = "HueSliderHandle"
+hueSliderHandle.Size = UDim2.new(0, 4, 1, 8)
+hueSliderHandle.Position = UDim2.new(0, -2, 0, -4)
+hueSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+hueSliderHandle.BorderSizePixel = 1
+hueSliderHandle.BorderColor3 = Color3.fromRGB(0, 0, 0)
+hueSliderHandle.ZIndex = 203
+hueSliderHandle.Parent = hueSliderFrame
+
+-- Preview section
+local previewFrame = Instance.new("Frame")
+previewFrame.Name = "PreviewFrame"
+previewFrame.Size = UDim2.new(1, -20, 0, 45)
+previewFrame.Position = UDim2.new(0, 10, 0, 315)
+previewFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+previewFrame.BorderSizePixel = 1
+previewFrame.BorderColor3 = Color3.fromRGB(70, 70, 70)
+previewFrame.ZIndex = 202
+previewFrame.Parent = colorPickerFrame
+
+-- Color preview
+local colorPreview = Instance.new("Frame")
+colorPreview.Name = "ColorPreview"
+colorPreview.Size = UDim2.new(0, 70, 1, -6)
+colorPreview.Position = UDim2.new(0, 3, 0, 3)
+colorPreview.BackgroundColor3 = selectedColor
+colorPreview.BorderSizePixel = 1
+colorPreview.BorderColor3 = Color3.fromRGB(30, 30, 30)
+colorPreview.ZIndex = 203
+colorPreview.Parent = previewFrame
+
+local previewCorner = Instance.new("UICorner")
+previewCorner.CornerRadius = UDim.new(0, 4)
+previewCorner.Parent = colorPreview
+
+-- RGB values display
+local rgbLabel = Instance.new("TextLabel")
+rgbLabel.Size = UDim2.new(1, -80, 1, 0)
+rgbLabel.Position = UDim2.new(0, 80, 0, 0)
+rgbLabel.BackgroundTransparency = 1
+rgbLabel.Text = "RGB: 255, 255, 255"
+rgbLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+rgbLabel.TextSize = 14
+rgbLabel.Font = Enum.Font.Gotham
+rgbLabel.TextXAlignment = Enum.TextXAlignment.Left
+rgbLabel.TextYAlignment = Enum.TextYAlignment.Center
+rgbLabel.ZIndex = 203
+rgbLabel.Parent = previewFrame
+
+-- Buttons
+local buttonFrame = Instance.new("Frame")
+buttonFrame.Name = "ButtonFrame"
+buttonFrame.Size = UDim2.new(1, -20, 0, 35)
+buttonFrame.Position = UDim2.new(0, 10, 0, 370)
+buttonFrame.BackgroundTransparency = 1
+buttonFrame.ZIndex = 202
+buttonFrame.Parent = colorPickerFrame
+
+local confirmButton = Instance.new("TextButton")
+confirmButton.Name = "ConfirmButton"
+confirmButton.Size = UDim2.new(0.48, 0, 1, 0)
+confirmButton.Position = UDim2.new(0, 0, 0, 0)
+confirmButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+confirmButton.BorderSizePixel = 0
+confirmButton.Text = "Confirm"
+confirmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+confirmButton.TextSize = 16
+confirmButton.Font = Enum.Font.GothamBold
+confirmButton.ZIndex = 203
+confirmButton.Parent = buttonFrame
+
+local confirmCorner = Instance.new("UICorner")
+confirmCorner.CornerRadius = UDim.new(0, 6)
+confirmCorner.Parent = confirmButton
+
+local cancelButton = Instance.new("TextButton")
+cancelButton.Name = "CancelButton"
+cancelButton.Size = UDim2.new(0.48, 0, 1, 0)
+cancelButton.Position = UDim2.new(0.52, 0, 0, 0)
+cancelButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+cancelButton.BorderSizePixel = 0
+cancelButton.Text = "Cancel"
+cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+cancelButton.TextSize = 16
+cancelButton.Font = Enum.Font.GothamBold
+cancelButton.ZIndex = 203
+cancelButton.Parent = buttonFrame
+
+local cancelCorner = Instance.new("UICorner")
+cancelCorner.CornerRadius = UDim.new(0, 6)
+cancelCorner.Parent = cancelButton
+
+-- Color picker logic
+local currentHue = 0
+local currentSat = 1
+local currentBright = 1
+
+local function hsvToRgb(h, s, v)
+    local r, g, b
+    local i = math.floor(h * 6)
+    local f = h * 6 - i
+    local p = v * (1 - s)
+    local q = v * (1 - f * s)
+    local t = v * (1 - (1 - f) * s)
+    
+    local imod = i % 6
+    if imod == 0 then
+        r, g, b = v, t, p
+    elseif imod == 1 then
+        r, g, b = q, v, p
+    elseif imod == 2 then
+        r, g, b = p, v, t
+    elseif imod == 3 then
+        r, g, b = p, q, v
+    elseif imod == 4 then
+        r, g, b = t, p, v
+    elseif imod == 5 then
+        r, g, b = v, p, q
+    end
+    
+    return Color3.fromRGB(r * 255, g * 255, b * 255)
+end
+
+local function updateColorFromHSV()
+    selectedColor = hsvToRgb(currentHue, currentSat, currentBright)
+    colorPreview.BackgroundColor3 = selectedColor
+    
+    local r = math.floor(selectedColor.R * 255)
+    local g = math.floor(selectedColor.G * 255)
+    local b = math.floor(selectedColor.B * 255)
+    rgbLabel.Text = string.format("RGB: %d, %d, %d", r, g, b)
+    
+    -- Update hue background
+    local hueColor = hsvToRgb(currentHue, 1, 1)
+    hueSatFrame.BackgroundColor3 = hueColor
+end
+
+local function updateSelectorPosition()
+    colorSelector.Position = UDim2.new(currentSat, -7, 1 - currentBright, -7)
+end
+
+local function updateHueSliderPosition()
+    hueSliderHandle.Position = UDim2.new(currentHue, -2, 0, -4)
+end
+
+-- Mobile-friendly touch handlers
+local isDraggingColor = false
+local isDraggingHue = false
+
+-- Color area touch handling
+local function updateColorFromPosition(inputObject)
+    local pos = inputObject.Position
+    local relativePos = Vector2.new(
+        math.clamp((pos.X - hueSatFrame.AbsolutePosition.X) / hueSatFrame.AbsoluteSize.X, 0, 1),
+        math.clamp((pos.Y - hueSatFrame.AbsolutePosition.Y) / hueSatFrame.AbsoluteSize.Y, 0, 1)
+    )
+    
+    currentSat = relativePos.X
+    currentBright = 1 - relativePos.Y
+    
+    updateColorFromHSV()
+    updateSelectorPosition()
+end
+
+-- Enhanced input detection for mobile
+hueSatFrame.InputBegan:Connect(function(inputObject)
+    if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or 
+       inputObject.UserInputType == Enum.UserInputType.Touch then
+        isDraggingColor = true
+        updateColorFromPosition(inputObject)
+    end
+end)
+
+hueSatFrame.InputChanged:Connect(function(inputObject)
+    if isDraggingColor and (inputObject.UserInputType == Enum.UserInputType.MouseMovement or 
+                           inputObject.UserInputType == Enum.UserInputType.Touch) then
+        updateColorFromPosition(inputObject)
+    end
+end)
+
+hueSatFrame.InputEnded:Connect(function(inputObject)
+    if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or 
+       inputObject.UserInputType == Enum.UserInputType.Touch then
+        isDraggingColor = false
+    end
+end)
+
+-- Hue slider touch handling
+local function updateHueFromPosition(inputObject)
+    local pos = inputObject.Position
+    local relativePos = math.clamp((pos.X - hueSliderFrame.AbsolutePosition.X) / hueSliderFrame.AbsoluteSize.X, 0, 1)
+    currentHue = relativePos
+    
+    updateColorFromHSV()
+    updateHueSliderPosition()
+end
+
+hueSliderFrame.InputBegan:Connect(function(inputObject)
+    if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or 
+       inputObject.UserInputType == Enum.UserInputType.Touch then
+        isDraggingHue = true
+        updateHueFromPosition(inputObject)
+    end
+end)
+
+hueSliderFrame.InputChanged:Connect(function(inputObject)
+    if isDraggingHue and (inputObject.UserInputType == Enum.UserInputType.MouseMovement or 
+                         inputObject.UserInputType == Enum.UserInputType.Touch) then
+        updateHueFromPosition(inputObject)
+    end
+end)
+
+hueSliderFrame.InputEnded:Connect(function(inputObject)
+    if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or 
+       inputObject.UserInputType == Enum.UserInputType.Touch then
+        isDraggingHue = false
+    end
+end)
+
+-- Function to open color picker
+local function openColorPicker(colorButton)
+    currentColorButton = colorButton
+    colorPickerOpen = true
+    colorPickerOverlay.Visible = true
+    
+    -- Set initial color in picker
+    selectedColor = colorButton.BackgroundColor3
+    colorPreview.BackgroundColor3 = selectedColor
+    
+    local r = math.floor(selectedColor.R * 255)
+    local g = math.floor(selectedColor.G * 255)
+    local b = math.floor(selectedColor.B * 255)
+    rgbLabel.Text = string.format("RGB: %d, %d, %d", r, g, b)
+    
+    updateColorFromHSV()
+    updateSelectorPosition()
+    updateHueSliderPosition()
+    
+    -- Animate in
+    colorPickerFrame.Position = UDim2.new(0.5, -175, 0.5, -250)
+    local slideIn = TweenService:Create(colorPickerFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0.5, -175, 0.5, -210)
+    })
+    slideIn:Play()
+    
+    print("Color picker opened!") -- Debug print
+end
+
+-- Function to close color picker
+local function closeColorPicker()
+    colorPickerOpen = false
+    colorPickerOverlay.Visible = false
+    currentColorButton = nil
+    print("Color picker closed!") -- Debug print
+end
+
+-- Button handlers
+confirmButton.MouseButton1Click:Connect(function()
+    if currentColorButton then
+        currentColorButton.BackgroundColor3 = selectedColor
+        createNotification("Color Selected", string.format("RGB: %d, %d, %d", 
+            math.floor(selectedColor.R * 255),
+            math.floor(selectedColor.G * 255),
+            math.floor(selectedColor.B * 255)), 2)
+    end
+    closeColorPicker()
+end)
+
+-- Touch support for confirm button
+confirmButton.TouchTap:Connect(function()
+    if currentColorButton then
+        currentColorButton.BackgroundColor3 = selectedColor
+        createNotification("Color Selected", string.format("RGB: %d, %d, %d", 
+            math.floor(selectedColor.R * 255),
+            math.floor(selectedColor.G * 255),
+            math.floor(selectedColor.B * 255)), 2)
+    end
+    closeColorPicker()
+end)
+
+cancelButton.MouseButton1Click:Connect(function()
+    closeColorPicker()
+end)
+
+cancelButton.TouchTap:Connect(function()
+    closeColorPicker()
+end)
+
+pickerCloseButton.MouseButton1Click:Connect(function()
+    closeColorPicker()
+end)
+
+pickerCloseButton.TouchTap:Connect(function()
+    closeColorPicker()
+end)
+
+-- Close on overlay click
+colorPickerOverlay.InputBegan:Connect(function(inputObject)
+    if (inputObject.UserInputType == Enum.UserInputType.MouseButton1 or 
+        inputObject.UserInputType == Enum.UserInputType.Touch) and 
+        inputObject.Target == colorPickerOverlay then
+        closeColorPicker()
+    end
+end)
+
+-- Enhanced Color Picker Function (Compact Version)
+local function createColorPicker(parent, text, position, savedColor)
+    -- Initialize setting if it doesn't exist
+    if settings[text] == nil then
+        settings[text] = savedColor or Color3.fromRGB(255, 100, 100)
+    end
+    local container = Instance.new("Frame")
+    container.Name = text .. "Container"
+    container.Size = UDim2.new(1, -10, 0, 30)
+    container.Position = position
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, -40, 1, 0)
+    textLabel.Position = UDim2.new(0, 10, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = text
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.Gotham
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.Parent = container
+    
+    local colorButton = Instance.new("TextButton")
+    colorButton.Size = UDim2.new(0, 25, 0, 22)
+    colorButton.Position = UDim2.new(1, -30, 0.5, -11)
+    colorButton.BackgroundColor3 = settings[text] or savedColor or Color3.fromRGB(255, 100, 100)
+    colorButton.BorderSizePixel = 1
+    colorButton.BorderColor3 = Color3.fromRGB(150, 150, 150)
+    colorButton.Text = ""
+    colorButton.ZIndex = 2
+    colorButton.Parent = container
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 4)
+    buttonCorner.Parent = colorButton
+    
+    -- Color picker popup with better contrast
+    local colorPicker = Instance.new("Frame")
+    colorPicker.Name = "ColorPicker"
+    colorPicker.Size = UDim2.new(0, 250, 0, 155)
+    colorPicker.Position = UDim2.new(1, -250, 0, 30)
+    colorPicker.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    colorPicker.BorderSizePixel = 2
+    colorPicker.BorderColor3 = Color3.fromRGB(70, 70, 70)
+    colorPicker.Visible = false
+    colorPicker.ZIndex = 50
+    colorPicker.Parent = container
+    
+    local pickerCorner = Instance.new("UICorner")
+    pickerCorner.CornerRadius = UDim.new(0, 8)
+    pickerCorner.Parent = colorPicker
+    
+    -- Add a subtle glow effect
+    local glowFrame = Instance.new("Frame")
+    glowFrame.Size = UDim2.new(1, 6, 1, 6)
+    glowFrame.Position = UDim2.new(0, -3, 0, -3)
+    glowFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    glowFrame.BackgroundTransparency = 0.3
+    glowFrame.BorderSizePixel = 0
+    glowFrame.ZIndex = 49
+    glowFrame.Parent = colorPicker
+    
+    local glowCorner = Instance.new("UICorner")
+    glowCorner.CornerRadius = UDim.new(0, 10)
+    glowCorner.Parent = glowFrame
+    
+    -- 2D Saturation/Brightness picker
+    local satBrightPicker = Instance.new("TextButton")
+    satBrightPicker.Size = UDim2.new(0, 180, 0, 120)
+    satBrightPicker.Position = UDim2.new(0, 10, 0, 10)
+    satBrightPicker.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Will be updated based on hue
+    satBrightPicker.BorderSizePixel = 2
+    satBrightPicker.BorderColor3 = Color3.fromRGB(200, 200, 200)
+    satBrightPicker.Text = ""
+    satBrightPicker.ZIndex = 51
+    satBrightPicker.Parent = colorPicker
+    
+    -- White to transparent gradient (horizontal - saturation)
+    local saturationOverlay = Instance.new("Frame")
+    saturationOverlay.Size = UDim2.new(1, 0, 1, 0)
+    saturationOverlay.Position = UDim2.new(0, 0, 0, 0)
+    saturationOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    saturationOverlay.BorderSizePixel = 0
+    saturationOverlay.ZIndex = 52
+    saturationOverlay.Parent = satBrightPicker
+    
+    local satGradient = Instance.new("UIGradient")
+    satGradient.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1)
+    }
+    satGradient.Rotation = 0
+    satGradient.Parent = saturationOverlay
+    
+    -- Black overlay (vertical - brightness)
+    local brightnessOverlay = Instance.new("Frame")
+    brightnessOverlay.Size = UDim2.new(1, 0, 1, 0)
+    brightnessOverlay.Position = UDim2.new(0, 0, 0, 0)
+    brightnessOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    brightnessOverlay.BorderSizePixel = 0
+    brightnessOverlay.ZIndex = 53
+    brightnessOverlay.Parent = saturationOverlay
+    
+    local brightGradient = Instance.new("UIGradient")
+    brightGradient.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(1, 0)
+    }
+    brightGradient.Rotation = 90
+    brightGradient.Parent = brightnessOverlay
+    
+    -- Color picker selector with better visibility
+    local colorSelector = Instance.new("Frame")
+    colorSelector.Size = UDim2.new(0, 12, 0, 12)
+    colorSelector.Position = UDim2.new(1, -6, 0, -6) -- Start at top right (full saturation, full brightness)
+    colorSelector.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    colorSelector.BorderSizePixel = 3
+    colorSelector.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    colorSelector.ZIndex = 55
+    colorSelector.Parent = satBrightPicker
+    
+    local selectorCorner = Instance.new("UICorner")
+    selectorCorner.CornerRadius = UDim.new(0.5, 0)
+    selectorCorner.Parent = colorSelector
+    
+    -- Add white inner ring for better visibility
+    local innerSelector = Instance.new("Frame")
+    innerSelector.Size = UDim2.new(0, 6, 0, 6)
+    innerSelector.Position = UDim2.new(0.5, -3, 0.5, -3)
+    innerSelector.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    innerSelector.BorderSizePixel = 1
+    innerSelector.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    innerSelector.ZIndex = 56
+    innerSelector.Parent = colorSelector
+    
+    local innerCorner = Instance.new("UICorner")
+    innerCorner.CornerRadius = UDim.new(0.5, 0)
+    innerCorner.Parent = innerSelector
+    
+    -- Hue bar with better contrast
+    local hueBar = Instance.new("TextButton")
+    hueBar.Size = UDim2.new(0, 25, 0, 120)
+    hueBar.Position = UDim2.new(0, 200, 0, 10)
+    hueBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    hueBar.BorderSizePixel = 2
+    hueBar.BorderColor3 = Color3.fromRGB(200, 200, 200)
+    hueBar.Text = ""
+    hueBar.ZIndex = 51
+    hueBar.Parent = colorPicker
+    
+    local hueGradient = Instance.new("UIGradient")
+    hueGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),    -- Red
+        ColorSequenceKeypoint.new(0.167, Color3.fromRGB(255, 255, 0)), -- Yellow
+        ColorSequenceKeypoint.new(0.333, Color3.fromRGB(0, 255, 0)), -- Green
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),   -- Cyan
+        ColorSequenceKeypoint.new(0.667, Color3.fromRGB(0, 0, 255)), -- Blue
+        ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 0, 255)), -- Magenta
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))      -- Red
+    }
+    hueGradient.Rotation = 90
+    hueGradient.Parent = hueBar
+    
+    -- Hue selector with better visibility
+    local hueSelector = Instance.new("Frame")
+    hueSelector.Size = UDim2.new(1, 6, 0, 6)
+    hueSelector.Position = UDim2.new(0, -3, 0, -3) -- Start at top (red)
+    hueSelector.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    hueSelector.BorderSizePixel = 2
+    hueSelector.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    hueSelector.ZIndex = 52
+    hueSelector.Parent = hueBar
+    
+    local hueSelectorCorner = Instance.new("UICorner")
+    hueSelectorCorner.CornerRadius = UDim.new(0, 3)
+    hueSelectorCorner.Parent = hueSelector
+    
+    -- Current color values (HSV format)
+    local currentHue = 0     -- 0-1
+    local currentSat = 1     -- 0-1  
+    local currentBright = 1  -- 0-1
+    
+    -- Function to convert HSV to RGB
+    local function HSVtoRGB(h, s, v)
+        local r, g, b
+        
+        local i = math.floor(h * 6)
+        local f = h * 6 - i
+        local p = v * (1 - s)
+        local q = v * (1 - f * s)
+        local t = v * (1 - (1 - f) * s)
+        
+        local imod = i % 6
+        
+        if imod == 0 then
+            r, g, b = v, t, p
+        elseif imod == 1 then
+            r, g, b = q, v, p
+        elseif imod == 2 then
+            r, g, b = p, v, t
+        elseif imod == 3 then
+            r, g, b = p, q, v
+        elseif imod == 4 then
+            r, g, b = t, p, v
+        elseif imod == 5 then
+            r, g, b = v, p, q
+        end
+        
+        return math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5)
+    end
+    
+    -- Function to get hue color (pure hue at full saturation and brightness)
+    local function getHueColor(hue)
+        return HSVtoRGB(hue, 1, 1)
+    end
+    
+    -- Update color function
+    local function updateColor()
+        local r, g, b = HSVtoRGB(currentHue, currentSat, currentBright)
+        local newColor = Color3.fromRGB(r, g, b)
+        colorButton.BackgroundColor3 = newColor
+        
+        -- Initialize the setting if it doesn't exist
+        if settings[text] == nil then
+            settings[text] = newColor
+        else
+            settings[text] = newColor
+        end
+        
+        -- Update the base hue for the 2D picker
+        local hueR, hueG, hueB = getHueColor(currentHue)
+        satBrightPicker.BackgroundColor3 = Color3.fromRGB(hueR, hueG, hueB)
+        
+        -- Debug print
+        print("Color updated for", text, "RGB:", r, g, b)
+    end
+    
+    -- Handle 2D picker dragging (Mobile-compatible)
+    local isPickerDragging = false
+    
+    local function updateSatBright(inputPos)
+        local relativeX = math.clamp((inputPos.X - satBrightPicker.AbsolutePosition.X) / satBrightPicker.AbsoluteSize.X, 0, 1)
+        local relativeY = math.clamp((inputPos.Y - satBrightPicker.AbsolutePosition.Y) / satBrightPicker.AbsoluteSize.Y, 0, 1)
+        
+        currentSat = relativeX
+        currentBright = 1 - relativeY
+        
+        colorSelector.Position = UDim2.new(relativeX, -6, relativeY, -6)
+        updateColor()
+    end
+    
+    -- Enhanced mobile input handling for 2D picker
+    satBrightPicker.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            isPickerDragging = true
+            updateSatBright(input.Position)
+        end
+    end)
+    
+    satBrightPicker.InputChanged:Connect(function(input)
+        if isPickerDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or 
+                                input.UserInputType == Enum.UserInputType.Touch) then
+            updateSatBright(input.Position)
+        end
+    end)
+    
+    satBrightPicker.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            isPickerDragging = false
+        end
+    end)
+    
+    -- Handle hue bar dragging (Mobile-compatible)
+    local isHueDragging = false
+    
+    local function updateHue(inputPos)
+        local relativeY = math.clamp((inputPos.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
+        
+        currentHue = relativeY
+        hueSelector.Position = UDim2.new(0, -3, relativeY, -3)
+        updateColor()
+    end
+    
+    -- Enhanced mobile input handling for hue bar
+    hueBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            isHueDragging = true
+            updateHue(input.Position)
+        end
+    end)
+    
+    hueBar.InputChanged:Connect(function(input)
+        if isHueDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or 
+                             input.UserInputType == Enum.UserInputType.Touch) then
+            updateHue(input.Position)
+        end
+    end)
+    
+    hueBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            isHueDragging = false
+        end
+    end)
+    
+    -- Close button with better styling
+    local closeButton = Instance.new("TextButton")
+    closeButton.Size = UDim2.new(0, 22, 0, 22)
+    closeButton.Position = UDim2.new(1, -27, 0, 5)
+    closeButton.BackgroundColor3 = Color3.fromRGB(220, 50, 47)
+    closeButton.BorderSizePixel = 1
+    closeButton.BorderColor3 = Color3.fromRGB(150, 150, 150)
+    closeButton.Text = "×"
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.TextSize = 14
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.ZIndex = 52
+    closeButton.Parent = colorPicker
+    
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 6)
+    closeCorner.Parent = closeButton
+    
+    -- Mobile-compatible close button
+    closeButton.MouseButton1Click:Connect(function()
+        colorPicker.Visible = false
+    end)
+    
+    closeButton.TouchTap:Connect(function()
+        colorPicker.Visible = false
+    end)
+    
+    -- Toggle color picker visibility (Mobile-compatible)
+    local isOpen = false
+    
+    colorButton.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        colorPicker.Visible = isOpen
+        if isOpen then
+            createNotification("Color Picker", "Select your color", 2)
+        end
+    end)
+    
+    colorButton.TouchTap:Connect(function()
+        isOpen = not isOpen
+        colorPicker.Visible = isOpen
+        if isOpen then
+            createNotification("Color Picker", "Select your color", 2)
+        end
+    end)
+    
+    -- Initialize with default color
+    updateColor()
+    
+    return container
+end
+
+-- Make the function globally available
+_G.createColorPicker = createColorPicker
+
+-- Example usage - add these to your updateTabDisplay function
+-- createColorPicker(rightContent, "Aimbot Color", UDim2.new(0, 0, 0, 10), Color3.fromRGB(255, 0, 0))
+-- createColorPicker(rightContent, "ESP Color", UDim2.new(0, 0, 0, 50), Color3.fromRGB(0, 255, 0))
+
+print("Compact Mobile Color Picker loaded successfully!")
+
+-- end
+
+
+
 -- Content frame
 local contentFrame = Instance.new("Frame")
 contentFrame.Size = UDim2.new(1, -8, 1, 0)
@@ -359,66 +1319,421 @@ usernameLabel.Parent = userProfileFrame
 
 -- Mobile-Compatible Functions
 
--- Notification System
-local notificationContainer = Instance.new("Frame")
-notificationContainer.Name = "NotificationContainer"
-notificationContainer.Size = UDim2.new(0, 300, 0, 200)
-notificationContainer.Position = UDim2.new(1, -310, 1, -210)
-notificationContainer.BackgroundTransparency = 1
-notificationContainer.Parent = watermarkGui
+-- Mobile-Compatible UI Elements
+-- dropdown start
 
-local notificationQueue = {}
-
-local function createNotification(title, message, duration)
-    local notification = Instance.new("Frame")
-    notification.Size = UDim2.new(1, 0, 0, 60)
-    notification.Position = UDim2.new(1, 0, 1, -60 * (#notificationQueue + 1))
-    notification.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    notification.BorderSizePixel = 0
-    notification.Parent = notificationContainer
+-- Multi Dropdown with search
+local function createMultiDropdown(parent, text, position, options, savedSelections)
+    local container = Instance.new("Frame")
+    container.Name = text .. "Container"
+    container.Size = UDim2.new(1, -10, 0, 35)
+    container.Position = position
+    container.BackgroundTransparency = 1
+    container.Parent = parent
     
-    table.insert(notificationQueue, notification)
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(0.4, 0, 1, 0)
+    textLabel.Position = UDim2.new(0, 10, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = text
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.Gotham
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.Parent = container
     
-    local notifCorner = Instance.new("UICorner")
-    notifCorner.CornerRadius = UDim.new(0, 6)
-    notifCorner.Parent = notification
+    local dropdown = Instance.new("TextButton")
+    dropdown.Size = UDim2.new(0.55, -10, 0, 25)
+    dropdown.Position = UDim2.new(0.45, 0, 0.5, -12.5)
+    dropdown.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    dropdown.BorderSizePixel = 1
+    dropdown.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    dropdown.Text = "Multiple ▼"
+    dropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
+    dropdown.TextStrokeTransparency = 0
+    dropdown.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    dropdown.TextSize = 11
+    dropdown.Font = Enum.Font.Gotham
+    dropdown.ZIndex = 2
+    dropdown.Parent = container
     
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -10, 0, 20)
-    titleLabel.Position = UDim2.new(0, 8, 0, 8)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextSize = 12
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Parent = notification
+    -- Multi dropdown menu container
+    local dropdownMenu = Instance.new("Frame")
+    dropdownMenu.Name = "MultiDropdownMenu"
+    dropdownMenu.Size = UDim2.new(0.55, -10, 0, #options * 25 + 30)
+    dropdownMenu.Position = UDim2.new(0.45, 0, 1, 0)
+    dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    dropdownMenu.BorderSizePixel = 1
+    dropdownMenu.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    dropdownMenu.Visible = false
+    dropdownMenu.ZIndex = 3
+    dropdownMenu.Parent = container
     
-    local slideIn = TweenService:Create(notification, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0, 0, 1, -60 * #notificationQueue)
-    })
-    slideIn:Play()
+    -- Search box
+    local searchBox = Instance.new("TextBox")
+    searchBox.Name = "SearchBox"
+    searchBox.Size = UDim2.new(1, -10, 0, 25)
+    searchBox.Position = UDim2.new(0, 5, 0, 2.5)
+    searchBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    searchBox.BorderSizePixel = 1
+    searchBox.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    searchBox.Text = ""
+    searchBox.PlaceholderText = "Search..."
+    searchBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    searchBox.TextStrokeTransparency = 0
+    searchBox.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    searchBox.TextSize = 10
+    searchBox.Font = Enum.Font.Gotham
+    searchBox.ZIndex = 4
+    searchBox.Parent = dropdownMenu
     
-    spawn(function()
-        wait(duration or 3)
-        for i, notif in ipairs(notificationQueue) do
-            if notif == notification then
-                table.remove(notificationQueue, i)
-                break
+    -- Scrolling frame for options
+    local optionsFrame = Instance.new("ScrollingFrame")
+    optionsFrame.Name = "OptionsFrame"
+    optionsFrame.Size = UDim2.new(1, 0, 1, -30)
+    optionsFrame.Position = UDim2.new(0, 0, 0, 30)
+    optionsFrame.BackgroundTransparency = 1
+    optionsFrame.BorderSizePixel = 0
+    optionsFrame.ScrollBarThickness = 6
+    optionsFrame.ZIndex = 4
+    optionsFrame.Parent = dropdownMenu
+    
+    local isOpen = false
+    local selectedCount = 0
+    local selectedOptions = savedSelections or {}
+    local optionFrames = {}
+    
+    -- Count initially selected options
+    for option, isSelected in pairs(selectedOptions) do
+        if isSelected then
+            selectedCount = selectedCount + 1
+        end
+    end
+    
+    -- Update dropdown text based on initial count
+    if selectedCount == 0 then
+        dropdown.Text = "None Selected ▼"
+    elseif selectedCount == 1 then
+        dropdown.Text = "1 Selected ▼"
+    else
+        dropdown.Text = selectedCount .. " Selected ▼"
+    end
+    
+    -- Create option checkboxes
+    for i, option in ipairs(options) do
+        local optionFrame = Instance.new("Frame")
+        optionFrame.Size = UDim2.new(1, 0, 0, 25)
+        optionFrame.Position = UDim2.new(0, 0, 0, (i-1) * 25)
+        optionFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        optionFrame.BorderSizePixel = 0
+        optionFrame.ZIndex = 4
+        optionFrame.Parent = optionsFrame
+        
+        table.insert(optionFrames, {frame = optionFrame, text = option, index = i})
+        
+        local optionLabel = Instance.new("TextLabel")
+        optionLabel.Size = UDim2.new(1, -25, 1, 0)
+        optionLabel.Position = UDim2.new(0, 5, 0, 0)
+        optionLabel.BackgroundTransparency = 1
+        optionLabel.Text = option
+        optionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        optionLabel.TextStrokeTransparency = 0
+        optionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        optionLabel.TextSize = 11
+        optionLabel.Font = Enum.Font.Gotham
+        optionLabel.TextXAlignment = Enum.TextXAlignment.Left
+        optionLabel.TextYAlignment = Enum.TextYAlignment.Center
+        optionLabel.ZIndex = 5
+        optionLabel.Parent = optionFrame
+        
+        local checkbox = Instance.new("TextButton")
+        checkbox.Size = UDim2.new(0, 15, 0, 15)
+        checkbox.Position = UDim2.new(1, -20, 0.5, -7.5)
+        checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        checkbox.BorderSizePixel = 1
+        checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
+        checkbox.Text = ""
+        checkbox.ZIndex = 5
+        checkbox.Parent = optionFrame
+        
+        local checkmark = Instance.new("TextLabel")
+        checkmark.Size = UDim2.new(1, 0, 1, 0)
+        checkmark.BackgroundTransparency = 1
+        checkmark.Text = "✓"
+        checkmark.TextColor3 = Color3.fromRGB(0, 255, 100)
+        checkmark.TextStrokeTransparency = 0
+        checkmark.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        checkmark.TextSize = 10
+        checkmark.Font = Enum.Font.GothamBold
+        checkmark.Visible = false
+        checkmark.ZIndex = 6
+        checkmark.Parent = checkbox
+        
+        if selectedOptions[option] == nil then
+            selectedOptions[option] = false
+        end
+        
+        -- Apply saved state
+        if selectedOptions[option] then
+            checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
+            checkmark.Visible = true
+        end
+        
+        -- Hover effect
+        optionFrame.MouseEnter:Connect(function()
+            optionFrame.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        end)
+        
+        optionFrame.MouseLeave:Connect(function()
+            optionFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        end)
+        
+        -- Checkbox toggle
+        checkbox.MouseButton1Click:Connect(function()
+            selectedOptions[option] = not selectedOptions[option]
+            settings[text] = selectedOptions
+            
+            if selectedOptions[option] then
+                checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
+                checkmark.Visible = true
+                selectedCount = selectedCount + 1
+            else
+                checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+                checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
+                checkmark.Visible = false
+                selectedCount = selectedCount - 1
+            end
+            
+            if selectedCount == 0 then
+                dropdown.Text = "None Selected ▼"
+            elseif selectedCount == 1 then
+                dropdown.Text = "1 Selected ▼"
+            else
+                dropdown.Text = selectedCount .. " Selected ▼"
+            end
+        end)
+    end
+    
+    -- Update canvas size
+    optionsFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 25)
+    
+    -- Search functionality
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        local searchTerm = searchBox.Text:lower()
+        local visibleCount = 0
+        
+        for _, optionData in ipairs(optionFrames) do
+            if searchTerm == "" or optionData.text:lower():find(searchTerm) then
+                optionData.frame.Visible = true
+                optionData.frame.Position = UDim2.new(0, 0, 0, visibleCount * 25)
+                visibleCount = visibleCount + 1
+            else
+                optionData.frame.Visible = false
             end
         end
         
-        local slideOut = TweenService:Create(notification, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Position = UDim2.new(1, 0, notification.Position.Y.Scale, notification.Position.Y.Offset)
-        })
-        slideOut:Play()
-        slideOut.Completed:Connect(function()
-            notification:Destroy()
-        end)
+        -- Update canvas size based on visible options
+        optionsFrame.CanvasSize = UDim2.new(0, 0, 0, visibleCount * 25)
+        dropdownMenu.Size = UDim2.new(0.55, -10, 0, math.min(visibleCount * 25 + 30, 200))
     end)
+    
+    -- Toggle dropdown
+    dropdown.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        dropdownMenu.Visible = isOpen
+        if isOpen then
+            if selectedCount == 0 then
+                dropdown.Text = "None Selected ▲"
+            elseif selectedCount == 1 then
+                dropdown.Text = "1 Selected ▲"
+            else
+                dropdown.Text = selectedCount .. " Selected ▲"
+            end
+            searchBox.Text = ""
+            searchBox:CaptureFocus()
+        else
+            if selectedCount == 0 then
+                dropdown.Text = "None Selected ▼"
+            elseif selectedCount == 1 then
+                dropdown.Text = "1 Selected ▼"
+            else
+                dropdown.Text = selectedCount .. " Selected ▼"
+            end
+        end
+    end)
+    
+    return container
 end
 
--- Mobile-Compatible UI Elements
+-- Dropdown with search
+local function createDropdown(parent, text, position, options, savedIndex)
+    local container = Instance.new("Frame")
+    container.Name = text .. "Container"
+    container.Size = UDim2.new(1, -10, 0, 35)
+    container.Position = position
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(0.4, 0, 1, 0)
+    textLabel.Position = UDim2.new(0, 10, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = text
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.Gotham
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.Parent = container
+    
+    local currentIndex = savedIndex or 1
+    
+    local dropdown = Instance.new("TextButton")
+    dropdown.Size = UDim2.new(0.55, -10, 0, 25)
+    dropdown.Position = UDim2.new(0.45, 0, 0.5, -12.5)
+    dropdown.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    dropdown.BorderSizePixel = 1
+    dropdown.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    dropdown.Text = options[currentIndex] .. " ▼"
+    dropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
+    dropdown.TextStrokeTransparency = 0
+    dropdown.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    dropdown.TextSize = 11
+    dropdown.Font = Enum.Font.Gotham
+    dropdown.ZIndex = 2
+    dropdown.Parent = container
+    
+    -- Dropdown menu container
+    local dropdownMenu = Instance.new("Frame")
+    dropdownMenu.Name = "DropdownMenu"
+    dropdownMenu.Size = UDim2.new(0.55, -10, 0, #options * 25 + 30)
+    dropdownMenu.Position = UDim2.new(0.45, 0, 1, 0)
+    dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    dropdownMenu.BorderSizePixel = 1
+    dropdownMenu.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    dropdownMenu.Visible = false
+    dropdownMenu.ZIndex = 3
+    dropdownMenu.Parent = container
+    
+    -- Search box
+    local searchBox = Instance.new("TextBox")
+    searchBox.Name = "SearchBox"
+    searchBox.Size = UDim2.new(1, -10, 0, 25)
+    searchBox.Position = UDim2.new(0, 5, 0, 2.5)
+    searchBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    searchBox.BorderSizePixel = 1
+    searchBox.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    searchBox.Text = ""
+    searchBox.PlaceholderText = "Search..."
+    searchBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    searchBox.TextStrokeTransparency = 0
+    searchBox.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    searchBox.TextSize = 10
+    searchBox.Font = Enum.Font.Gotham
+    searchBox.ZIndex = 4
+    searchBox.Parent = dropdownMenu
+    
+    -- Scrolling frame for options
+    local optionsFrame = Instance.new("ScrollingFrame")
+    optionsFrame.Name = "OptionsFrame"
+    optionsFrame.Size = UDim2.new(1, 0, 1, -30)
+    optionsFrame.Position = UDim2.new(0, 0, 0, 30)
+    optionsFrame.BackgroundTransparency = 1
+    optionsFrame.BorderSizePixel = 0
+    optionsFrame.ScrollBarThickness = 6
+    optionsFrame.ZIndex = 4
+    optionsFrame.Parent = dropdownMenu
+    
+    local isOpen = false
+    local optionButtons = {}
+    
+    -- Create option buttons
+    for i, option in ipairs(options) do
+        local optionButton = Instance.new("TextButton")
+        optionButton.Size = UDim2.new(1, 0, 0, 25)
+        optionButton.Position = UDim2.new(0, 0, 0, (i-1) * 25)
+        optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        optionButton.BorderSizePixel = 0
+        optionButton.Text = option
+        optionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        optionButton.TextStrokeTransparency = 0
+        optionButton.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        optionButton.TextSize = 11
+        optionButton.Font = Enum.Font.Gotham
+        optionButton.ZIndex = 5
+        optionButton.Parent = optionsFrame
+        
+        table.insert(optionButtons, {button = optionButton, text = option, index = i})
+        
+        -- Hover effect
+        optionButton.MouseEnter:Connect(function()
+            optionButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        end)
+        
+        optionButton.MouseLeave:Connect(function()
+            optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        end)
+        
+        -- Selection
+        optionButton.MouseButton1Click:Connect(function()
+            dropdown.Text = option .. " ▼"
+            currentIndex = i
+            settings[text] = i
+            dropdownMenu.Visible = false
+            isOpen = false
+        end)
+    end
+    
+    -- Update canvas size
+    optionsFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 25)
+    
+    -- Search functionality
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        local searchTerm = searchBox.Text:lower()
+        local visibleCount = 0
+        
+        for _, optionData in ipairs(optionButtons) do
+            if searchTerm == "" or optionData.text:lower():find(searchTerm) then
+                optionData.button.Visible = true
+                optionData.button.Position = UDim2.new(0, 0, 0, visibleCount * 25)
+                visibleCount = visibleCount + 1
+            else
+                optionData.button.Visible = false
+            end
+        end
+        
+        -- Update canvas size based on visible options
+        optionsFrame.CanvasSize = UDim2.new(0, 0, 0, visibleCount * 25)
+        dropdownMenu.Size = UDim2.new(0.55, -10, 0, math.min(visibleCount * 25 + 30, 200))
+    end)
+    
+    -- Toggle dropdown
+    dropdown.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        dropdownMenu.Visible = isOpen
+        if isOpen then
+            dropdown.Text = options[currentIndex] .. " ▲"
+            searchBox.Text = ""
+            searchBox:CaptureFocus()
+        else
+            dropdown.Text = options[currentIndex] .. " ▼"
+        end
+    end)
+    
+    return container
+end
+
+-- dropdown end
+
 
 local function createCheckboxToggle(parent, text, position, savedState)
     local container = Instance.new("Frame")
@@ -438,6 +1753,8 @@ local function createCheckboxToggle(parent, text, position, savedState)
     textLabel.Font = Enum.Font.Gotham
     textLabel.TextXAlignment = Enum.TextXAlignment.Left
     textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     textLabel.Parent = container
 
     local checkbox = Instance.new("TextButton")
@@ -449,6 +1766,15 @@ local function createCheckboxToggle(parent, text, position, savedState)
     checkbox.Text = ""
     checkbox.Parent = container
 
+    -- Gradient background (black to red)
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+    })
+    gradient.Rotation = 45
+    gradient.Parent = checkbox
+
     local checkmark = Instance.new("TextLabel")
     checkmark.Size = UDim2.new(1, 0, 1, 0)
     checkmark.BackgroundTransparency = 1
@@ -456,6 +1782,8 @@ local function createCheckboxToggle(parent, text, position, savedState)
     checkmark.TextColor3 = Color3.fromRGB(0, 255, 100)
     checkmark.TextSize = 14
     checkmark.Font = Enum.Font.GothamBold
+    checkmark.TextStrokeTransparency = 0
+    checkmark.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     checkmark.Visible = false
     checkmark.Parent = checkbox
 
@@ -507,6 +1835,8 @@ local function createSlider(parent, text, position, minVal, maxVal, savedValue)
     textLabel.TextSize = 12
     textLabel.Font = Enum.Font.Gotham
     textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     textLabel.Parent = container
 
     local currentValue = savedValue or 50
@@ -520,6 +1850,8 @@ local function createSlider(parent, text, position, minVal, maxVal, savedValue)
     valueLabel.TextSize = 12
     valueLabel.Font = Enum.Font.Gotham
     valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valueLabel.TextStrokeTransparency = 0
+    valueLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     valueLabel.Parent = container
 
     local sliderBG = Instance.new("TextButton")
@@ -535,9 +1867,19 @@ local function createSlider(parent, text, position, minVal, maxVal, savedValue)
     local initPos = (currentValue - minVal) / (maxVal - minVal)
     sliderFill.Size = UDim2.new(initPos, 0, 1, 0)
     sliderFill.Position = UDim2.new(0, 0, 0, 0)
-    sliderFill.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    sliderFill.BackgroundTransparency = 0
+    sliderFill.BackgroundColor3 = Color3.new(1, 1, 1) -- Will be overridden by gradient
     sliderFill.BorderSizePixel = 0
     sliderFill.Parent = sliderBG
+
+    -- Gradient for slider fill (black to red)
+    local sliderGradient = Instance.new("UIGradient")
+    sliderGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+    })
+    sliderGradient.Rotation = 0
+    sliderGradient.Parent = sliderFill
 
     local sliderHandle = Instance.new("TextButton")
     sliderHandle.Size = UDim2.new(0, 12, 0, 12)
@@ -727,9 +2069,17 @@ function updateTabDisplay(tabName)
     
     if tabName == "Combat" then
         createCheckboxToggle(leftContent, "Enable Aimbot", UDim2.new(0, 0, 0, 10), settings["Enable Aimbot"])
+        -- Add this to your updateTabDisplay function
+        createColorPicker(rightContent, "Aimbot Color", UDim2.new(0, 0, 0, 10), Color3.fromRGB(255, 0, 0))
+        createColorPicker(rightContent, "ESP Color", UDim2.new(0, 0, 0, 50), Color3.fromRGB(0, 255, 0))
+        createColorPicker(rightContent, "Crosshair Color", UDim2.new(0, 0, 0, 90), Color3.fromRGB(0, 255, 255))
         createSlider(leftContent, "Aim Smoothness", UDim2.new(0, 0, 0, 45), 1, 100, settings["Aim Smoothness"])
         createCheckboxToggle(leftContent, "Silent Aim", UDim2.new(0, 0, 0, 90), settings["Silent Aim"])
         createSlider(leftContent, "FOV Size", UDim2.new(0, 0, 0, 125), 10, 360, settings["FOV Size"])
+
+
+        createDropdown(rightContent, "Target Bone", UDim2.new(0, 0, 0, 130), {"Head", "Torso", "Random"}, 1)
+        createMultiDropdown(rightContent, "Target Parts", UDim2.new(0, 0, 0, 170), {"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}, {})
     end
 end
 
@@ -819,6 +2169,7 @@ end)
 -- Close button
 closeButton.Activated:Connect(function()
     screenGui:Destroy()
+    watermarkGui:Destroy()
 end)
 
 -- Keyboard shortcut (Right Ctrl to toggle)
