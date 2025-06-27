@@ -309,10 +309,12 @@ minimizedIcon.Name = "MinimizedIcon"
 minimizedIcon.Size = UDim2.new(0, 50, 0, 50)
 minimizedIcon.Position = UDim2.new(0, 50, 0, 50)
 minimizedIcon.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+minimizedIcon.BackgroundTransparency = 1
 minimizedIcon.BorderSizePixel = 2
 minimizedIcon.BorderColor3 = Color3.fromRGB(0, 150, 255)
-minimizedIcon.Image = ""
-minimizedIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
+minimizedIcon.Image = "rbxassetid://139404696073599"
+minimizedIcon.ImageColor3 = Color3.fromRGB(255, 255, 255) -- make sure it's not tinted
+minimizedIcon.ImageTransparency = 0.1 -- fully visible
 minimizedIcon.Visible = false
 minimizedIcon.Parent = screenGui
 
