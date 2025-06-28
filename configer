@@ -429,6 +429,7 @@ function RadiantHub:CreateTab(config)
         CreateButton = function(config) return self:_createButton(tab, config) end
     }
 end
+end
 
 function RadiantHub:_createTabButton(tab, index)
     local container = Instance.new("Frame")
@@ -559,6 +560,7 @@ function RadiantHub:_updateTabDisplay(tab)
         element.Parent = self.rightContent
         rightY = rightY + element.Size.Y.Offset + 5
     end
+end
 end
 
 -- UI Elements
@@ -1171,7 +1173,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("update")
+print("hey")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
