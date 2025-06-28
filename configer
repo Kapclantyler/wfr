@@ -1,4 +1,4 @@
--- RadiantUI Library - Complete Rewrite
+-- RadiantUI Library - Fixed Version
 -- Mobile-Compatible UI Library with Modern Design
 
 local RadiantUI = {}
@@ -31,7 +31,14 @@ function RadiantUI.new(config)
     self.ScreenGui = Instance.new("ScreenGui")
     self.ScreenGui.Name = "RadiantUI_" .. self.Config.Title
     self.ScreenGui.ResetOnSpawn = false
-    self.ScreenGui.Parent = CoreGui
+    
+    -- Parent to CoreGui or PlayerGui
+    local success, err = pcall(function()
+        self.ScreenGui.Parent = CoreGui
+    end)
+    if not success then
+        self.ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+    end
     
     -- Calculate position
     local sizeX, sizeY = self.Config.Size[1], self.Config.Size[2]
@@ -382,8 +389,8 @@ function RadiantUI.CreateNotification(self, title, message, duration)
     })
     slideIn:Play()
     
-    spawn(function()
-        wait(duration or 3)
+    task.spawn(function()
+        task.wait(duration or 3)
         for i, notif in ipairs(self.NotificationQueue) do
             if notif == notification then
                 table.remove(self.NotificationQueue, i)
@@ -406,7 +413,14 @@ function RadiantUI.InitializeWatermark(self)
     self.WatermarkGui = Instance.new("ScreenGui")
     self.WatermarkGui.Name = "RadiantUI_Watermark"
     self.WatermarkGui.ResetOnSpawn = false
-    self.WatermarkGui.Parent = CoreGui
+    
+    -- Parent to CoreGui or PlayerGui
+    local success, err = pcall(function()
+        self.WatermarkGui.Parent = CoreGui
+    end)
+    if not success then
+        self.WatermarkGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+    end
     
     local watermarkFrame = Instance.new("Frame")
     watermarkFrame.Size = UDim2.new(0, 250, 0, 25)
@@ -953,7 +967,19 @@ function RadiantUI.CreateDropdown(self, tab, side, text, options, default, callb
     textLabel.TextYAlignment = Enum.TextYAlignment.Center
     textLabel.Parent = container
     
-    local currentIndex = default or 1
+    -- Fix: Ensure default is a valid index or use 1
+    local currentIndex = 1
+    if type(default) == "number" and default >= 1 and default <= #options then
+        currentIndex = default
+    elseif type(default) == "string" then
+        -- If default is a string, find its index in options
+        for i, option in ipairs(options) do
+            if option == default then
+                currentIndex = i
+                break
+            end
+        end
+    end
     
     local dropdown = Instance.new("TextButton")
     dropdown.Size = UDim2.new(0.55, -10, 0, 25)
@@ -961,7 +987,7 @@ function RadiantUI.CreateDropdown(self, tab, side, text, options, default, callb
     dropdown.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     dropdown.BorderSizePixel = 1
     dropdown.BorderColor3 = Color3.fromRGB(100, 100, 100)
-    dropdown.Text = options[currentIndex] .. " ▼"
+    dropdown.Text = (options[currentIndex] or "Select Option") .. " ▼"
     dropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
     dropdown.TextStrokeTransparency = 0
     dropdown.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -976,7 +1002,7 @@ function RadiantUI.CreateDropdown(self, tab, side, text, options, default, callb
     
     -- Dropdown menu container
     local dropdownMenu = Instance.new("Frame")
-    dropdownMenu.Size = UDim2.new(0.55, -10, 0, #options * 25 + 30)
+    dropdownMenu.Size = UDim2.new(0.55, -10, 0, math.min(#options * 25 + 30, 200))
     dropdownMenu.Position = UDim2.new(0.45, 0, 1, 0)
     dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     dropdownMenu.BorderSizePixel = 1
@@ -1004,6 +1030,7 @@ function RadiantUI.CreateDropdown(self, tab, side, text, options, default, callb
     searchBox.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     searchBox.TextSize = 10
     searchBox.Font = Enum.Font.Gotham
+    searchBox.ClearTextOnFocus = false
     searchBox.ZIndex = 4
     searchBox.Parent = dropdownMenu
     
@@ -1018,6 +1045,8 @@ function RadiantUI.CreateDropdown(self, tab, side, text, options, default, callb
     optionsFrame.BackgroundTransparency = 1
     optionsFrame.BorderSizePixel = 0
     optionsFrame.ScrollBarThickness = 6
+    optionsFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
+    optionsFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 25)
     optionsFrame.ZIndex = 4
     optionsFrame.Parent = dropdownMenu
     
@@ -1031,7 +1060,7 @@ function RadiantUI.CreateDropdown(self, tab, side, text, options, default, callb
         optionButton.Position = UDim2.new(0, 0, 0, (i-1) * 25)
         optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         optionButton.BorderSizePixel = 0
-        optionButton.Text = option
+        optionButton.Text = tostring(option)
         optionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         optionButton.TextStrokeTransparency = 0
         optionButton.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -1040,7 +1069,7 @@ function RadiantUI.CreateDropdown(self, tab, side, text, options, default, callb
         optionButton.ZIndex = 5
         optionButton.Parent = optionsFrame
         
-        table.insert(optionButtons, {button = optionButton, text = option, index = i})
+        table.insert(optionButtons, {button = optionButton, text = tostring(option), index = i})
         
         -- Hover effect for desktop
         optionButton.MouseEnter:Connect(function()
@@ -1053,7 +1082,7 @@ function RadiantUI.CreateDropdown(self, tab, side, text, options, default, callb
         
         -- Selection
         optionButton.Activated:Connect(function()
-            dropdown.Text = option .. " ▼"
+            dropdown.Text = tostring(option) .. " ▼"
             currentIndex = i
             dropdownMenu.Visible = false
             isOpen = false
@@ -1063,16 +1092,13 @@ function RadiantUI.CreateDropdown(self, tab, side, text, options, default, callb
         end)
     end
     
-    -- Update canvas size
-    optionsFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 25)
-    
     -- Search functionality
     searchBox:GetPropertyChangedSignal("Text"):Connect(function()
         local searchTerm = searchBox.Text:lower()
         local visibleCount = 0
         
         for _, optionData in ipairs(optionButtons) do
-            if searchTerm == "" or optionData.text:lower():find(searchTerm) then
+            if searchTerm == "" or optionData.text:lower():find(searchTerm, 1, true) then
                 optionData.button.Visible = true
                 optionData.button.Position = UDim2.new(0, 0, 0, visibleCount * 25)
                 visibleCount = visibleCount + 1
@@ -1091,11 +1117,11 @@ function RadiantUI.CreateDropdown(self, tab, side, text, options, default, callb
         isOpen = not isOpen
         dropdownMenu.Visible = isOpen
         if isOpen then
-            dropdown.Text = options[currentIndex] .. " ▲"
+            dropdown.Text = (options[currentIndex] or "Select Option") .. " ▲"
             searchBox.Text = ""
             searchBox:CaptureFocus()
         else
-            dropdown.Text = options[currentIndex] .. " ▼"
+            dropdown.Text = (options[currentIndex] or "Select Option") .. " ▼"
         end
     end)
     
@@ -1112,7 +1138,7 @@ function RadiantUI.CreateDropdown(self, tab, side, text, options, default, callb
     
     return container
 end
-print("nevr card")
+
 -- Destroy window
 function RadiantUI.Destroy(self)
     if self.ScreenGui then
