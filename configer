@@ -432,6 +432,41 @@ function RadiantHub:CreateTab(config)
     
     print("[RadiantHub] Tab created:", tab.name)
     return tab
+end 
+            local element = self._radiantHubInstance:_createColorPicker(self, config)
+            table.insert(self.elementConfigs, {type = "colorpicker", config = config})
+            return element
+        end
+        function section:CreateButton(config) 
+            local element = self._radiantHubInstance:_createButton(self, config)
+            table.insert(self.elementConfigs, {type = "button", config = config})
+            return element
+        end
+        
+        table.insert(tab.sections, section)
+        table.insert(tab.sectionOrder, section)
+        print("[RadiantHub] Section created:", section.name)
+        return section
+    end
+    
+    table.insert(self.tabs, tab)
+    self:_createTabButton(tab, #self.tabs - 1)
+    
+    -- Set as current tab and display immediately if it's the first tab
+    if #self.tabs == 1 then
+        self.currentTab = tab
+        -- Force initial display after a brief delay to ensure everything is loaded
+        spawn(function()
+            wait(0.1)
+            if self.contentArea then
+                self:_updateTabDisplay(tab)
+                self:_updateTabButtons(tab)
+            end
+        end)
+    end
+    
+    print("[RadiantHub] Tab created:", tab.name)
+    return tab
 end
 
 function RadiantHub:_updateTabDisplay(tab)
@@ -2150,5 +2185,5 @@ function RadiantHub:Destroy()
         self.watermarkGui:Destroy()
     end
 end
-print("dfadasdaggh GAYYFDASRFDSA")
+print("niga")
 return RadiantHub
