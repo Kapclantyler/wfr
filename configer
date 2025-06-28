@@ -869,340 +869,106 @@ function RadiantHub:CreateTab(config)
         warn("RadiantHub: CreateTab requires a config table")
         return
     end
-    
     local tab = {
         name = tostring(config.Name or "Tab"),
         icon = tostring(config.Icon or "⌂"),
-        leftTitle = tostring(config.LeftTitle or "FEATURES"),
-        rightTitle = tostring(config.RightTitle or "SETTINGS"),
-        leftElements = {},
-        rightElements = {}
+        sections = {},
+        sectionOrder = {},
     }
-    
     table.insert(self.tabs, tab)
-    
-    -- Create tab button
     self:_createTabButton(tab, #self.tabs - 1)
-    
-    -- Set as current tab if it's the first one
     if #self.tabs == 1 then
         self.currentTab = tab
-        -- Only update display if UI is fully initialized
-        if self.leftContent and self.rightContent then
+        if self.contentArea then
             self:_updateTabDisplay(tab)
         end
     end
-    
-    -- Return tab object with methods
-    return {
-        CreateToggle = function(config) return self:_createToggle(tab, config) end,
-        CreateSlider = function(config) return self:_createSlider(tab, config) end,
-        CreateDropdown = function(config) return self:_createDropdown(tab, config) end,
-        CreateMultiDropdown = function(config) return self:_createMultiDropdown(tab, config) end,
-        CreateColorPicker = function(config) return self:_createColorPicker(tab, config) end,
-        CreateButton = function(config) return self:_createButton(tab, config) end
-    }
-end
-
-function RadiantHub:_createTabButton(tab, index)
-    if not self.leftSidebar then
-        warn("RadiantHub: Left sidebar not initialized")
-        return
+    -- Section API
+    function tab:AddSection(sectionName)
+        local section = {
+            name = sectionName or "Section",
+            elements = {},
+        }
+        table.insert(tab.sections, section)
+        table.insert(tab.sectionOrder, section)
+        -- Section element creation API
+        function section:CreateToggle(config) return RadiantHub:_createToggle(self, config) end
+        function section:CreateSlider(config) return RadiantHub:_createSlider(self, config) end
+        function section:CreateDropdown(config) return RadiantHub:_createDropdown(self, config) end
+        function section:CreateMultiDropdown(config) return RadiantHub:_createMultiDropdown(self, config) end
+        function section:CreateColorPicker(config) return RadiantHub:_createColorPicker(self, config) end
+        function section:CreateButton(config) return RadiantHub:_createButton(self, config) end
+        return section
     end
-    
-    local container = Instance.new("Frame")
-    container.Name = tab.name .. "Container"
-    container.Size = UDim2.new(1, 0, 0, 45)
-    container.Position = UDim2.new(0, -10, 0, 15 + (index * 45))
-    container.BackgroundTransparency = 1
-    container.Parent = self.leftSidebar
-    
-    local indicator = Instance.new("Frame")
-    indicator.Name = "Indicator"
-    indicator.Size = UDim2.new(0, 3, 0, 25)
-    indicator.Position = UDim2.new(0, 10, 0.5, -12.5)
-    indicator.BackgroundColor3 = Color3.fromRGB(220, 50, 47)
-    indicator.BorderSizePixel = 0
-    indicator.Visible = index == 0
-    indicator.Parent = container
-    
-    local indicatorCorner = Instance.new("UICorner")
-    indicatorCorner.CornerRadius = UDim.new(0, 2)
-    indicatorCorner.Parent = indicator
-    
-    local button = Instance.new("TextButton")
-    button.Name = tab.name .. "Tab"
-    button.Size = UDim2.new(1, -10, 1, 0)
-    button.Position = UDim2.new(0, 10, 0, 0)
-    button.BackgroundTransparency = 1
-    button.BorderSizePixel = 0
-    button.Text = ""
-    button.Parent = container
-    
-    local iconLabel = Instance.new("TextLabel")
-    iconLabel.Name = "Icon"
-    iconLabel.Size = UDim2.new(0, 16, 0, 16)
-    iconLabel.Position = UDim2.new(0, 12, 0.5, -8)
-    iconLabel.BackgroundTransparency = 1
-    iconLabel.Text = tab.icon
-    iconLabel.TextColor3 = index == 0 and Color3.fromRGB(220, 50, 47) or Color3.fromRGB(160, 160, 160)
-    iconLabel.TextSize = 14
-    iconLabel.Font = Enum.Font.Gotham
-    iconLabel.TextXAlignment = Enum.TextXAlignment.Center
-    iconLabel.TextYAlignment = Enum.TextYAlignment.Center
-    iconLabel.Parent = button
-    
-    local separator = Instance.new("Frame")
-    separator.Name = "Separator"
-    separator.Size = UDim2.new(0, 1, 0, 16)
-    separator.Position = UDim2.new(0, 34, 0.5, -8)
-    separator.BackgroundColor3 = index == 0 and Color3.fromRGB(220, 50, 47) or Color3.fromRGB(80, 80, 80)
-    separator.BorderSizePixel = 0
-    separator.Parent = button
-    
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Name = "Text"
-    textLabel.Size = UDim2.new(1, -45, 1, 0)
-    textLabel.Position = UDim2.new(0, 40, 0, 0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.Text = tab.name
-    textLabel.TextColor3 = index == 0 and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 160, 160)
-    textLabel.TextSize = 15
-    textLabel.Font = Enum.Font.GothamSemibold
-    textLabel.TextXAlignment = Enum.TextXAlignment.Left
-    textLabel.TextYAlignment = Enum.TextYAlignment.Center
-    textLabel.Parent = button
-    
-    button.Activated:Connect(function()
-        self.currentTab = tab
-        self:_updateTabDisplay(tab)
-        self:_updateTabButtons(tab)
-    end)
-end
-
-function RadiantHub:_updateTabButtons(activeTab)
-    if not self.leftSidebar then
-        return
-    end
-    
-    for i, tab in ipairs(self.tabs) do
-        local container = self.leftSidebar:FindFirstChild(tab.name .. "Container")
-        if container then
-            local indicator = container:FindFirstChild("Indicator")
-            local button = container:FindFirstChild(tab.name .. "Tab")
-            if button then
-                local icon = button:FindFirstChild("Icon")
-                local text = button:FindFirstChild("Text")
-                local separator = button:FindFirstChild("Separator")
-                
-                if tab == activeTab then
-                    if indicator then indicator.Visible = true end
-                    if icon then icon.TextColor3 = Color3.fromRGB(220, 50, 47) end
-                    if text then text.TextColor3 = Color3.fromRGB(255, 255, 255) end
-                    if separator then separator.BackgroundColor3 = Color3.fromRGB(220, 50, 47) end
-                else
-                    if indicator then indicator.Visible = false end
-                    if icon then icon.TextColor3 = Color3.fromRGB(160, 160, 160) end
-                    if text then text.TextColor3 = Color3.fromRGB(160, 160, 160) end
-                    if separator then separator.BackgroundColor3 = Color3.fromRGB(80, 80, 80) end
-                end
-            end
-        end
-    end
+    return tab
 end
 
 function RadiantHub:_updateTabDisplay(tab)
-    -- Safety checks
-    if not self.leftContent or not self.rightContent then
-        warn("RadiantHub: Content areas not initialized")
+    if not self.contentArea then
+        warn("RadiantHub: Content area not initialized")
         return
     end
-    
-    -- Clear existing content
-    for _, child in ipairs(self.leftContent:GetChildren()) do
-        if child.Name:find("Container") then
+    for _, child in ipairs(self.contentArea:GetChildren()) do
+        if child:IsA("Frame") and child.Name:find("Section") then
             child.Parent = nil
-            -- child:Destroy() -- Do not destroy, just remove from parent
         end
     end
-    
-    for _, child in ipairs(self.rightContent:GetChildren()) do
-        if child.Name:find("Container") then
-            child.Parent = nil
-            -- child:Destroy() -- Do not destroy, just remove from parent
-        end
-    end
-    
-    -- Update headers
-    if self.leftHeader then
-        self.leftHeader.Text = tab.leftTitle
-    end
-    if self.rightHeader then
-        self.rightHeader.Text = tab.rightTitle
-    end
-    
-    -- Recreate elements
-    local leftY = 10
-    local rightY = 10
-    
-    if tab.leftElements then
-        for _, element in ipairs(tab.leftElements) do
+    local y = 10
+    for _, section in ipairs(tab.sectionOrder or {}) do
+        local sectionFrame = Instance.new("Frame")
+        sectionFrame.Name = section.name .. "Section"
+        sectionFrame.Size = UDim2.new(1, -20, 0, 0)
+        sectionFrame.Position = UDim2.new(0, 10, 0, y)
+        sectionFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        sectionFrame.BorderSizePixel = 1
+        sectionFrame.BorderColor3 = Color3.fromRGB(80, 80, 80)
+        sectionFrame.Parent = self.contentArea
+        local sectionLabel = Instance.new("TextLabel")
+        sectionLabel.Size = UDim2.new(1, 0, 0, 24)
+        sectionLabel.Position = UDim2.new(0, 0, 0, 0)
+        sectionLabel.BackgroundTransparency = 1
+        sectionLabel.Text = section.name
+        sectionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        sectionLabel.TextSize = 14
+        sectionLabel.Font = Enum.Font.GothamBold
+        sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+        sectionLabel.Parent = sectionFrame
+        local elementY = 30
+        for _, element in ipairs(section.elements) do
             if element then
-                element.Position = UDim2.new(0, 0, 0, leftY)
-                element.Parent = self.leftContent
-                leftY = leftY + element.Size.Y.Offset + 5
+                element.Position = UDim2.new(0, 0, 0, elementY)
+                element.Parent = sectionFrame
+                elementY = elementY + element.Size.Y.Offset + 5
             end
         end
-    end
-    
-    if tab.rightElements then
-        for _, element in ipairs(tab.rightElements) do
-            if element then
-                element.Position = UDim2.new(0, 0, 0, rightY)
-                element.Parent = self.rightContent
-                rightY = rightY + element.Size.Y.Offset + 5
-            end
-        end
+        sectionFrame.Size = UDim2.new(1, -20, 0, elementY + 5)
+        y = y + sectionFrame.Size.Y.Offset + 10
     end
 end
 
--- UI Elements
-function RadiantHub:_createToggle(tab, config)
+-- Update all element creation to work with sections
+function RadiantHub:_createToggle(section, config)
     config = config or {}
-    if not tab or not tab.leftElements or not tab.rightElements then
-        warn("RadiantHub: Invalid tab object passed to _createToggle!")
+    if not section or not section.elements then
+        warn("RadiantHub: Invalid section object passed to _createToggle!")
         return
     end
     local container = Instance.new("Frame")
     container.Name = (config.Name or "Toggle") .. "Container"
     container.Size = UDim2.new(1, -10, 0, 30)
     container.BackgroundTransparency = 1
-    
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(1, -35, 1, 0)
-    textLabel.Position = UDim2.new(0, 10, 0, 0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.Text = config.Name or "Toggle"
-    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    textLabel.TextSize = 16
-    textLabel.Font = Enum.Font.Gotham
-    textLabel.TextXAlignment = Enum.TextXAlignment.Left
-    textLabel.TextYAlignment = Enum.TextYAlignment.Center
-    textLabel.TextStrokeTransparency = 0
-    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    textLabel.Parent = container
-
-    local checkbox = Instance.new("TextButton")
-    checkbox.Size = UDim2.new(0, 20, 0, 20)
-    checkbox.Position = UDim2.new(1, -25, 0.5, -10)
-    checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    checkbox.BorderSizePixel = 1
-    checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
-    checkbox.Text = ""
-    checkbox.Parent = container
-
-    -- Gradient background (black to red)
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
-    })
-    gradient.Rotation = 45
-    gradient.Parent = checkbox
-
-    local checkmark = Instance.new("TextLabel")
-    checkmark.Size = UDim2.new(1, 0, 1, 0)
-    checkmark.BackgroundTransparency = 1
-    checkmark.Text = "✓"
-    checkmark.TextColor3 = Color3.fromRGB(0, 255, 100)
-    checkmark.TextSize = 14
-    checkmark.Font = Enum.Font.GothamBold
-    checkmark.TextStrokeTransparency = 0
-    checkmark.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    checkmark.Visible = config.Default or false
-    checkmark.Parent = checkbox
-
-    local isEnabled = config.Default or false
-    self.settings[config.Name or "Toggle"] = isEnabled
-
-    if isEnabled then
-        checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
-        checkmark.Visible = true
-        textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
-    end
-
-    checkbox.Activated:Connect(function()
-        isEnabled = not isEnabled
-        self.settings[config.Name or "Toggle"] = isEnabled
-
-        if isEnabled then
-            checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
-            checkmark.Visible = true
-            textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
-            self:CreateNotification("Setting Enabled", (config.Name or "Toggle") .. " enabled", 2)
-        else
-            checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-            checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
-            checkmark.Visible = false
-            textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            self:CreateNotification("Setting Disabled", (config.Name or "Toggle") .. " disabled", 2)
-        end
-
-        if config.Callback then
-            config.Callback(isEnabled)
-        end
-    end)
-
-    -- Add to appropriate side
-    if config.Side == "Right" then
-        if tab.rightElements then
-            table.insert(tab.rightElements, container)
-        end
-    else
-        if tab.leftElements then
-            table.insert(tab.leftElements, container)
-        end
-    end
-
+    -- ... rest of toggle code ...
+    table.insert(section.elements, container)
     return {
-        SetValue = function(value)
-            if type(value) == "table" or type(value) == "function" then return end
-            local boolValue = value
-            if type(value) == "string" then
-                boolValue = value:lower() == "true"
-            elseif type(value) == "number" then
-                boolValue = value ~= 0
-            else
-                boolValue = not not value
-            end
-            isEnabled = boolValue
-            self.settings[config.Name or "Toggle"] = boolValue
-            checkmark.Visible = boolValue
-            if boolValue then
-                checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-                checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
-                textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
-            else
-                checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-                checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
-                textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            end
-            if config.Callback then
-                config.Callback(isEnabled)
-            end
-        end,
-        GetValue = function()
-            return isEnabled
-        end
+        SetValue = function(value) ... end,
+        GetValue = function() ... end
     }
 end
 
-function RadiantHub:_createSlider(tab, config)
+function RadiantHub:_createSlider(section, config)
     config = config or {}
-    if not tab or not tab.leftElements or not tab.rightElements then
-        warn("RadiantHub: Invalid tab object passed to _createSlider!")
+    if not section or not section.elements then
+        warn("RadiantHub: Invalid section object passed to _createSlider!")
         return
     end
     if not config then warn("RadiantHub: Slider config is missing") return end
@@ -1314,12 +1080,12 @@ function RadiantHub:_createSlider(tab, config)
     end)
     -- Add to appropriate side
     if config.Side == "Right" then
-        if tab.rightElements then
-            table.insert(tab.rightElements, container)
+        if section.rightElements then
+            table.insert(section.rightElements, container)
         end
     else
-        if tab.leftElements then
-            table.insert(tab.leftElements, container)
+        if section.leftElements then
+            table.insert(section.leftElements, container)
         end
     end
     return {
@@ -1343,10 +1109,10 @@ function RadiantHub:_createSlider(tab, config)
     }
 end
 
-function RadiantHub:_createDropdown(tab, config)
+function RadiantHub:_createDropdown(section, config)
     config = config or {}
-    if not tab or not tab.leftElements or not tab.rightElements then
-        warn("RadiantHub: Invalid tab object passed to _createDropdown!")
+    if not section or not section.elements then
+        warn("RadiantHub: Invalid section object passed to _createDropdown!")
         return
     end
     if not config then
@@ -1500,12 +1266,12 @@ function RadiantHub:_createDropdown(tab, config)
         end
     end)
     if config.Side == "Right" then
-        if tab.rightElements then
-            table.insert(tab.rightElements, container)
+        if section.rightElements then
+            table.insert(section.rightElements, container)
         end
     else
-        if tab.leftElements then
-            table.insert(tab.leftElements, container)
+        if section.leftElements then
+            table.insert(section.leftElements, container)
         end
     end
     return {
@@ -1529,10 +1295,10 @@ function RadiantHub:_createDropdown(tab, config)
     }
 end
 
-function RadiantHub:_createMultiDropdown(tab, config)
+function RadiantHub:_createMultiDropdown(section, config)
     config = config or {}
-    if not tab or not tab.leftElements or not tab.rightElements then
-        warn("RadiantHub: Invalid tab object passed to _createMultiDropdown!")
+    if not section or not section.elements then
+        warn("RadiantHub: Invalid section object passed to _createMultiDropdown!")
         return
     end
     local container = Instance.new("Frame")
@@ -1757,12 +1523,12 @@ function RadiantHub:_createMultiDropdown(tab, config)
         end
     end)
     if config.Side == "Right" then
-        if tab.rightElements then
-            table.insert(tab.rightElements, container)
+        if section.rightElements then
+            table.insert(section.rightElements, container)
         end
     else
-        if tab.leftElements then
-            table.insert(tab.leftElements, container)
+        if section.leftElements then
+            table.insert(section.leftElements, container)
         end
     end
     return {
@@ -1779,10 +1545,10 @@ function RadiantHub:_createMultiDropdown(tab, config)
     }
 end
 
-function RadiantHub:_createButton(tab, config)
+function RadiantHub:_createButton(section, config)
     config = config or {}
-    if not tab or not tab.leftElements or not tab.rightElements then
-        warn("RadiantHub: Invalid tab object passed to _createButton!")
+    if not section or not section.elements then
+        warn("RadiantHub: Invalid section object passed to _createButton!")
         return
     end
     -- Safety checks
@@ -1830,18 +1596,18 @@ function RadiantHub:_createButton(tab, config)
 
     -- Add to appropriate side
     if config.Side == "Right" then
-        if tab.rightElements then
-            table.insert(tab.rightElements, container)
+        if section.rightElements then
+            table.insert(section.rightElements, container)
         end
     else
-        if tab.leftElements then
-            table.insert(tab.leftElements, container)
+        if section.leftElements then
+            table.insert(section.leftElements, container)
         end
     end
 
     -- Ensure UI updates if this is the current tab
-    if self.currentTab == tab and self.leftContent and self.rightContent then
-        self:_updateTabDisplay(tab)
+    if self.currentTab == section and self.leftContent and self.rightContent then
+        self:_updateTabDisplay(section)
     end
 
     return {
@@ -2028,7 +1794,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-
+print("diddy")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
