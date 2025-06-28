@@ -356,115 +356,69 @@ function RadiantHub:CreateTab(config)
         warn("RadiantHub: CreateTab requires a config table")
         return nil
     end
-    
     local tab = {
         name = tostring(config.Name or "Tab"),
         icon = tostring(config.Icon or "⌂"),
         sections = {},
         sectionOrder = {},
-        elementData = {} -- Store element creation data for recreation
+        _radiantHubInstance = self
     }
-    
-    -- Store reference to the RadiantHub instance
-    tab._radiantHubInstance = self
-    
     function tab:AddSection(sectionName)
         local section = {
             name = sectionName or "Section",
             elements = {},
-            elementConfigs = {}, -- Store configs for recreation
+            elementConfigs = {},
             _radiantHubInstance = self._radiantHubInstance
         }
-        
-        -- Bind element creation methods to the section with proper context
-        function section:CreateToggle(config) 
+        function section:CreateToggle(config)
             local element = self._radiantHubInstance:_createToggle(self, config)
             table.insert(self.elementConfigs, {type = "toggle", config = config})
+            print("[RadiantHub] Toggle created in section:", section.name)
             return element
         end
-        function section:CreateSlider(config) 
+        function section:CreateSlider(config)
             local element = self._radiantHubInstance:_createSlider(self, config)
             table.insert(self.elementConfigs, {type = "slider", config = config})
+            print("[RadiantHub] Slider created in section:", section.name)
             return element
         end
-        function section:CreateDropdown(config) 
+        function section:CreateDropdown(config)
             local element = self._radiantHubInstance:_createDropdown(self, config)
             table.insert(self.elementConfigs, {type = "dropdown", config = config})
+            print("[RadiantHub] Dropdown created in section:", section.name)
             return element
         end
-        function section:CreateMultiDropdown(config) 
+        function section:CreateMultiDropdown(config)
             local element = self._radiantHubInstance:_createMultiDropdown(self, config)
             table.insert(self.elementConfigs, {type = "multidropdown", config = config})
+            print("[RadiantHub] MultiDropdown created in section:", section.name)
             return element
         end
-        function section:CreateColorPicker(config) 
+        function section:CreateColorPicker(config)
             local element = self._radiantHubInstance:_createColorPicker(self, config)
             table.insert(self.elementConfigs, {type = "colorpicker", config = config})
+            print("[RadiantHub] ColorPicker created in section:", section.name)
             return element
         end
-        function section:CreateButton(config) 
+        function section:CreateButton(config)
             local element = self._radiantHubInstance:_createButton(self, config)
             table.insert(self.elementConfigs, {type = "button", config = config})
+            print("[RadiantHub] Button created in section:", section.name)
             return element
         end
-        
         table.insert(tab.sections, section)
         table.insert(tab.sectionOrder, section)
         print("[RadiantHub] Section created:", section.name)
         return section
     end
-    
     table.insert(self.tabs, tab)
     self:_createTabButton(tab, #self.tabs - 1)
-    
-    -- Set as current tab and display immediately if it's the first tab
     if #self.tabs == 1 then
         self.currentTab = tab
-        -- Force initial display after a brief delay to ensure everything is loaded
-        spawn(function()
-            wait(0.1)
-            if self.contentArea then
-                self:_updateTabDisplay(tab)
-                self:_updateTabButtons(tab)
-            end
-        end)
-    end
-    
-    print("[RadiantHub] Tab created:", tab.name)
-    return tab
-end 
-            local element = self._radiantHubInstance:_createColorPicker(self, config)
-            table.insert(self.elementConfigs, {type = "colorpicker", config = config})
-            return element
+        if self.contentArea then
+            self:_updateTabDisplay(tab)
         end
-        function section:CreateButton(config) 
-            local element = self._radiantHubInstance:_createButton(self, config)
-            table.insert(self.elementConfigs, {type = "button", config = config})
-            return element
-        end
-        
-        table.insert(tab.sections, section)
-        table.insert(tab.sectionOrder, section)
-        print("[RadiantHub] Section created:", section.name)
-        return section
     end
-    
-    table.insert(self.tabs, tab)
-    self:_createTabButton(tab, #self.tabs - 1)
-    
-    -- Set as current tab and display immediately if it's the first tab
-    if #self.tabs == 1 then
-        self.currentTab = tab
-        -- Force initial display after a brief delay to ensure everything is loaded
-        spawn(function()
-            wait(0.1)
-            if self.contentArea then
-                self:_updateTabDisplay(tab)
-                self:_updateTabButtons(tab)
-            end
-        end)
-    end
-    
     print("[RadiantHub] Tab created:", tab.name)
     return tab
 end
@@ -474,47 +428,14 @@ function RadiantHub:_updateTabDisplay(tab)
         warn("[RadiantHub] Content area not initialized")
         return
     end
-    
-    -- Clear existing content
     for _, child in ipairs(self.contentArea:GetChildren()) do
         child:Destroy()
     end
-    
-    -- Re-create the left and right sections for side-by-side layout
-    self:_createContentSections()
-    
-    -- Only display sections if there are any
-    if not tab.sectionOrder or #tab.sectionOrder == 0 then
-        return
-    end
-    
-    -- Separate sections into left and right
-    local leftSections = {}
-    local rightSections = {}
-    
-    for i, section in ipairs(tab.sectionOrder) do
-        if i % 2 == 1 then -- Odd sections go to left
-            table.insert(leftSections, section)
-        else -- Even sections go to right
-            table.insert(rightSections, section)
-        end
-    end
-    
-    -- Create left sections
-    local leftY = 0
-    for _, section in ipairs(leftSections) do
+    local y = 10
+    for _, section in ipairs(tab.sectionOrder or {}) do
         if section.elementConfigs and #section.elementConfigs > 0 then
-            local sectionFrame = self:_recreateSectionFrame(section, self.leftContent, leftY)
-            leftY = leftY + sectionFrame.Size.Y.Offset + 10
-        end
-    end
-    
-    -- Create right sections  
-    local rightY = 0
-    for _, section in ipairs(rightSections) do
-        if section.elementConfigs and #section.elementConfigs > 0 then
-            local sectionFrame = self:_recreateSectionFrame(section, self.rightContent, rightY)
-            rightY = rightY + sectionFrame.Size.Y.Offset + 10
+            local sectionFrame = self:_recreateSectionFrame(section, self.contentArea, y)
+            y = y + sectionFrame.Size.Y.Offset + 10
         end
     end
 end
@@ -2164,7 +2085,7 @@ end
 function RadiantHub:GetSetting(name)
     return self.settings[name]
 end
-print("di k or ")
+
 function RadiantHub:SetSetting(name, value)
     self.settings[name] = value
 end
@@ -2185,5 +2106,5 @@ function RadiantHub:Destroy()
         self.watermarkGui:Destroy()
     end
 end
-
+print("balls")
 return RadiantHub
