@@ -564,12 +564,14 @@ function RadiantHub:_updateTabDisplay(tab)
     -- Clear existing content
     for _, child in ipairs(self.leftContent:GetChildren()) do
         if child.Name:find("Container") then
+            child.Parent = nil
             child:Destroy()
         end
     end
     
     for _, child in ipairs(self.rightContent:GetChildren()) do
         if child.Name:find("Container") then
+            child.Parent = nil
             child:Destroy()
         end
     end
@@ -690,6 +692,11 @@ function RadiantHub:_createToggle(tab, config)
         if tab.leftElements then
             table.insert(tab.leftElements, container)
         end
+    end
+
+    -- Ensure UI updates if this is the current tab
+    if self.currentTab == tab and self.leftContent and self.rightContent then
+        self:_updateTabDisplay(tab)
     end
 
     return {
@@ -914,6 +921,11 @@ function RadiantHub:_createSlider(tab, config)
         end
     end
 
+    -- Ensure UI updates if this is the current tab
+    if self.currentTab == tab and self.leftContent and self.rightContent then
+        self:_updateTabDisplay(tab)
+    end
+
     return {
         SetValue = function(value)
             -- Silently ignore invalid types
@@ -1066,6 +1078,11 @@ function RadiantHub:_createDropdown(tab, config)
         end
     end
 
+    -- Ensure UI updates if this is the current tab
+    if self.currentTab == tab and self.leftContent and self.rightContent then
+        self:_updateTabDisplay(tab)
+    end
+
     return {
         SetValue = function(value)
             -- Silently ignore invalid types
@@ -1143,6 +1160,11 @@ function RadiantHub:_createButton(tab, config)
         if tab.leftElements then
             table.insert(tab.leftElements, container)
         end
+    end
+
+    -- Ensure UI updates if this is the current tab
+    if self.currentTab == tab and self.leftContent and self.rightContent then
+        self:_updateTabDisplay(tab)
     end
 
     return {
@@ -1329,7 +1351,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-
+print("yes this is correct tyler")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
