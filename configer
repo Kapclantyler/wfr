@@ -417,6 +417,7 @@ function RadiantHub:_createNotificationSystem()
 end
 
 function RadiantHub:_createColorPicker(tab, config)
+    config = config or {}
     -- Mobile-compatible color picker implementation
     local container = Instance.new("Frame")
     container.Name = (config.Name or "ColorPicker") .. "Container"
@@ -873,6 +874,7 @@ end
 
 -- Tab System
 function RadiantHub:CreateTab(config)
+    config = config or {}
     if not config then
         warn("RadiantHub: CreateTab requires a config table")
         return
@@ -1079,6 +1081,7 @@ end
 
 -- UI Elements
 function RadiantHub:_createToggle(tab, config)
+    config = config or {}
     local container = Instance.new("Frame")
     container.Name = (config.Name or "Toggle") .. "Container"
     container.Size = UDim2.new(1, -10, 0, 30)
@@ -1206,6 +1209,7 @@ function RadiantHub:_createToggle(tab, config)
 end
 
 function RadiantHub:_createSlider(tab, config)
+    config = config or {}
     if not config then warn("RadiantHub: Slider config is missing") return end
     local container = Instance.new("Frame")
     container.Name = (config.Name or "Slider") .. "Container"
@@ -1345,6 +1349,7 @@ function RadiantHub:_createSlider(tab, config)
 end
 
 function RadiantHub:_createDropdown(tab, config)
+    config = config or {}
     -- Safety checks
     if not config then
         warn("RadiantHub: Dropdown config is missing")
@@ -1489,6 +1494,7 @@ function RadiantHub:_createDropdown(tab, config)
 end
 
 function RadiantHub:_createButton(tab, config)
+    config = config or {}
     -- Safety checks
     if not config then
         warn("RadiantHub: Button config is missing")
@@ -1732,12 +1738,12 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-
+print("balls")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
 end
-print("JWAD")
+
 function RadiantHub:SetSetting(name, value)
     self.settings[name] = value
 end
