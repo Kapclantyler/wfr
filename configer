@@ -717,6 +717,7 @@ function RadiantHub:_createColorPicker(tab, config)
     local selectedColor = config.Default or Color3.fromRGB(255, 255, 255)
 
     local function hsvToRgb(h, s, v)
+        -- h, s, v in [0,1]
         local r, g, b
         local i = math.floor(h * 6)
         local f = h * 6 - i
@@ -734,15 +735,15 @@ function RadiantHub:_createColorPicker(tab, config)
     end
 
     local function updateColorFromHSV()
+        -- Set the base color of the main color area to the current hue (full sat, full bright)
+        local hueColor = hsvToRgb(currentHue, 1, 1)
+        hueSatFrame.BackgroundColor3 = hueColor
         selectedColor = hsvToRgb(currentHue, currentSat, currentBright)
         colorPreview.BackgroundColor3 = selectedColor
         local r = math.floor(selectedColor.R * 255)
         local g = math.floor(selectedColor.G * 255)
         local b = math.floor(selectedColor.B * 255)
         rgbLabel.Text = string.format("RGB: %d, %d, %d", r, g, b)
-        -- Set the base color of the main color area to the current hue (full sat, full bright)
-        local hueColor = hsvToRgb(currentHue, 1, 1)
-        hueSatFrame.BackgroundColor3 = hueColor
     end
 
     local function updateSelectorPosition()
@@ -753,30 +754,41 @@ function RadiantHub:_createColorPicker(tab, config)
         hueSliderHandle.Position = UDim2.new(currentHue, -2, 0, -4)
     end
 
-    local isDraggingColor = false
-    local isDraggingHue = false
-
-    local function updateColorFromPosition(inputObject)
-        local pos = inputObject.Position
-        local relativePos = Vector2.new(
-            math.clamp((pos.X - hueSatFrame.AbsolutePosition.X) / hueSatFrame.AbsoluteSize.X, 0, 1),
-            math.clamp((pos.Y - hueSatFrame.AbsolutePosition.Y) / hueSatFrame.AbsoluteSize.Y, 0, 1)
-        )
-        currentSat = relativePos.X
-        currentBright = 1 - relativePos.Y
+    -- On any change, update all UI
+    local function updateAll()
         updateColorFromHSV()
         updateSelectorPosition()
+        updateHueSliderPosition()
     end
 
+    -- Update on open
+    local function openColorPicker()
+        colorPickerOverlay.Visible = true
+        selectedColor = colorButton.BackgroundColor3
+        local r = math.floor(selectedColor.R * 255)
+        local g = math.floor(selectedColor.G * 255)
+        local b = math.floor(selectedColor.B * 255)
+        rgbLabel.Text = string.format("RGB: %d, %d, %d", r, g, b)
+        updateAll()
+        colorPickerFrame.Position = UDim2.new(0.5, -175, 0.5, -250)
+        local slideIn = TweenService:Create(colorPickerFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Position = UDim2.new(0.5, -175, 0.5, -210)
+        })
+        slideIn:Play()
+    end
+
+    -- Update on drag
     hueSatFrame.InputBegan:Connect(function(inputObject)
         if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or inputObject.UserInputType == Enum.UserInputType.Touch then
             isDraggingColor = true
             updateColorFromPosition(inputObject)
+            updateAll()
         end
     end)
     hueSatFrame.InputChanged:Connect(function(inputObject)
         if isDraggingColor and (inputObject.UserInputType == Enum.UserInputType.MouseMovement or inputObject.UserInputType == Enum.UserInputType.Touch) then
             updateColorFromPosition(inputObject)
+            updateAll()
         end
     end)
     hueSatFrame.InputEnded:Connect(function(inputObject)
@@ -784,23 +796,17 @@ function RadiantHub:_createColorPicker(tab, config)
             isDraggingColor = false
         end
     end)
-
-    local function updateHueFromPosition(inputObject)
-        local pos = inputObject.Position
-        local relativePos = math.clamp((pos.X - hueSliderFrame.AbsolutePosition.X) / hueSliderFrame.AbsoluteSize.X, 0, 1)
-        currentHue = relativePos
-        updateColorFromHSV()
-        updateHueSliderPosition()
-    end
     hueSliderFrame.InputBegan:Connect(function(inputObject)
         if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or inputObject.UserInputType == Enum.UserInputType.Touch then
             isDraggingHue = true
             updateHueFromPosition(inputObject)
+            updateAll()
         end
     end)
     hueSliderFrame.InputChanged:Connect(function(inputObject)
         if isDraggingHue and (inputObject.UserInputType == Enum.UserInputType.MouseMovement or inputObject.UserInputType == Enum.UserInputType.Touch) then
             updateHueFromPosition(inputObject)
+            updateAll()
         end
     end)
     hueSliderFrame.InputEnded:Connect(function(inputObject)
@@ -809,23 +815,6 @@ function RadiantHub:_createColorPicker(tab, config)
         end
     end)
 
-    local function openColorPicker()
-        colorPickerOverlay.Visible = true
-        selectedColor = colorButton.BackgroundColor3
-        colorPreview.BackgroundColor3 = selectedColor
-        local r = math.floor(selectedColor.R * 255)
-        local g = math.floor(selectedColor.G * 255)
-        local b = math.floor(selectedColor.B * 255)
-        rgbLabel.Text = string.format("RGB: %d, %d, %d", r, g, b)
-        updateColorFromHSV()
-        updateSelectorPosition()
-        updateHueSliderPosition()
-        colorPickerFrame.Position = UDim2.new(0.5, -175, 0.5, -250)
-        local slideIn = TweenService:Create(colorPickerFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Position = UDim2.new(0.5, -175, 0.5, -210)
-        })
-        slideIn:Play()
-    end
     local function closeColorPicker()
         colorPickerOverlay.Visible = false
     end
@@ -2041,7 +2030,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-
+print("dadadagfdfdghgdgfd")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
