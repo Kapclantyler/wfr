@@ -3,7 +3,7 @@
 
 local RadiantHub = {}
 RadiantHub.__index = RadiantHub
-
+print("Yurrr")
 -- Services
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -416,7 +416,10 @@ function RadiantHub:CreateTab(config)
     -- Set as current tab if it's the first one
     if #self.tabs == 1 then
         self.currentTab = tab
-        self:_updateTabDisplay(tab)
+        -- Only update display if UI is fully initialized
+        if self.leftContent and self.rightContent then
+            self:_updateTabDisplay(tab)
+        end
     end
     
     -- Return tab object with methods
@@ -431,6 +434,11 @@ function RadiantHub:CreateTab(config)
 end
 
 function RadiantHub:_createTabButton(tab, index)
+    if not self.leftSidebar then
+        warn("RadiantHub: Left sidebar not initialized")
+        return
+    end
+    
     local container = Instance.new("Frame")
     container.Name = tab.name .. "Container"
     container.Size = UDim2.new(1, 0, 0, 45)
@@ -502,31 +510,43 @@ function RadiantHub:_createTabButton(tab, index)
 end
 
 function RadiantHub:_updateTabButtons(activeTab)
+    if not self.leftSidebar then
+        return
+    end
+    
     for i, tab in ipairs(self.tabs) do
         local container = self.leftSidebar:FindFirstChild(tab.name .. "Container")
         if container then
             local indicator = container:FindFirstChild("Indicator")
             local button = container:FindFirstChild(tab.name .. "Tab")
-            local icon = button:FindFirstChild("Icon")
-            local text = button:FindFirstChild("Text")
-            local separator = button:FindFirstChild("Separator")
-            
-            if tab == activeTab then
-                indicator.Visible = true
-                icon.TextColor3 = Color3.fromRGB(220, 50, 47)
-                text.TextColor3 = Color3.fromRGB(255, 255, 255)
-                separator.BackgroundColor3 = Color3.fromRGB(220, 50, 47)
-            else
-                indicator.Visible = false
-                icon.TextColor3 = Color3.fromRGB(160, 160, 160)
-                text.TextColor3 = Color3.fromRGB(160, 160, 160)
-                separator.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+            if button then
+                local icon = button:FindFirstChild("Icon")
+                local text = button:FindFirstChild("Text")
+                local separator = button:FindFirstChild("Separator")
+                
+                if tab == activeTab then
+                    if indicator then indicator.Visible = true end
+                    if icon then icon.TextColor3 = Color3.fromRGB(220, 50, 47) end
+                    if text then text.TextColor3 = Color3.fromRGB(255, 255, 255) end
+                    if separator then separator.BackgroundColor3 = Color3.fromRGB(220, 50, 47) end
+                else
+                    if indicator then indicator.Visible = false end
+                    if icon then icon.TextColor3 = Color3.fromRGB(160, 160, 160) end
+                    if text then text.TextColor3 = Color3.fromRGB(160, 160, 160) end
+                    if separator then separator.BackgroundColor3 = Color3.fromRGB(80, 80, 80) end
+                end
             end
         end
     end
 end
 
 function RadiantHub:_updateTabDisplay(tab)
+    -- Safety checks
+    if not self.leftContent or not self.rightContent then
+        warn("RadiantHub: Content areas not initialized")
+        return
+    end
+    
     -- Clear existing content
     for _, child in ipairs(self.leftContent:GetChildren()) do
         if child.Name:find("Container") then
@@ -541,23 +561,35 @@ function RadiantHub:_updateTabDisplay(tab)
     end
     
     -- Update headers
-    self.leftHeader.Text = tab.leftTitle
-    self.rightHeader.Text = tab.rightTitle
+    if self.leftHeader then
+        self.leftHeader.Text = tab.leftTitle
+    end
+    if self.rightHeader then
+        self.rightHeader.Text = tab.rightTitle
+    end
     
     -- Recreate elements
     local leftY = 10
     local rightY = 10
     
-    for _, element in ipairs(tab.leftElements) do
-        element.Position = UDim2.new(0, 0, 0, leftY)
-        element.Parent = self.leftContent
-        leftY = leftY + element.Size.Y.Offset + 5
+    if tab.leftElements then
+        for _, element in ipairs(tab.leftElements) do
+            if element then
+                element.Position = UDim2.new(0, 0, 0, leftY)
+                element.Parent = self.leftContent
+                leftY = leftY + element.Size.Y.Offset + 5
+            end
+        end
     end
     
-    for _, element in ipairs(tab.rightElements) do
-        element.Position = UDim2.new(0, 0, 0, rightY)
-        element.Parent = self.rightContent
-        rightY = rightY + element.Size.Y.Offset + 5
+    if tab.rightElements then
+        for _, element in ipairs(tab.rightElements) do
+            if element then
+                element.Position = UDim2.new(0, 0, 0, rightY)
+                element.Parent = self.rightContent
+                rightY = rightY + element.Size.Y.Offset + 5
+            end
+        end
     end
 end
 
@@ -637,9 +669,13 @@ function RadiantHub:_createToggle(tab, config)
 
     -- Add to appropriate side
     if config.Side == "Right" then
-        table.insert(tab.rightElements, container)
+        if tab.rightElements then
+            table.insert(tab.rightElements, container)
+        end
     else
-        table.insert(tab.leftElements, container)
+        if tab.leftElements then
+            table.insert(tab.leftElements, container)
+        end
     end
 
     return {
@@ -665,8 +701,8 @@ end
 
 function RadiantHub:_createSlider(tab, config)
     -- Safety checks
-    if not config or not config.Name then
-        warn("RadiantHub: Slider config or name is missing")
+    if not config then
+        warn("RadiantHub: Slider config is missing")
         return
     end
     
@@ -781,9 +817,13 @@ function RadiantHub:_createSlider(tab, config)
 
     -- Add to appropriate side
     if config.Side == "Right" then
-        table.insert(tab.rightElements, container)
+        if tab.rightElements then
+            table.insert(tab.rightElements, container)
+        end
     else
-        table.insert(tab.leftElements, container)
+        if tab.leftElements then
+            table.insert(tab.leftElements, container)
+        end
     end
 
     return {
@@ -803,8 +843,8 @@ end
 
 function RadiantHub:_createDropdown(tab, config)
     -- Safety checks
-    if not config or not config.Name then
-        warn("RadiantHub: Dropdown config or name is missing")
+    if not config then
+        warn("RadiantHub: Dropdown config is missing")
         return
     end
     
@@ -907,9 +947,13 @@ function RadiantHub:_createDropdown(tab, config)
 
     -- Add to appropriate side
     if config.Side == "Right" then
-        table.insert(tab.rightElements, container)
+        if tab.rightElements then
+            table.insert(tab.rightElements, container)
+        end
     else
-        table.insert(tab.leftElements, container)
+        if tab.leftElements then
+            table.insert(tab.leftElements, container)
+        end
     end
 
     return {
@@ -928,8 +972,8 @@ end
 
 function RadiantHub:_createButton(tab, config)
     -- Safety checks
-    if not config or not config.Name then
-        warn("RadiantHub: Button config or name is missing")
+    if not config then
+        warn("RadiantHub: Button config is missing")
         return
     end
     
@@ -972,9 +1016,13 @@ function RadiantHub:_createButton(tab, config)
 
     -- Add to appropriate side
     if config.Side == "Right" then
-        table.insert(tab.rightElements, container)
+        if tab.rightElements then
+            table.insert(tab.rightElements, container)
+        end
     else
-        table.insert(tab.leftElements, container)
+        if tab.leftElements then
+            table.insert(tab.leftElements, container)
+        end
     end
 
     return {
@@ -1170,22 +1218,13 @@ end
 function RadiantHub:SetSetting(name, value)
     self.settings[name] = value
 end
-print("doggy")
+
 function RadiantHub:Destroy()
     if self.screenGui then
         self.screenGui:Destroy()
     end
     if self.watermarkGui then
         self.watermarkGui:Destroy()
-    end
-end
-
--- Initialize first tab if exists
-function RadiantHub:_initializeFirstTab()
-    if #self.tabs > 0 then
-        self.currentTab = self.tabs[1]
-        self:_updateTabDisplay(self.tabs[1])
-        self:_updateTabButtons(self.tabs[1])
     end
 end
 
