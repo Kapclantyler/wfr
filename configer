@@ -1161,7 +1161,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("uyifds")
+
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
@@ -1170,7 +1170,7 @@ end
 function RadiantHub:SetSetting(name, value)
     self.settings[name] = value
 end
-
+print("doggy")
 function RadiantHub:Destroy()
     if self.screenGui then
         self.screenGui:Destroy()
