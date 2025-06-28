@@ -2164,7 +2164,7 @@ end
 function RadiantHub:GetSetting(name)
     return self.settings[name]
 end
-
+print("di k or ")
 function RadiantHub:SetSetting(name, value)
     self.settings[name] = value
 end
@@ -2185,5 +2185,5 @@ function RadiantHub:Destroy()
         self.watermarkGui:Destroy()
     end
 end
-print("niga")
+
 return RadiantHub
