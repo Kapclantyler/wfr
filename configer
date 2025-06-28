@@ -561,7 +561,7 @@ function RadiantHub:_createColorPicker(tab, config)
         NumberSequenceKeypoint.new(0, 0),
         NumberSequenceKeypoint.new(1, 1)
     })
-    satGradient.Rotation = 0
+    satGradient.Rotation = 0 -- left to right
     satGradient.Parent = saturationOverlay
 
     -- Black overlay (brightness)
@@ -582,7 +582,7 @@ function RadiantHub:_createColorPicker(tab, config)
         NumberSequenceKeypoint.new(0, 1),
         NumberSequenceKeypoint.new(1, 0)
     })
-    brightGradient.Rotation = 90
+    brightGradient.Rotation = 90 -- top to bottom
     brightGradient.Parent = brightnessOverlay
 
     -- Color selector circle
@@ -1583,6 +1583,7 @@ function RadiantHub:_createMultiDropdown(tab, config)
     dropdownMenu.ZIndex = 3
     dropdownMenu.Parent = container
     local searchBox
+    local optionsFrame
     if config.Searchable then
         searchBox = Instance.new("TextBox")
         searchBox.Name = "SearchBox"
@@ -1601,11 +1602,16 @@ function RadiantHub:_createMultiDropdown(tab, config)
         searchBox.Font = Enum.Font.Gotham
         searchBox.ZIndex = 4
         searchBox.Parent = dropdownMenu
+        optionsFrame = Instance.new("ScrollingFrame")
+        optionsFrame.Name = "OptionsFrame"
+        optionsFrame.Size = UDim2.new(1, 0, 1, -30)
+        optionsFrame.Position = UDim2.new(0, 0, 0, 30)
+    else
+        optionsFrame = Instance.new("ScrollingFrame")
+        optionsFrame.Name = "OptionsFrame"
+        optionsFrame.Size = UDim2.new(1, 0, 1, 0)
+        optionsFrame.Position = UDim2.new(0, 0, 0, 0)
     end
-    local optionsFrame = Instance.new("ScrollingFrame")
-    optionsFrame.Name = "OptionsFrame"
-    optionsFrame.Size = UDim2.new(1, 0, 1, -30)
-    optionsFrame.Position = UDim2.new(0, 0, 0, 30)
     optionsFrame.BackgroundTransparency = 1
     optionsFrame.BorderSizePixel = 0
     optionsFrame.ScrollBarThickness = 6
@@ -2025,7 +2031,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("niggahack")
+print("DADADADA")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
