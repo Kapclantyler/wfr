@@ -418,8 +418,9 @@ end
 
 function RadiantHub:_createColorPicker(tab, config)
     config = config or {}
-    if not tab or not tab.leftElements or not tab.rightElements then
-        warn("RadiantHub: Invalid tab object passed to _createColorPicker!")
+    -- Robust tab validation
+    if not tab or type(tab) ~= "table" or not tab.leftElements or not tab.rightElements then
+        warn("RadiantHub: Invalid tab object passed to _createColorPicker! Tab: " .. tostring(tab))
         return
     end
     -- Mobile-compatible color picker implementation
@@ -543,7 +544,8 @@ function RadiantHub:_createColorPicker(tab, config)
     hueSatFrame.ZIndex = 202
     hueSatFrame.Parent = colorPickerFrame
 
-    -- White to transparent overlay (saturation)
+    -- Correct gradient overlays for HSV
+    -- 1. Saturation (white to transparent, left to right)
     local saturationOverlay = Instance.new("Frame")
     saturationOverlay.Size = UDim2.new(1, 0, 1, 0)
     saturationOverlay.Position = UDim2.new(0, 0, 0, 0)
@@ -551,7 +553,6 @@ function RadiantHub:_createColorPicker(tab, config)
     saturationOverlay.BorderSizePixel = 0
     saturationOverlay.ZIndex = 203
     saturationOverlay.Parent = hueSatFrame
-
     local satGradient = Instance.new("UIGradient")
     satGradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
@@ -563,8 +564,7 @@ function RadiantHub:_createColorPicker(tab, config)
     })
     satGradient.Rotation = 0 -- left to right
     satGradient.Parent = saturationOverlay
-
-    -- Black overlay (brightness)
+    -- 2. Brightness (transparent to black, top to bottom)
     local brightnessOverlay = Instance.new("Frame")
     brightnessOverlay.Size = UDim2.new(1, 0, 1, 0)
     brightnessOverlay.Position = UDim2.new(0, 0, 0, 0)
@@ -572,15 +572,14 @@ function RadiantHub:_createColorPicker(tab, config)
     brightnessOverlay.BorderSizePixel = 0
     brightnessOverlay.ZIndex = 204
     brightnessOverlay.Parent = hueSatFrame
-
     local brightGradient = Instance.new("UIGradient")
     brightGradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.new(0, 0, 0)),
         ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0))
     })
     brightGradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(1, 0)
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1)
     })
     brightGradient.Rotation = 90 -- top to bottom
     brightGradient.Parent = brightnessOverlay
@@ -1402,7 +1401,10 @@ function RadiantHub:_createDropdown(tab, config)
     dropdown.Parent = container
     local dropdownMenu = Instance.new("Frame")
     dropdownMenu.Name = "DropdownMenu"
-    dropdownMenu.Size = UDim2.new(0.55, -10, 0, #options * 25 + 30)
+    -- Dynamically set height based on options (max 6 visible)
+    local maxVisible = 6
+    local menuHeight = math.min(#options, maxVisible) * 25 + (config.Searchable and 30 or 0)
+    dropdownMenu.Size = UDim2.new(0.55, -10, 0, menuHeight)
     dropdownMenu.Position = UDim2.new(0.45, 0, 1, 0)
     dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     dropdownMenu.BorderSizePixel = 1
@@ -1411,6 +1413,7 @@ function RadiantHub:_createDropdown(tab, config)
     dropdownMenu.ZIndex = 3
     dropdownMenu.Parent = container
     local searchBox
+    local optionsFrame
     if config.Searchable then
         searchBox = Instance.new("TextBox")
         searchBox.Name = "SearchBox"
@@ -1429,11 +1432,16 @@ function RadiantHub:_createDropdown(tab, config)
         searchBox.Font = Enum.Font.Gotham
         searchBox.ZIndex = 4
         searchBox.Parent = dropdownMenu
+        optionsFrame = Instance.new("ScrollingFrame")
+        optionsFrame.Name = "OptionsFrame"
+        optionsFrame.Size = UDim2.new(1, 0, 1, -30)
+        optionsFrame.Position = UDim2.new(0, 0, 0, 30)
+    else
+        optionsFrame = Instance.new("ScrollingFrame")
+        optionsFrame.Name = "OptionsFrame"
+        optionsFrame.Size = UDim2.new(1, 0, 1, 0)
+        optionsFrame.Position = UDim2.new(0, 0, 0, 0)
     end
-    local optionsFrame = Instance.new("ScrollingFrame")
-    optionsFrame.Name = "OptionsFrame"
-    optionsFrame.Size = UDim2.new(1, 0, 1, -30)
-    optionsFrame.Position = UDim2.new(0, 0, 0, 30)
     optionsFrame.BackgroundTransparency = 1
     optionsFrame.BorderSizePixel = 0
     optionsFrame.ScrollBarThickness = 6
@@ -1572,9 +1580,11 @@ function RadiantHub:_createMultiDropdown(tab, config)
     dropdown.ZIndex = 2
     dropdown.Parent = container
     local options = config.Options or {"Option 1", "Option 2"}
+    local maxVisible = 6
+    local menuHeight = math.min(#options, maxVisible) * 25 + (config.Searchable and 30 or 0)
     local dropdownMenu = Instance.new("Frame")
     dropdownMenu.Name = "MultiDropdownMenu"
-    dropdownMenu.Size = UDim2.new(0.55, -10, 0, #options * 25 + 30)
+    dropdownMenu.Size = UDim2.new(0.55, -10, 0, menuHeight)
     dropdownMenu.Position = UDim2.new(0.45, 0, 1, 0)
     dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     dropdownMenu.BorderSizePixel = 1
@@ -2031,7 +2041,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("DADADADA")
+print("ya boyyy")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
