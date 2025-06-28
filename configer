@@ -1,13 +1,13 @@
 -- RadiantUI Library - Complete Rewrite
 -- Mobile-Compatible UI Library with Modern Design
-
+warn("wsp guys")
 local RadiantUI = {}
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
-print("hi")
+
 -- Create new window
 function RadiantUI.new(config)
     config = config or {}
@@ -262,27 +262,56 @@ function RadiantUI.new(config)
     
     -- Initialize features
     if self.Config.Notifications then
-        self:InitializeNotifications()
+        RadiantUI.InitializeNotifications(self)
     end
     
     if self.Config.Watermark then
-        self:InitializeWatermark()
+        RadiantUI.InitializeWatermark(self)
     end
     
-    self:InitializeDragging()
-    self:InitializeMinimize()
-    self:InitializeAnimations()
+    RadiantUI.InitializeDragging(self)
+    RadiantUI.InitializeMinimize(self)
+    RadiantUI.InitializeAnimations(self)
+    
+    -- Bind methods to the window object for easy calling
+    self.CreateTab = function(name, icon, leftTitle, rightTitle)
+        return RadiantUI.CreateTab(self, name, icon, leftTitle, rightTitle)
+    end
+    
+    self.SelectTab = function(tab)
+        return RadiantUI.SelectTab(self, tab)
+    end
+    
+    self.CreateToggle = function(tab, side, text, default, callback)
+        return RadiantUI.CreateToggle(self, tab, side, text, default, callback)
+    end
+    
+    self.CreateSlider = function(tab, side, text, min, max, default, callback)
+        return RadiantUI.CreateSlider(self, tab, side, text, min, max, default, callback)
+    end
+    
+    self.CreateDropdown = function(tab, side, text, options, default, callback)
+        return RadiantUI.CreateDropdown(self, tab, side, text, options, default, callback)
+    end
+    
+    self.CreateNotification = function(title, message, duration)
+        return RadiantUI.CreateNotification(self, title, message, duration)
+    end
+    
+    self.Destroy = function()
+        return RadiantUI.Destroy(self)
+    end
     
     -- Button events
     closeButton.Activated:Connect(function()
-        self:Destroy()
+        RadiantUI.Destroy(self)
     end)
     
     return self
 end
 
 -- Initialize notification system
-function RadiantUI:InitializeNotifications()
+function RadiantUI.InitializeNotifications(self)
     self.NotificationContainer = Instance.new("Frame")
     self.NotificationContainer.Size = UDim2.new(0, 300, 0, 200)
     self.NotificationContainer.Position = UDim2.new(1, -310, 1, -210)
@@ -290,7 +319,7 @@ function RadiantUI:InitializeNotifications()
     self.NotificationContainer.Parent = self.ScreenGui
 end
 
-function RadiantUI:CreateNotification(title, message, duration)
+function RadiantUI.CreateNotification(self, title, message, duration)
     if not self.NotificationContainer then return end
     
     local notification = Instance.new("Frame")
@@ -358,7 +387,7 @@ function RadiantUI:CreateNotification(title, message, duration)
 end
 
 -- Initialize watermark
-function RadiantUI:InitializeWatermark()
+function RadiantUI.InitializeWatermark(self)
     self.WatermarkGui = Instance.new("ScreenGui")
     self.WatermarkGui.Name = "RadiantUI_Watermark"
     self.WatermarkGui.ResetOnSpawn = false
@@ -452,7 +481,7 @@ function RadiantUI:InitializeWatermark()
 end
 
 -- Initialize dragging
-function RadiantUI:InitializeDragging()
+function RadiantUI.InitializeDragging(self)
     local dragging = false
     local dragStart = nil
     local startPos = nil
@@ -483,7 +512,7 @@ function RadiantUI:InitializeDragging()
 end
 
 -- Initialize minimize/restore
-function RadiantUI:InitializeMinimize()
+function RadiantUI.InitializeMinimize(self)
     local function minimizeUI()
         self.IsMinimized = true
         self.MainFrame.Visible = false
@@ -516,7 +545,7 @@ function RadiantUI:InitializeMinimize()
 end
 
 -- Initialize animations
-function RadiantUI:InitializeAnimations()
+function RadiantUI.InitializeAnimations(self)
     -- Rainbow border animation
     local borderGradient = self.BorderFrame:FindFirstChild("UIGradient")
     if borderGradient then
@@ -527,7 +556,7 @@ function RadiantUI:InitializeAnimations()
 end
 
 -- Create tab
-function RadiantUI:CreateTab(name, icon, leftTitle, rightTitle)
+function RadiantUI.CreateTab(self, name, icon, leftTitle, rightTitle)
     local tab = {
         Name = name,
         Icon = icon or "⌂",
@@ -606,21 +635,21 @@ function RadiantUI:CreateTab(name, icon, leftTitle, rightTitle)
     tab.Separator = separator
     
     button.Activated:Connect(function()
-        self:SelectTab(tab)
+        RadiantUI.SelectTab(self, tab)
     end)
     
     table.insert(self.Tabs, tab)
     
     -- If this is the first tab, make it active
     if #self.Tabs == 1 then
-        self:SelectTab(tab)
+        RadiantUI.SelectTab(self, tab)
     end
     
     return tab
 end
 
 -- Select tab
-function RadiantUI:SelectTab(selectedTab)
+function RadiantUI.SelectTab(self, selectedTab)
     -- Deactivate all tabs
     for _, tab in ipairs(self.Tabs) do
         tab.IsActive = false
@@ -678,7 +707,7 @@ function RadiantUI:SelectTab(selectedTab)
 end
 
 -- Create toggle
-function RadiantUI:CreateToggle(tab, side, text, default, callback)
+function RadiantUI.CreateToggle(self, tab, side, text, default, callback)
     local container = Instance.new("Frame")
     container.Size = UDim2.new(1, -10, 0, 30)
     container.BackgroundTransparency = 1
@@ -756,14 +785,14 @@ function RadiantUI:CreateToggle(tab, side, text, default, callback)
     
     -- Refresh tab if it's currently active
     if tab.IsActive then
-        self:SelectTab(tab)
+        RadiantUI.SelectTab(self, tab)
     end
     
     return container
 end
 
 -- Create slider
-function RadiantUI:CreateSlider(tab, side, text, min, max, default, callback)
+function RadiantUI.CreateSlider(self, tab, side, text, min, max, default, callback)
     local container = Instance.new("Frame")
     container.Size = UDim2.new(1, -10, 0, 40)
     container.BackgroundTransparency = 1
@@ -887,14 +916,14 @@ function RadiantUI:CreateSlider(tab, side, text, min, max, default, callback)
     
     -- Refresh tab if it's currently active
     if tab.IsActive then
-        self:SelectTab(tab)
+        RadiantUI.SelectTab(self, tab)
     end
     
     return container
 end
 
 -- Create dropdown
-function RadiantUI:CreateDropdown(tab, side, text, options, default, callback)
+function RadiantUI.CreateDropdown(self, tab, side, text, options, default, callback)
     local container = Instance.new("Frame")
     container.Size = UDim2.new(1, -10, 0, 35)
     container.BackgroundTransparency = 1
@@ -1045,7 +1074,7 @@ function RadiantUI:CreateDropdown(tab, side, text, options, default, callback)
         optionsFrame.CanvasSize = UDim2.new(0, 0, 0, visibleCount * 25)
         dropdownMenu.Size = UDim2.new(0.55, -10, 0, math.min(visibleCount * 25 + 30, 200))
     end)
-    print("mom")
+    
     -- Toggle dropdown
     dropdown.Activated:Connect(function()
         isOpen = not isOpen
@@ -1067,14 +1096,14 @@ function RadiantUI:CreateDropdown(tab, side, text, options, default, callback)
     
     -- Refresh tab if it's currently active
     if tab.IsActive then
-        self:SelectTab(tab)
+        RadiantUI.SelectTab(self, tab)
     end
     
     return container
 end
 
 -- Destroy window
-function RadiantUI:Destroy()
+function RadiantUI.Destroy(self)
     if self.ScreenGui then
         self.ScreenGui:Destroy()
     end
