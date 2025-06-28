@@ -694,9 +694,8 @@ function RadiantHub:_createToggle(tab, config)
 
     return {
         SetValue = function(value)
-            -- Prevent passing the element object or wrong types
+            -- Silently ignore invalid types
             if type(value) == "table" or type(value) == "function" then
-                warn("RadiantHub: Toggle SetValue expects a boolean/number/string, got " .. type(value) .. ". Did you accidentally pass the element object?")
                 return
             end
             -- Convert to boolean properly
@@ -917,25 +916,13 @@ function RadiantHub:_createSlider(tab, config)
 
     return {
         SetValue = function(value)
-            -- Enhanced debugging and type checking
-            if value == nil then
-                warn("RadiantHub: SetValue received nil value")
-                return
-            end
-            if type(value) == "table" or type(value) == "function" then
-                warn("RadiantHub: Slider SetValue expects a number, got " .. type(value) .. ". Did you accidentally pass the element object?")
+            -- Silently ignore invalid types
+            if value == nil or type(value) == "table" or type(value) == "function" then
                 return
             end
             -- Ensure value is a number
             local numValue = tonumber(value)
             if not numValue then
-                warn("RadiantHub: SetValue expects a number, got " .. type(value) .. " with value: " .. tostring(value))
-                if type(value) == "table" then
-                    warn("RadiantHub: Table contents - this might help debug:")
-                    for k, v in pairs(value) do
-                        warn("  " .. tostring(k) .. " = " .. tostring(v))
-                    end
-                end
                 return
             end
             
@@ -1081,8 +1068,8 @@ function RadiantHub:_createDropdown(tab, config)
 
     return {
         SetValue = function(value)
+            -- Silently ignore invalid types
             if type(value) == "table" or type(value) == "function" then
-                warn("RadiantHub: Dropdown SetValue expects a number, got " .. type(value) .. ". Did you accidentally pass the element object?")
                 return
             end
             local numValue = tonumber(value)
@@ -1094,7 +1081,7 @@ function RadiantHub:_createDropdown(tab, config)
                     pcall(config.Callback, options[currentIndex], currentIndex)
                 end
             else
-                warn("RadiantHub: Dropdown SetValue expects a number between 1 and " .. #options .. ", got " .. tostring(value))
+                return
             end
         end,
         GetValue = function()
@@ -1342,7 +1329,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("update")
+
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
