@@ -867,13 +867,30 @@ function RadiantHub:CreateTab(config)
     config = config or {}
     if not config then
         warn("RadiantHub: CreateTab requires a config table")
-        return
+        return nil
     end
     local tab = {
         name = tostring(config.Name or "Tab"),
         icon = tostring(config.Icon or "⌂"),
         sections = {},
         sectionOrder = {},
+        AddSection = function(self, sectionName)
+            local section = {
+                name = sectionName or "Section",
+                elements = {},
+            }
+            table.insert(self.sections, section)
+            table.insert(self.sectionOrder, section)
+            function section:CreateToggle(config) return RadiantHub:_createToggle(self, config) end
+            function section:CreateSlider(config) return RadiantHub:_createSlider(self, config) end
+            function section:CreateDropdown(config) return RadiantHub:_createDropdown(self, config) end
+            function section:CreateMultiDropdown(config) return RadiantHub:_createMultiDropdown(self, config) end
+            function section:CreateColorPicker(config) return RadiantHub:_createColorPicker(self, config) end
+            function section:CreateButton(config) return RadiantHub:_createButton(self, config) end
+            print("[RadiantHub] Section created:", section.name)
+            RadiantHub:_updateTabDisplay(tab)
+            return section
+        end
     }
     table.insert(self.tabs, tab)
     self:_createTabButton(tab, #self.tabs - 1)
@@ -883,23 +900,7 @@ function RadiantHub:CreateTab(config)
             self:_updateTabDisplay(tab)
         end
     end
-    -- Section API
-    function tab:AddSection(sectionName)
-        local section = {
-            name = sectionName or "Section",
-            elements = {},
-        }
-        table.insert(tab.sections, section)
-        table.insert(tab.sectionOrder, section)
-        -- Section element creation API
-        function section:CreateToggle(config) return RadiantHub:_createToggle(self, config) end
-        function section:CreateSlider(config) return RadiantHub:_createSlider(self, config) end
-        function section:CreateDropdown(config) return RadiantHub:_createDropdown(self, config) end
-        function section:CreateMultiDropdown(config) return RadiantHub:_createMultiDropdown(self, config) end
-        function section:CreateColorPicker(config) return RadiantHub:_createColorPicker(self, config) end
-        function section:CreateButton(config) return RadiantHub:_createButton(self, config) end
-        return section
-    end
+    print("[RadiantHub] Tab created:", tab.name)
     return tab
 end
 
@@ -1021,6 +1022,7 @@ function RadiantHub:_createToggle(section, config)
         end
     end)
     table.insert(section.elements, container)
+    print("[RadiantHub] Toggle created in section:", section.name)
     return {
         SetValue = function(value)
             if type(value) == "table" or type(value) == "function" then return end
@@ -1976,5 +1978,5 @@ function RadiantHub:_createTabButton(tab, index)
         self:_updateTabButtons(tab)
     end)
 end
-print("balls")
+print("update 5")
 return RadiantHub
