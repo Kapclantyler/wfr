@@ -3,7 +3,7 @@
 
 local RadiantHub = {}
 RadiantHub.__index = RadiantHub
-print("Yurrr")
+
 -- Services
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -18,12 +18,15 @@ local player = Players.LocalPlayer
 function RadiantHub:CreateWindow(config)
     local self = setmetatable({}, RadiantHub)
     
-    -- Configuration
+    -- Ensure config exists
+    config = config or {}
+    
+    -- Configuration with proper type checking
     self.config = {
-        Name = config.Name or "RadiantHub",
+        Name = tostring(config.Name or "RadiantHub"),
         Size = config.Size or UDim2.new(0, 700, 0, 450),
         Position = config.Position or UDim2.new(0.5, -350, 0.5, -225),
-        Theme = config.Theme or "Dark"
+        Theme = tostring(config.Theme or "Dark")
     }
     
     -- Internal state
@@ -399,11 +402,16 @@ end
 
 -- Tab System
 function RadiantHub:CreateTab(config)
+    if not config then
+        warn("RadiantHub: CreateTab requires a config table")
+        return
+    end
+    
     local tab = {
-        name = config.Name or "Tab",
-        icon = config.Icon or "⌂",
-        leftTitle = config.LeftTitle or "FEATURES",
-        rightTitle = config.RightTitle or "SETTINGS",
+        name = tostring(config.Name or "Tab"),
+        icon = tostring(config.Icon or "⌂"),
+        leftTitle = tostring(config.LeftTitle or "FEATURES"),
+        rightTitle = tostring(config.RightTitle or "SETTINGS"),
         leftElements = {},
         rightElements = {}
     }
@@ -680,10 +688,20 @@ function RadiantHub:_createToggle(tab, config)
 
     return {
         SetValue = function(value)
-            isEnabled = value
-            self.settings[config.Name or "Toggle"] = value
-            checkmark.Visible = value
-            if value then
+            -- Convert to boolean properly
+            local boolValue = value
+            if type(value) == "string" then
+                boolValue = value:lower() == "true"
+            elseif type(value) == "number" then
+                boolValue = value ~= 0
+            else
+                boolValue = not not value  -- Convert to boolean
+            end
+            
+            isEnabled = boolValue
+            self.settings[config.Name or "Toggle"] = boolValue
+            checkmark.Visible = boolValue
+            if boolValue then
                 checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
                 checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
                 textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
@@ -724,9 +742,12 @@ function RadiantHub:_createSlider(tab, config)
     textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     textLabel.Parent = container
 
-    local minVal = config.Min or 0
-    local maxVal = config.Max or 100
-    local currentValue = config.Default or config.Min or 50
+    local minVal = tonumber(config.Min) or 0
+    local maxVal = tonumber(config.Max) or 100
+    local currentValue = tonumber(config.Default) or tonumber(config.Min) or 50
+    
+    -- Ensure currentValue is within bounds
+    currentValue = math.clamp(currentValue, minVal, maxVal)
     self.settings[config.Name or "Slider"] = currentValue
 
     local valueLabel = Instance.new("TextLabel")
@@ -751,7 +772,11 @@ function RadiantHub:_createSlider(tab, config)
     sliderBG.Text = ""
     sliderBG.Parent = container
 
-    local initPos = (currentValue - minVal) / (maxVal - minVal)
+    local initPos = 0
+    if maxVal > minVal then
+        initPos = (currentValue - minVal) / (maxVal - minVal)
+    end
+    initPos = math.clamp(initPos, 0, 1)
     
     local sliderFill = Instance.new("Frame")
     sliderFill.Size = UDim2.new(initPos, 0, 1, 0)
@@ -772,17 +797,21 @@ function RadiantHub:_createSlider(tab, config)
     local isDragging = false
     
     local function updateSlider(inputPos)
+        if not inputPos or not sliderBG.AbsolutePosition or not sliderBG.AbsoluteSize then
+            return
+        end
+        
         local pos = math.clamp((inputPos.X - sliderBG.AbsolutePosition.X) / sliderBG.AbsoluteSize.X, 0, 1)
         local value = math.floor(minVal + (maxVal - minVal) * pos)
-        currentValue = value
-        self.settings[config.Name or "Slider"] = value
+        currentValue = math.clamp(value, minVal, maxVal)
+        self.settings[config.Name or "Slider"] = currentValue
 
         sliderFill.Size = UDim2.new(pos, 0, 1, 0)
         sliderHandle.Position = UDim2.new(pos, -6, 0.5, -6)
-        valueLabel.Text = tostring(value)
+        valueLabel.Text = tostring(currentValue)
         
         if config.Callback then
-            pcall(config.Callback, value)
+            pcall(config.Callback, currentValue)
         end
     end
 
@@ -828,7 +857,14 @@ function RadiantHub:_createSlider(tab, config)
 
     return {
         SetValue = function(value)
-            currentValue = math.clamp(value, minVal, maxVal)
+            -- Ensure value is a number
+            local numValue = tonumber(value)
+            if not numValue then
+                warn("RadiantHub: SetValue expects a number, got " .. type(value))
+                return
+            end
+            
+            currentValue = math.clamp(numValue, minVal, maxVal)
             self.settings[config.Name or "Slider"] = currentValue
             local pos = (currentValue - minVal) / (maxVal - minVal)
             sliderFill.Size = UDim2.new(pos, 0, 1, 0)
@@ -958,10 +994,13 @@ function RadiantHub:_createDropdown(tab, config)
 
     return {
         SetValue = function(value)
-            if type(value) == "number" and value >= 1 and value <= #options then
-                currentIndex = value
+            local numValue = tonumber(value)
+            if numValue and numValue >= 1 and numValue <= #options then
+                currentIndex = numValue
                 dropdown.Text = tostring(options[currentIndex]) .. " ▼"
                 self.settings[config.Name or "Dropdown"] = currentIndex
+            else
+                warn("RadiantHub: Dropdown SetValue expects a number between 1 and " .. #options .. ", got " .. tostring(value))
             end
         end,
         GetValue = function()
@@ -1209,7 +1248,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-
+print("ddiddy")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
