@@ -912,10 +912,7 @@ function RadiantHub:CreateTab(config)
         CreateToggle = function(config) return self:_createToggle(tab, config) end,
         CreateSlider = function(config) return self:_createSlider(tab, config) end,
         CreateDropdown = function(config) return self:_createDropdown(tab, config) end,
-        CreateMultiDropdown = function(config)
-            warn("RadiantHub: CreateMultiDropdown is not implemented.")
-            return {}
-        end,
+        CreateMultiDropdown = function(config) return self:_createMultiDropdown(tab, config) end,
         CreateColorPicker = function(config) return self:_createColorPicker(tab, config) end,
         CreateButton = function(config) return self:_createButton(tab, config) end
     }
@@ -1366,17 +1363,14 @@ function RadiantHub:_createDropdown(tab, config)
         warn("RadiantHub: Invalid tab object passed to _createDropdown!")
         return
     end
-    -- Safety checks
     if not config then
         warn("RadiantHub: Dropdown config is missing")
         return
     end
-    
     local container = Instance.new("Frame")
     container.Name = (config.Name or "Dropdown") .. "Container"
     container.Size = UDim2.new(1, -10, 0, 35)
     container.BackgroundTransparency = 1
-    
     local textLabel = Instance.new("TextLabel")
     textLabel.Size = UDim2.new(0.4, 0, 1, 0)
     textLabel.Position = UDim2.new(0, 10, 0, 0)
@@ -1390,11 +1384,8 @@ function RadiantHub:_createDropdown(tab, config)
     textLabel.TextXAlignment = Enum.TextXAlignment.Left
     textLabel.TextYAlignment = Enum.TextYAlignment.Center
     textLabel.Parent = container
-    
-    local currentIndex = 1
+    local currentIndex = config.Default or 1
     local options = config.Options or {"Option 1", "Option 2"}
-    self.settings[config.Name or "Dropdown"] = currentIndex
-    
     local dropdown = Instance.new("TextButton")
     dropdown.Size = UDim2.new(0.55, -10, 0, 25)
     dropdown.Position = UDim2.new(0.45, 0, 0.5, -12.5)
@@ -1409,67 +1400,110 @@ function RadiantHub:_createDropdown(tab, config)
     dropdown.Font = Enum.Font.Gotham
     dropdown.ZIndex = 2
     dropdown.Parent = container
-    
     local dropdownMenu = Instance.new("Frame")
     dropdownMenu.Name = "DropdownMenu"
-    dropdownMenu.Size = UDim2.new(0.55, -10, 0, #options * 25)
+    dropdownMenu.Size = UDim2.new(0.55, -10, 0, #options * 25 + 30)
     dropdownMenu.Position = UDim2.new(0.45, 0, 1, 0)
     dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     dropdownMenu.BorderSizePixel = 1
     dropdownMenu.BorderColor3 = Color3.fromRGB(100, 100, 100)
     dropdownMenu.Visible = false
-    dropdownMenu.ZIndex = 10
+    dropdownMenu.ZIndex = 3
     dropdownMenu.Parent = container
-    
+    local searchBox
+    if config.Searchable then
+        searchBox = Instance.new("TextBox")
+        searchBox.Name = "SearchBox"
+        searchBox.Size = UDim2.new(1, -10, 0, 25)
+        searchBox.Position = UDim2.new(0, 5, 0, 2.5)
+        searchBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        searchBox.BorderSizePixel = 1
+        searchBox.BorderColor3 = Color3.fromRGB(100, 100, 100)
+        searchBox.Text = ""
+        searchBox.PlaceholderText = "Search..."
+        searchBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+        searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+        searchBox.TextStrokeTransparency = 0
+        searchBox.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        searchBox.TextSize = 10
+        searchBox.Font = Enum.Font.Gotham
+        searchBox.ZIndex = 4
+        searchBox.Parent = dropdownMenu
+    end
+    local optionsFrame = Instance.new("ScrollingFrame")
+    optionsFrame.Name = "OptionsFrame"
+    optionsFrame.Size = UDim2.new(1, 0, 1, -30)
+    optionsFrame.Position = UDim2.new(0, 0, 0, 30)
+    optionsFrame.BackgroundTransparency = 1
+    optionsFrame.BorderSizePixel = 0
+    optionsFrame.ScrollBarThickness = 6
+    optionsFrame.ZIndex = 4
+    optionsFrame.Parent = dropdownMenu
     local isOpen = false
-    
+    local optionButtons = {}
     for i, option in ipairs(options) do
         local optionButton = Instance.new("TextButton")
         optionButton.Size = UDim2.new(1, 0, 0, 25)
         optionButton.Position = UDim2.new(0, 0, 0, (i-1) * 25)
         optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         optionButton.BorderSizePixel = 0
-        optionButton.Text = tostring(option)
+        optionButton.Text = option
         optionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         optionButton.TextStrokeTransparency = 0
         optionButton.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         optionButton.TextSize = 11
         optionButton.Font = Enum.Font.Gotham
-        optionButton.ZIndex = 11
-        optionButton.Parent = dropdownMenu
-        
+        optionButton.ZIndex = 5
+        optionButton.Parent = optionsFrame
+        table.insert(optionButtons, {button = optionButton, text = option, index = i})
         optionButton.MouseEnter:Connect(function()
-            optionButton.BackgroundColor3 = Color3.fromRGB(220, 50, 47)
+            optionButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
         end)
-        
         optionButton.MouseLeave:Connect(function()
             optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         end)
-        
-        optionButton.Activated:Connect(function()
-            dropdown.Text = tostring(option) .. " ▼"
+        optionButton.MouseButton1Click:Connect(function()
+            dropdown.Text = option .. " ▼"
             currentIndex = i
             self.settings[config.Name or "Dropdown"] = i
             dropdownMenu.Visible = false
             isOpen = false
-            
             if config.Callback then
-                pcall(config.Callback, option, i)
+                config.Callback(option, i)
             end
         end)
     end
-    
-    dropdown.Activated:Connect(function()
+    optionsFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 25)
+    if searchBox then
+        searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+            local searchTerm = searchBox.Text:lower()
+            local visibleCount = 0
+            for _, optionData in ipairs(optionButtons) do
+                if searchTerm == "" or optionData.text:lower():find(searchTerm) then
+                    optionData.button.Visible = true
+                    optionData.button.Position = UDim2.new(0, 0, 0, visibleCount * 25)
+                    visibleCount = visibleCount + 1
+                else
+                    optionData.button.Visible = false
+                end
+            end
+            optionsFrame.CanvasSize = UDim2.new(0, 0, 0, visibleCount * 25)
+            dropdownMenu.Size = UDim2.new(0.55, -10, 0, math.min(visibleCount * 25 + 30, 200))
+        end)
+    end
+    dropdown.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         dropdownMenu.Visible = isOpen
         if isOpen then
             dropdown.Text = tostring(options[currentIndex]) .. " ▲"
+            if searchBox then
+                searchBox.Text = ""
+                searchBox:CaptureFocus()
+            end
         else
             dropdown.Text = tostring(options[currentIndex]) .. " ▼"
         end
     end)
-
-    -- Add to appropriate side
     if config.Side == "Right" then
         if tab.rightElements then
             table.insert(tab.rightElements, container)
@@ -1479,25 +1513,16 @@ function RadiantHub:_createDropdown(tab, config)
             table.insert(tab.leftElements, container)
         end
     end
-
-    -- Ensure UI updates if this is the current tab
-    if self.currentTab == tab and self.leftContent and self.rightContent then
-        self:_updateTabDisplay(tab)
-    end
-
     return {
         SetValue = function(value)
-            -- Silently ignore invalid types
-            if type(value) == "table" or type(value) == "function" then
-                return
-            end
+            if type(value) == "table" or type(value) == "function" then return end
             local numValue = tonumber(value)
             if numValue and numValue >= 1 and numValue <= #options then
                 currentIndex = numValue
                 dropdown.Text = tostring(options[currentIndex]) .. " ▼"
                 self.settings[config.Name or "Dropdown"] = currentIndex
                 if config.Callback then
-                    pcall(config.Callback, options[currentIndex], currentIndex)
+                    config.Callback(options[currentIndex], currentIndex)
                 end
             else
                 return
@@ -1505,6 +1530,248 @@ function RadiantHub:_createDropdown(tab, config)
         end,
         GetValue = function()
             return currentIndex, options[currentIndex]
+        end
+    }
+end
+
+function RadiantHub:_createMultiDropdown(tab, config)
+    config = config or {}
+    if not tab or not tab.leftElements or not tab.rightElements then
+        warn("RadiantHub: Invalid tab object passed to _createMultiDropdown!")
+        return
+    end
+    local container = Instance.new("Frame")
+    container.Name = (config.Name or "MultiDropdown") .. "Container"
+    container.Size = UDim2.new(1, -10, 0, 35)
+    container.BackgroundTransparency = 1
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(0.4, 0, 1, 0)
+    textLabel.Position = UDim2.new(0, 10, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = config.Name or "MultiDropdown"
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.Gotham
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.Parent = container
+    local dropdown = Instance.new("TextButton")
+    dropdown.Size = UDim2.new(0.55, -10, 0, 25)
+    dropdown.Position = UDim2.new(0.45, 0, 0.5, -12.5)
+    dropdown.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    dropdown.BorderSizePixel = 1
+    dropdown.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    dropdown.Text = "Multiple ▼"
+    dropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
+    dropdown.TextStrokeTransparency = 0
+    dropdown.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    dropdown.TextSize = 11
+    dropdown.Font = Enum.Font.Gotham
+    dropdown.ZIndex = 2
+    dropdown.Parent = container
+    local options = config.Options or {"Option 1", "Option 2"}
+    local dropdownMenu = Instance.new("Frame")
+    dropdownMenu.Name = "MultiDropdownMenu"
+    dropdownMenu.Size = UDim2.new(0.55, -10, 0, #options * 25 + 30)
+    dropdownMenu.Position = UDim2.new(0.45, 0, 1, 0)
+    dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    dropdownMenu.BorderSizePixel = 1
+    dropdownMenu.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    dropdownMenu.Visible = false
+    dropdownMenu.ZIndex = 3
+    dropdownMenu.Parent = container
+    local searchBox
+    if config.Searchable then
+        searchBox = Instance.new("TextBox")
+        searchBox.Name = "SearchBox"
+        searchBox.Size = UDim2.new(1, -10, 0, 25)
+        searchBox.Position = UDim2.new(0, 5, 0, 2.5)
+        searchBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        searchBox.BorderSizePixel = 1
+        searchBox.BorderColor3 = Color3.fromRGB(100, 100, 100)
+        searchBox.Text = ""
+        searchBox.PlaceholderText = "Search..."
+        searchBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+        searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+        searchBox.TextStrokeTransparency = 0
+        searchBox.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        searchBox.TextSize = 10
+        searchBox.Font = Enum.Font.Gotham
+        searchBox.ZIndex = 4
+        searchBox.Parent = dropdownMenu
+    end
+    local optionsFrame = Instance.new("ScrollingFrame")
+    optionsFrame.Name = "OptionsFrame"
+    optionsFrame.Size = UDim2.new(1, 0, 1, -30)
+    optionsFrame.Position = UDim2.new(0, 0, 0, 30)
+    optionsFrame.BackgroundTransparency = 1
+    optionsFrame.BorderSizePixel = 0
+    optionsFrame.ScrollBarThickness = 6
+    optionsFrame.ZIndex = 4
+    optionsFrame.Parent = dropdownMenu
+    local isOpen = false
+    local selectedCount = 0
+    local selectedOptions = config.Default or {}
+    local optionFrames = {}
+    for option, isSelected in pairs(selectedOptions) do
+        if isSelected then
+            selectedCount = selectedCount + 1
+        end
+    end
+    if selectedCount == 0 then
+        dropdown.Text = "None Selected ▼"
+    elseif selectedCount == 1 then
+        dropdown.Text = "1 Selected ▼"
+    else
+        dropdown.Text = selectedCount .. " Selected ▼"
+    end
+    for i, option in ipairs(options) do
+        local optionFrame = Instance.new("Frame")
+        optionFrame.Size = UDim2.new(1, 0, 0, 25)
+        optionFrame.Position = UDim2.new(0, 0, 0, (i-1) * 25)
+        optionFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        optionFrame.BorderSizePixel = 0
+        optionFrame.ZIndex = 4
+        optionFrame.Parent = optionsFrame
+        table.insert(optionFrames, {frame = optionFrame, text = option, index = i})
+        local optionLabel = Instance.new("TextLabel")
+        optionLabel.Size = UDim2.new(1, -25, 1, 0)
+        optionLabel.Position = UDim2.new(0, 5, 0, 0)
+        optionLabel.BackgroundTransparency = 1
+        optionLabel.Text = option
+        optionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        optionLabel.TextStrokeTransparency = 0
+        optionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        optionLabel.TextSize = 11
+        optionLabel.Font = Enum.Font.Gotham
+        optionLabel.TextXAlignment = Enum.TextXAlignment.Left
+        optionLabel.TextYAlignment = Enum.TextYAlignment.Center
+        optionLabel.ZIndex = 5
+        optionLabel.Parent = optionFrame
+        local checkbox = Instance.new("TextButton")
+        checkbox.Size = UDim2.new(0, 15, 0, 15)
+        checkbox.Position = UDim2.new(1, -20, 0.5, -7.5)
+        checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        checkbox.BorderSizePixel = 1
+        checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
+        checkbox.Text = ""
+        checkbox.ZIndex = 5
+        checkbox.Parent = optionFrame
+        local checkmark = Instance.new("TextLabel")
+        checkmark.Size = UDim2.new(1, 0, 1, 0)
+        checkmark.BackgroundTransparency = 1
+        checkmark.Text = "✓"
+        checkmark.TextColor3 = Color3.fromRGB(0, 255, 100)
+        checkmark.TextStrokeTransparency = 0
+        checkmark.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        checkmark.TextSize = 10
+        checkmark.Font = Enum.Font.GothamBold
+        checkmark.Visible = false
+        checkmark.ZIndex = 6
+        checkmark.Parent = checkbox
+        if selectedOptions[option] == nil then
+            selectedOptions[option] = false
+        end
+        if selectedOptions[option] then
+            checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
+            checkmark.Visible = true
+        end
+        optionFrame.MouseEnter:Connect(function()
+            optionFrame.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        end)
+        optionFrame.MouseLeave:Connect(function()
+            optionFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        end)
+        checkbox.MouseButton1Click:Connect(function()
+            selectedOptions[option] = not selectedOptions[option]
+            if selectedOptions[option] then
+                checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
+                checkmark.Visible = true
+                selectedCount = selectedCount + 1
+            else
+                checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+                checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
+                checkmark.Visible = false
+                selectedCount = selectedCount - 1
+            end
+            if selectedCount == 0 then
+                dropdown.Text = "None Selected ▼"
+            elseif selectedCount == 1 then
+                dropdown.Text = "1 Selected ▼"
+            else
+                dropdown.Text = selectedCount .. " Selected ▼"
+            end
+            if config.Callback then
+                config.Callback(selectedOptions)
+            end
+        end)
+    end
+    optionsFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 25)
+    if searchBox then
+        searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+            local searchTerm = searchBox.Text:lower()
+            local visibleCount = 0
+            for _, optionData in ipairs(optionFrames) do
+                if searchTerm == "" or optionData.text:lower():find(searchTerm) then
+                    optionData.frame.Visible = true
+                    optionData.frame.Position = UDim2.new(0, 0, 0, visibleCount * 25)
+                    visibleCount = visibleCount + 1
+                else
+                    optionData.frame.Visible = false
+                end
+            end
+            optionsFrame.CanvasSize = UDim2.new(0, 0, 0, visibleCount * 25)
+            dropdownMenu.Size = UDim2.new(0.55, -10, 0, math.min(visibleCount * 25 + 30, 200))
+        end)
+    end
+    dropdown.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        dropdownMenu.Visible = isOpen
+        if isOpen then
+            if selectedCount == 0 then
+                dropdown.Text = "None Selected ▲"
+            elseif selectedCount == 1 then
+                dropdown.Text = "1 Selected ▲"
+            else
+                dropdown.Text = selectedCount .. " Selected ▲"
+            end
+            if searchBox then
+                searchBox.Text = ""
+                searchBox:CaptureFocus()
+            end
+        else
+            if selectedCount == 0 then
+                dropdown.Text = "None Selected ▼"
+            elseif selectedCount == 1 then
+                dropdown.Text = "1 Selected ▼"
+            else
+                dropdown.Text = selectedCount .. " Selected ▼"
+            end
+        end
+    end)
+    if config.Side == "Right" then
+        if tab.rightElements then
+            table.insert(tab.rightElements, container)
+        end
+    else
+        if tab.leftElements then
+            table.insert(tab.leftElements, container)
+        end
+    end
+    return {
+        SetValue = function(value)
+            if type(value) ~= "table" then return end
+            selectedOptions = value
+            if config.Callback then
+                config.Callback(selectedOptions)
+            end
+        end,
+        GetValue = function()
+            return selectedOptions
         end
     }
 end
@@ -1758,7 +2025,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("da")
+print("niggahack")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
