@@ -153,6 +153,10 @@ function RadiantHub:_createMainUI()
     
     -- Minimized icon
     self:_createMinimizedIcon()
+
+    if self.currentTab then
+        self:_updateTabDisplay(self.currentTab)
+    end
 end
 
 function RadiantHub:_createControlButtons()
@@ -873,25 +877,23 @@ function RadiantHub:CreateTab(config)
         name = tostring(config.Name or "Tab"),
         icon = tostring(config.Icon or "⌂"),
         sections = {},
-        sectionOrder = {},
-        AddSection = function(self, sectionName)
-            local section = {
-                name = sectionName or "Section",
-                elements = {},
-            }
-            table.insert(self.sections, section)
-            table.insert(self.sectionOrder, section)
-            function section:CreateToggle(config) return RadiantHub:_createToggle(self, config) end
-            function section:CreateSlider(config) return RadiantHub:_createSlider(self, config) end
-            function section:CreateDropdown(config) return RadiantHub:_createDropdown(self, config) end
-            function section:CreateMultiDropdown(config) return RadiantHub:_createMultiDropdown(self, config) end
-            function section:CreateColorPicker(config) return RadiantHub:_createColorPicker(self, config) end
-            function section:CreateButton(config) return RadiantHub:_createButton(self, config) end
-            print("[RadiantHub] Section created:", section.name)
-            RadiantHub:_updateTabDisplay(tab)
-            return section
-        end
+        sectionOrder = {}
     }
+    function tab:AddSection(sectionName)
+        local section = {
+            name = sectionName or "Section",
+            elements = {}
+        }
+        function section:CreateToggle(config) return RadiantHub:_createToggle(self, config) end
+        function section:CreateSlider(config) return RadiantHub:_createSlider(self, config) end
+        function section:CreateDropdown(config) return RadiantHub:_createDropdown(self, config) end
+        function section:CreateMultiDropdown(config) return RadiantHub:_createMultiDropdown(self, config) end
+        function section:CreateColorPicker(config) return RadiantHub:_createColorPicker(self, config) end
+        function section:CreateButton(config) return RadiantHub:_createButton(self, config) end
+        table.insert(tab.sections, section)
+        table.insert(tab.sectionOrder, section)
+        return section
+    end
     table.insert(self.tabs, tab)
     self:_createTabButton(tab, #self.tabs - 1)
     if #self.tabs == 1 then
@@ -900,19 +902,16 @@ function RadiantHub:CreateTab(config)
             self:_updateTabDisplay(tab)
         end
     end
-    print("[RadiantHub] Tab created:", tab.name)
     return tab
 end
 
 function RadiantHub:_updateTabDisplay(tab)
     if not self.contentArea then
-        warn("RadiantHub: Content area not initialized")
+        warn("[RadiantHub] Content area not initialized")
         return
     end
     for _, child in ipairs(self.contentArea:GetChildren()) do
-        if child:IsA("Frame") and child.Name:find("Section") then
-            child.Parent = nil
-        end
+        child:Destroy()
     end
     local y = 10
     for _, section in ipairs(tab.sectionOrder or {}) do
@@ -1978,5 +1977,5 @@ function RadiantHub:_createTabButton(tab, index)
         self:_updateTabButtons(tab)
     end)
 end
-print("update 5")
+print("update222222")
 return RadiantHub
