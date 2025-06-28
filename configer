@@ -426,58 +426,165 @@ function RadiantHub:_updateTabDisplay(tab)
         child:Destroy()
     end
     
-    local y = 10
-    for _, section in ipairs(tab.sectionOrder or {}) do
-        local sectionFrame = Instance.new("Frame")
-        sectionFrame.Name = section.name .. "Section"
-        sectionFrame.Size = UDim2.new(1, -20, 0, 0)
-        sectionFrame.Position = UDim2.new(0, 10, 0, y)
-        sectionFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        sectionFrame.BorderSizePixel = 1
-        sectionFrame.BorderColor3 = Color3.fromRGB(80, 80, 80)
-        sectionFrame.Parent = self.contentArea
-        
-        local sectionCorner = Instance.new("UICorner")
-        sectionCorner.CornerRadius = UDim.new(0, 6)
-        sectionCorner.Parent = sectionFrame
-        
-        local sectionLabel = Instance.new("TextLabel")
-        sectionLabel.Size = UDim2.new(1, -20, 0, 24)
-        sectionLabel.Position = UDim2.new(0, 10, 0, 5)
-        sectionLabel.BackgroundTransparency = 1
-        sectionLabel.Text = section.name
-        sectionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        sectionLabel.TextSize = 14
-        sectionLabel.Font = Enum.Font.GothamBold
-        sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
-        sectionLabel.Parent = sectionFrame
-        
-        local elementY = 35
-        for _, element in ipairs(section.elements) do
-            if element then
-                element.Position = UDim2.new(0, 10, 0, elementY)
-                element.Parent = sectionFrame
-                elementY = elementY + element.Size.Y.Offset + 5
-            end
+    -- Re-create the left and right sections for side-by-side layout
+    self:_createContentSections()
+    
+    -- Separate sections into left and right
+    local leftSections = {}
+    local rightSections = {}
+    
+    for i, section in ipairs(tab.sectionOrder or {}) do
+        if i % 2 == 1 then -- Odd sections go to left
+            table.insert(leftSections, section)
+        else -- Even sections go to right
+            table.insert(rightSections, section)
         end
-        
-        sectionFrame.Size = UDim2.new(1, -20, 0, elementY + 10)
-        y = y + sectionFrame.Size.Y.Offset + 10
+    end
+    
+    -- Create left sections
+    local leftY = 0
+    for _, section in ipairs(leftSections) do
+        local sectionFrame = self:_createSectionFrame(section, self.leftContent, leftY)
+        leftY = leftY + sectionFrame.Size.Y.Offset + 10
+    end
+    
+    -- Create right sections
+    local rightY = 0
+    for _, section in ipairs(rightSections) do
+        local sectionFrame = self:_createSectionFrame(section, self.rightContent, rightY)
+        rightY = rightY + sectionFrame.Size.Y.Offset + 10
     end
 end
 
+function RadiantHub:_createSectionFrame(section, parent, yPos)
+    local sectionFrame = Instance.new("Frame")
+    sectionFrame.Name = section.name .. "Section"
+    sectionFrame.Size = UDim2.new(1, -10, 0, 0)
+    sectionFrame.Position = UDim2.new(0, 5, 0, yPos)
+    sectionFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    sectionFrame.BorderSizePixel = 1
+    sectionFrame.BorderColor3 = Color3.fromRGB(70, 70, 70)
+    sectionFrame.Parent = parent
+    
+    local sectionCorner = Instance.new("UICorner")
+    sectionCorner.CornerRadius = UDim.new(0, 6)
+    sectionCorner.Parent = sectionFrame
+    
+    local sectionLabel = Instance.new("TextLabel")
+    sectionLabel.Size = UDim2.new(1, -20, 0, 24)
+    sectionLabel.Position = UDim2.new(0, 10, 0, 8)
+    sectionLabel.BackgroundTransparency = 1
+    sectionLabel.Text = section.name
+    sectionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sectionLabel.TextSize = 12
+    sectionLabel.Font = Enum.Font.GothamBold
+    sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+    sectionLabel.Parent = sectionFrame
+    
+    local elementY = 35
+    for _, element in ipairs(section.elements) do
+        if element then
+            -- Clone the element to avoid parenting issues
+            local elementClone = element:Clone()
+            elementClone.Position = UDim2.new(0, 5, 0, elementY)
+            elementClone.Parent = sectionFrame
+            elementY = elementY + elementClone.Size.Y.Offset + 5
+        end
+    end
+    
+    sectionFrame.Size = UDim2.new(1, -10, 0, math.max(elementY + 10, 50))
+    return sectionFrame
+end
+
+function RadiantHub:_createContentSections()
+    -- Left Section
+    self.leftSection = Instance.new("Frame")
+    self.leftSection.Name = "LeftSection"
+    self.leftSection.Size = UDim2.new(0.495, -5, 1, 0)
+    self.leftSection.Position = UDim2.new(0, 0, 0, 0)
+    self.leftSection.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    self.leftSection.BorderSizePixel = 1
+    self.leftSection.BorderColor3 = Color3.fromRGB(70, 70, 70)
+    self.leftSection.Parent = self.contentArea
+    
+    -- Right Section
+    self.rightSection = Instance.new("Frame")
+    self.rightSection.Name = "RightSection"
+    self.rightSection.Size = UDim2.new(0.495, -5, 1, 0)
+    self.rightSection.Position = UDim2.new(0.505, 0, 0, 0)
+    self.rightSection.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    self.rightSection.BorderSizePixel = 1
+    self.rightSection.BorderColor3 = Color3.fromRGB(70, 70, 70)
+    self.rightSection.Parent = self.contentArea
+    
+    -- Headers
+    self.leftHeader = Instance.new("TextLabel")
+    self.leftHeader.Name = "LeftHeader"
+    self.leftHeader.Size = UDim2.new(1, 0, 0, 30)
+    self.leftHeader.Position = UDim2.new(0, 0, 0, 5)
+    self.leftHeader.BackgroundTransparency = 1
+    self.leftHeader.Text = "FEATURES"
+    self.leftHeader.TextColor3 = Color3.fromRGB(255, 255, 255)
+    self.leftHeader.TextSize = 14
+    self.leftHeader.Font = Enum.Font.GothamBold
+    self.leftHeader.TextXAlignment = Enum.TextXAlignment.Center
+    self.leftHeader.Parent = self.leftSection
+    
+    self.rightHeader = Instance.new("TextLabel")
+    self.rightHeader.Name = "RightHeader"
+    self.rightHeader.Size = UDim2.new(1, 0, 0, 30)
+    self.rightHeader.Position = UDim2.new(0, 0, 0, 5)
+    self.rightHeader.BackgroundTransparency = 1
+    self.rightHeader.Text = "SETTINGS"
+    self.rightHeader.TextColor3 = Color3.fromRGB(255, 255, 255)
+    self.rightHeader.TextSize = 14
+    self.rightHeader.Font = Enum.Font.GothamBold
+    self.rightHeader.TextXAlignment = Enum.TextXAlignment.Center
+    self.rightHeader.Parent = self.rightSection
+    
+    -- Content containers
+    self.leftContent = Instance.new("Frame")
+    self.leftContent.Name = "LeftContent"
+    self.leftContent.Size = UDim2.new(1, -10, 1, -45)
+    self.leftContent.Position = UDim2.new(0, 5, 0, 40)
+    self.leftContent.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    self.leftContent.BorderSizePixel = 1
+    self.leftContent.BorderColor3 = Color3.fromRGB(80, 80, 80)
+    self.leftContent.Parent = self.leftSection
+    
+    self.rightContent = Instance.new("Frame")
+    self.rightContent.Name = "RightContent"
+    self.rightContent.Size = UDim2.new(1, -10, 1, -45)
+    self.rightContent.Position = UDim2.new(0, 5, 0, 40)
+    self.rightContent.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    self.rightContent.BorderSizePixel = 1
+    self.rightContent.BorderColor3 = Color3.fromRGB(80, 80, 80)
+    self.rightContent.Parent = self.rightSection
+end
+
 function RadiantHub:_updateTabButtons(selectedTab)
-    for i, tabButton in ipairs(self.leftSidebar:GetChildren()) do
-        if tabButton.Name:find("Container") then
-            local indicator = tabButton:FindFirstChild("Indicator")
-            local button = tabButton:GetChildren()[2] -- The button is usually the second child
+    if not self.leftSidebar then return end
+    
+    for _, tabContainer in ipairs(self.leftSidebar:GetChildren()) do
+        if tabContainer.Name:find("Container") and tabContainer ~= self.leftSidebar:FindFirstChild("UserProfileFrame") then
+            local indicator = tabContainer:FindFirstChild("Indicator")
+            local button = nil
+            
+            -- Find the button (should be a TextButton)
+            for _, child in ipairs(tabContainer:GetChildren()) do
+                if child:IsA("TextButton") then
+                    button = child
+                    break
+                end
+            end
+            
             if button then
                 local iconLabel = button:FindFirstChild("Icon")
                 local separator = button:FindFirstChild("Separator")
                 local textLabel = button:FindFirstChild("Text")
                 
                 -- Get the tab name from the container name
-                local tabName = tabButton.Name:gsub("Container", "")
+                local tabName = tabContainer.Name:gsub("Container", "")
                 local isSelected = (selectedTab.name == tabName)
                 
                 if indicator then indicator.Visible = isSelected end
@@ -535,6 +642,15 @@ function RadiantHub:_createToggle(section, config)
     checkboxCorner.CornerRadius = UDim.new(0, 3)
     checkboxCorner.Parent = checkbox
     
+    -- Gradient for toggle
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+    })
+    gradient.Rotation = 45
+    gradient.Parent = checkbox
+    
     local checkmark = Instance.new("TextLabel")
     checkmark.Size = UDim2.new(1, 0, 1, 0)
     checkmark.BackgroundTransparency = 1
@@ -555,8 +671,10 @@ function RadiantHub:_createToggle(section, config)
         textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
     end
     
-    checkbox.Activated:Connect(function()
-        isEnabled = not isEnabled
+    -- Store connection data for proper updates
+    local connections = {}
+    
+    local function updateToggle()
         if isEnabled then
             checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
             checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
@@ -568,10 +686,18 @@ function RadiantHub:_createToggle(section, config)
             checkmark.Visible = false
             textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         end
+    end
+    
+    connections.activated = checkbox.Activated:Connect(function()
+        isEnabled = not isEnabled
+        updateToggle()
         if config.Callback then
             config.Callback(isEnabled)
         end
     end)
+    
+    -- Store connections in the container for cleanup
+    container:SetAttribute("HasConnections", true)
     
     table.insert(section.elements, container)
     print("[RadiantHub] Toggle created in section:", section.name)
@@ -588,22 +714,18 @@ function RadiantHub:_createToggle(section, config)
                 boolValue = not not value
             end
             isEnabled = boolValue
-            checkmark.Visible = boolValue
-            if boolValue then
-                checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-                checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
-                textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
-            else
-                checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-                checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
-                textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            end
+            updateToggle()
             if config.Callback then
                 config.Callback(isEnabled)
             end
         end,
         GetValue = function()
             return isEnabled
+        end,
+        Destroy = function()
+            for _, connection in pairs(connections) do
+                if connection then connection:Disconnect() end
+            end
         end
     }
 end
@@ -1459,7 +1581,7 @@ function RadiantHub:DebugSettings()
     end
     print("=== End Debug ===")
 end
-
+print("diddy did me")
 function RadiantHub:Destroy()
     if self.screenGui then
         self.screenGui:Destroy()
@@ -1468,5 +1590,5 @@ function RadiantHub:Destroy()
         self.watermarkGui:Destroy()
     end
 end
-print("huidaioudhas")
+
 return RadiantHub
