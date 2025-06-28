@@ -608,7 +608,7 @@ function RadiantUI.CreateTab(self, name, icon, leftTitle, rightTitle)
     iconLabel.Size = UDim2.new(0, 16, 0, 16)
     iconLabel.Position = UDim2.new(0, 12, 0.5, -8)
     iconLabel.BackgroundTransparency = 1
-    iconLabel.Text = tab.Icon
+    iconLabel.Text = icon or "⌂"
     iconLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
     iconLabel.TextSize = 14
     iconLabel.Font = Enum.Font.Gotham
@@ -1112,7 +1112,7 @@ function RadiantUI.CreateDropdown(self, tab, side, text, options, default, callb
     
     return container
 end
-
+print("nevr card")
 -- Destroy window
 function RadiantUI.Destroy(self)
     if self.ScreenGui then
@@ -1122,5 +1122,5 @@ function RadiantUI.Destroy(self)
         self.WatermarkGui:Destroy()
     end
 end
-print("dingdong")
+
 return RadiantUI
