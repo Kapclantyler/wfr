@@ -694,6 +694,11 @@ function RadiantHub:_createToggle(tab, config)
 
     return {
         SetValue = function(value)
+            -- Prevent passing the element object or wrong types
+            if type(value) == "table" or type(value) == "function" then
+                warn("RadiantHub: Toggle SetValue expects a boolean/number/string, got " .. type(value) .. ". Did you accidentally pass the element object?")
+                return
+            end
             -- Convert to boolean properly
             local boolValue = value
             if type(value) == "string" then
@@ -917,7 +922,10 @@ function RadiantHub:_createSlider(tab, config)
                 warn("RadiantHub: SetValue received nil value")
                 return
             end
-            
+            if type(value) == "table" or type(value) == "function" then
+                warn("RadiantHub: Slider SetValue expects a number, got " .. type(value) .. ". Did you accidentally pass the element object?")
+                return
+            end
             -- Ensure value is a number
             local numValue = tonumber(value)
             if not numValue then
@@ -1073,6 +1081,10 @@ function RadiantHub:_createDropdown(tab, config)
 
     return {
         SetValue = function(value)
+            if type(value) == "table" or type(value) == "function" then
+                warn("RadiantHub: Dropdown SetValue expects a number, got " .. type(value) .. ". Did you accidentally pass the element object?")
+                return
+            end
             local numValue = tonumber(value)
             if numValue and numValue >= 1 and numValue <= #options then
                 currentIndex = numValue
@@ -1330,7 +1342,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("dada")
+print("update")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
