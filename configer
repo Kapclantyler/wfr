@@ -303,6 +303,29 @@ function RadiantHub:_createMinimizedIcon()
     self.minimizedIcon.ImageTransparency = 0.1
     self.minimizedIcon.Visible = false
     self.minimizedIcon.Parent = self.screenGui
+
+    -- Minimized icon drag support
+    local minimizedDragging = false
+    local minimizedDragStart = nil
+    local minimizedStartPos = nil
+    self.minimizedIcon.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            minimizedDragging = true
+            minimizedDragStart = input.Position
+            minimizedStartPos = self.minimizedIcon.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if minimizedDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - minimizedDragStart
+            self.minimizedIcon.Position = UDim2.new(minimizedStartPos.X.Scale, minimizedStartPos.X.Offset + delta.X, minimizedStartPos.Y.Scale, minimizedStartPos.Y.Offset + delta.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            minimizedDragging = false
+        end
+    end)
 end
 
 function RadiantHub:_createWatermark()
@@ -1351,7 +1374,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("yes this is correct tyler")
+
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
