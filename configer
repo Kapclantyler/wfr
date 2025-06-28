@@ -329,22 +329,22 @@ function RadiantUI:CreateWindow(config)
     
     -- Initialize notifications if enabled
     if config.Notifications then
-        Window:InitializeNotifications()
+        RadiantUI.InitializeNotifications(Window)
     end
     
     -- Initialize watermark if enabled
     if config.Watermark then
-        Window:InitializeWatermark()
+        RadiantUI.InitializeWatermark(Window)
     end
     
     -- Initialize dragging
-    Window:InitializeDragging()
+    RadiantUI.InitializeDragging(Window)
     
     -- Initialize minimize/restore
-    Window:InitializeMinimize()
+    RadiantUI.InitializeMinimize(Window)
     
     -- Initialize animations
-    Window:InitializeAnimations()
+    RadiantUI.InitializeAnimations(Window)
     
     -- Close button functionality
     closeButton.Activated:Connect(function()
@@ -838,7 +838,7 @@ end
 
 -- Create toggle/checkbox
 function RadiantUI:CreateToggle(tab, side, text, default, callback)
-    local element = self:CreateToggleElement(text, default, callback)
+    local element = RadiantUI.CreateToggleElement(self, text, default, callback)
     
     if side == "left" then
         table.insert(tab.LeftElements, element)
@@ -848,7 +848,7 @@ function RadiantUI:CreateToggle(tab, side, text, default, callback)
     
     -- Refresh tab if it's currently active
     if tab.IsActive then
-        self:SelectTab(tab)
+        RadiantUI.SelectTab(self, tab)
     end
     
     return element
@@ -931,7 +931,7 @@ end
 
 -- Create slider
 function RadiantUI:CreateSlider(tab, side, text, min, max, default, callback)
-    local element = self:CreateSliderElement(text, min, max, default, callback)
+    local element = RadiantUI.CreateSliderElement(self, text, min, max, default, callback)
     
     if side == "left" then
         table.insert(tab.LeftElements, element)
@@ -941,7 +941,7 @@ function RadiantUI:CreateSlider(tab, side, text, min, max, default, callback)
     
     -- Refresh tab if it's currently active
     if tab.IsActive then
-        self:SelectTab(tab)
+        RadiantUI.SelectTab(self, tab)
     end
     
     return element
@@ -1070,7 +1070,7 @@ end
 
 -- Create dropdown
 function RadiantUI:CreateDropdown(tab, side, text, options, default, callback)
-    local element = self:CreateDropdownElement(text, options, default, callback)
+    local element = RadiantUI.CreateDropdownElement(self, text, options, default, callback)
     
     if side == "left" then
         table.insert(tab.LeftElements, element)
@@ -1080,7 +1080,7 @@ function RadiantUI:CreateDropdown(tab, side, text, options, default, callback)
     
     -- Refresh tab if it's currently active
     if tab.IsActive then
-        self:SelectTab(tab)
+        RadiantUI.SelectTab(self, tab)
     end
     
     return element
@@ -1269,6 +1269,6 @@ function RadiantUI:Destroy()
         Window.WatermarkGui:Destroy()
     end
 end
-
+print("hello world!!")
 -- Return the library
 return RadiantUI
