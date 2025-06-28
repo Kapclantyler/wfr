@@ -957,11 +957,99 @@ function RadiantHub:_createToggle(section, config)
     container.Name = (config.Name or "Toggle") .. "Container"
     container.Size = UDim2.new(1, -10, 0, 30)
     container.BackgroundTransparency = 1
-    -- ... rest of toggle code ...
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, -35, 1, 0)
+    textLabel.Position = UDim2.new(0, 10, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = config.Name or "Toggle"
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextSize = 16
+    textLabel.Font = Enum.Font.Gotham
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.Parent = container
+    local checkbox = Instance.new("TextButton")
+    checkbox.Size = UDim2.new(0, 20, 0, 20)
+    checkbox.Position = UDim2.new(1, -25, 0.5, -10)
+    checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    checkbox.BorderSizePixel = 1
+    checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
+    checkbox.Text = ""
+    checkbox.Parent = container
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+    })
+    gradient.Rotation = 45
+    gradient.Parent = checkbox
+    local checkmark = Instance.new("TextLabel")
+    checkmark.Size = UDim2.new(1, 0, 1, 0)
+    checkmark.BackgroundTransparency = 1
+    checkmark.Text = "✓"
+    checkmark.TextColor3 = Color3.fromRGB(0, 255, 100)
+    checkmark.TextSize = 14
+    checkmark.Font = Enum.Font.GothamBold
+    checkmark.TextStrokeTransparency = 0
+    checkmark.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    checkmark.Visible = config.Default or false
+    checkmark.Parent = checkbox
+    local isEnabled = config.Default or false
+    if isEnabled then
+        checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
+        checkmark.Visible = true
+        textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+    end
+    checkbox.Activated:Connect(function()
+        isEnabled = not isEnabled
+        if isEnabled then
+            checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
+            checkmark.Visible = true
+            textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+        else
+            checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+            checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
+            checkmark.Visible = false
+            textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        end
+        if config.Callback then
+            config.Callback(isEnabled)
+        end
+    end)
     table.insert(section.elements, container)
     return {
-        SetValue = function(value) ... end,
-        GetValue = function() ... end
+        SetValue = function(value)
+            if type(value) == "table" or type(value) == "function" then return end
+            local boolValue = value
+            if type(value) == "string" then
+                boolValue = value:lower() == "true"
+            elseif type(value) == "number" then
+                boolValue = value ~= 0
+            else
+                boolValue = not not value
+            end
+            isEnabled = boolValue
+            checkmark.Visible = boolValue
+            if boolValue then
+                checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
+                textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+            else
+                checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+                checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
+                textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            end
+            if config.Callback then
+                config.Callback(isEnabled)
+            end
+        end,
+        GetValue = function()
+            return isEnabled
+        end
     }
 end
 
@@ -1794,7 +1882,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("diddy")
+print("homie")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
