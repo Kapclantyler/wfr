@@ -537,14 +537,13 @@ function RadiantHub:_createColorPicker(tab, config)
     hueSatFrame.Name = "HueSatFrame"
     hueSatFrame.Size = UDim2.new(1, -20, 0, 220)
     hueSatFrame.Position = UDim2.new(0, 10, 0, 50)
-    hueSatFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    hueSatFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- will be updated dynamically
     hueSatFrame.BorderSizePixel = 1
     hueSatFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
     hueSatFrame.Text = ""
     hueSatFrame.ZIndex = 202
     hueSatFrame.Parent = colorPickerFrame
 
-    -- Correct gradient overlays for HSV
     -- 1. Saturation (white to transparent, left to right)
     local saturationOverlay = Instance.new("Frame")
     saturationOverlay.Size = UDim2.new(1, 0, 1, 0)
@@ -611,7 +610,7 @@ function RadiantHub:_createColorPicker(tab, config)
     hueSliderFrame.ZIndex = 202
     hueSliderFrame.Parent = colorPickerFrame
 
-    -- Hue gradient
+    -- Hue gradient (rainbow, horizontal)
     local hueGradient = Instance.new("UIGradient")
     hueGradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
@@ -622,7 +621,7 @@ function RadiantHub:_createColorPicker(tab, config)
         ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
     })
-    hueGradient.Rotation = 0
+    hueGradient.Rotation = 0 -- horizontal
     hueGradient.Parent = hueSliderFrame
 
     -- Hue slider handle
@@ -731,7 +730,7 @@ function RadiantHub:_createColorPicker(tab, config)
         elseif imod == 3 then r, g, b = p, q, v
         elseif imod == 4 then r, g, b = t, p, v
         elseif imod == 5 then r, g, b = v, p, q end
-        return Color3.fromRGB(r * 255, g * 255, b * 255)
+        return Color3.fromRGB(math.clamp(r * 255, 0, 255), math.clamp(g * 255, 0, 255), math.clamp(b * 255, 0, 255))
     end
 
     local function updateColorFromHSV()
@@ -741,6 +740,7 @@ function RadiantHub:_createColorPicker(tab, config)
         local g = math.floor(selectedColor.G * 255)
         local b = math.floor(selectedColor.B * 255)
         rgbLabel.Text = string.format("RGB: %d, %d, %d", r, g, b)
+        -- Set the base color of the main color area to the current hue (full sat, full bright)
         local hueColor = hsvToRgb(currentHue, 1, 1)
         hueSatFrame.BackgroundColor3 = hueColor
     end
@@ -2041,7 +2041,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("ya boyyy")
+
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
