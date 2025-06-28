@@ -892,6 +892,7 @@ function RadiantHub:CreateTab(config)
         function section:CreateButton(config) return RadiantHub:_createButton(self, config) end
         table.insert(tab.sections, section)
         table.insert(tab.sectionOrder, section)
+        print("[RadiantHub] Section created:", section.name)
         return section
     end
     table.insert(self.tabs, tab)
@@ -902,6 +903,7 @@ function RadiantHub:CreateTab(config)
             self:_updateTabDisplay(tab)
         end
     end
+    print("[RadiantHub] Tab created:", tab.name)
     return tab
 end
 
@@ -1977,5 +1979,5 @@ function RadiantHub:_createTabButton(tab, index)
         self:_updateTabButtons(tab)
     end)
 end
-print("update222222")
+print("sigma")
 return RadiantHub
