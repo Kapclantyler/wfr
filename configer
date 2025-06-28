@@ -429,7 +429,6 @@ function RadiantHub:CreateTab(config)
         CreateButton = function(config) return self:_createButton(tab, config) end
     }
 end
-end
 
 function RadiantHub:_createTabButton(tab, index)
     local container = Instance.new("Frame")
@@ -560,7 +559,6 @@ function RadiantHub:_updateTabDisplay(tab)
         element.Parent = self.rightContent
         rightY = rightY + element.Size.Y.Offset + 5
     end
-end
 end
 
 -- UI Elements
@@ -792,16 +790,6 @@ function RadiantHub:_createSlider(tab, config)
         SetValue = function(value)
             currentValue = math.clamp(value, minVal, maxVal)
             self.settings[tostring(config.Name)] = currentValue
-            local pos = (currentValue - minVal) / (maxVal - minVal)
-            sliderFill.Size = UDim2.new(pos, 0, 1, 0)
-            sliderHandle.Position = UDim2.new(pos, -6, 0.5, -6)
-            valueLabel.Text = tostring(currentValue)
-        end,
-        GetValue = function()
-            return currentValue
-        end
-    }
-endValue
             local pos = (currentValue - minVal) / (maxVal - minVal)
             sliderFill.Size = UDim2.new(pos, 0, 1, 0)
             sliderHandle.Position = UDim2.new(pos, -6, 0.5, -6)
@@ -1173,7 +1161,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("hey")
+print("doggy doo")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
