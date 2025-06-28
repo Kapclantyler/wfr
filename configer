@@ -418,6 +418,10 @@ end
 
 function RadiantHub:_createColorPicker(tab, config)
     config = config or {}
+    if not tab or not tab.leftElements or not tab.rightElements then
+        warn("RadiantHub: Invalid tab object passed to _createColorPicker!")
+        return
+    end
     -- Mobile-compatible color picker implementation
     local container = Instance.new("Frame")
     container.Name = (config.Name or "ColorPicker") .. "Container"
@@ -1082,6 +1086,10 @@ end
 -- UI Elements
 function RadiantHub:_createToggle(tab, config)
     config = config or {}
+    if not tab or not tab.leftElements or not tab.rightElements then
+        warn("RadiantHub: Invalid tab object passed to _createToggle!")
+        return
+    end
     local container = Instance.new("Frame")
     container.Name = (config.Name or "Toggle") .. "Container"
     container.Size = UDim2.new(1, -10, 0, 30)
@@ -1210,6 +1218,10 @@ end
 
 function RadiantHub:_createSlider(tab, config)
     config = config or {}
+    if not tab or not tab.leftElements or not tab.rightElements then
+        warn("RadiantHub: Invalid tab object passed to _createSlider!")
+        return
+    end
     if not config then warn("RadiantHub: Slider config is missing") return end
     local container = Instance.new("Frame")
     container.Name = (config.Name or "Slider") .. "Container"
@@ -1350,6 +1362,10 @@ end
 
 function RadiantHub:_createDropdown(tab, config)
     config = config or {}
+    if not tab or not tab.leftElements or not tab.rightElements then
+        warn("RadiantHub: Invalid tab object passed to _createDropdown!")
+        return
+    end
     -- Safety checks
     if not config then
         warn("RadiantHub: Dropdown config is missing")
@@ -1495,6 +1511,10 @@ end
 
 function RadiantHub:_createButton(tab, config)
     config = config or {}
+    if not tab or not tab.leftElements or not tab.rightElements then
+        warn("RadiantHub: Invalid tab object passed to _createButton!")
+        return
+    end
     -- Safety checks
     if not config then
         warn("RadiantHub: Button config is missing")
@@ -1738,7 +1758,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("balls")
+print("da")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
