@@ -1882,7 +1882,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("homie")
+
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
@@ -1909,4 +1909,72 @@ function RadiantHub:Destroy()
     end
 end
 
+function RadiantHub:_createTabButton(tab, index)
+    if not self.leftSidebar then
+        warn("RadiantHub: Left sidebar not initialized")
+        return
+    end
+    local container = Instance.new("Frame")
+    container.Name = tab.name .. "Container"
+    container.Size = UDim2.new(1, 0, 0, 45)
+    container.Position = UDim2.new(0, -10, 0, 15 + (index * 45))
+    container.BackgroundTransparency = 1
+    container.Parent = self.leftSidebar
+    local indicator = Instance.new("Frame")
+    indicator.Name = "Indicator"
+    indicator.Size = UDim2.new(0, 3, 0, 25)
+    indicator.Position = UDim2.new(0, 10, 0.5, -12.5)
+    indicator.BackgroundColor3 = Color3.fromRGB(220, 50, 47)
+    indicator.BorderSizePixel = 0
+    indicator.Visible = index == 0
+    indicator.Parent = container
+    local indicatorCorner = Instance.new("UICorner")
+    indicatorCorner.CornerRadius = UDim.new(0, 2)
+    indicatorCorner.Parent = indicator
+    local button = Instance.new("TextButton")
+    button.Name = tab.name .. "Tab"
+    button.Size = UDim2.new(1, -10, 1, 0)
+    button.Position = UDim2.new(0, 10, 0, 0)
+    button.BackgroundTransparency = 1
+    button.BorderSizePixel = 0
+    button.Text = ""
+    button.Parent = container
+    local iconLabel = Instance.new("TextLabel")
+    iconLabel.Name = "Icon"
+    iconLabel.Size = UDim2.new(0, 16, 0, 16)
+    iconLabel.Position = UDim2.new(0, 12, 0.5, -8)
+    iconLabel.BackgroundTransparency = 1
+    iconLabel.Text = tab.icon
+    iconLabel.TextColor3 = index == 0 and Color3.fromRGB(220, 50, 47) or Color3.fromRGB(160, 160, 160)
+    iconLabel.TextSize = 14
+    iconLabel.Font = Enum.Font.Gotham
+    iconLabel.TextXAlignment = Enum.TextXAlignment.Center
+    iconLabel.TextYAlignment = Enum.TextYAlignment.Center
+    iconLabel.Parent = button
+    local separator = Instance.new("Frame")
+    separator.Name = "Separator"
+    separator.Size = UDim2.new(0, 1, 0, 16)
+    separator.Position = UDim2.new(0, 34, 0.5, -8)
+    separator.BackgroundColor3 = index == 0 and Color3.fromRGB(220, 50, 47) or Color3.fromRGB(80, 80, 80)
+    separator.BorderSizePixel = 0
+    separator.Parent = button
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = "Text"
+    textLabel.Size = UDim2.new(1, -45, 1, 0)
+    textLabel.Position = UDim2.new(0, 40, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = tab.name
+    textLabel.TextColor3 = index == 0 and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 160, 160)
+    textLabel.TextSize = 15
+    textLabel.Font = Enum.Font.GothamSemibold
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.Parent = button
+    button.Activated:Connect(function()
+        self.currentTab = tab
+        self:_updateTabDisplay(tab)
+        self:_updateTabButtons(tab)
+    end)
+end
+print("balls")
 return RadiantHub
