@@ -149,10 +149,9 @@ function RadiantHub:_createMainUI()
     
     -- Minimized icon
     self:_createMinimizedIcon()
-
-    if self.currentTab then
-        self:_updateTabDisplay(self.currentTab)
-    end
+    
+    -- Initialize content sections immediately
+    self:_createContentSections()
 end
 
 function RadiantHub:_createControlButtons()
@@ -404,11 +403,17 @@ function RadiantHub:CreateTab(config)
     table.insert(self.tabs, tab)
     self:_createTabButton(tab, #self.tabs - 1)
     
+    -- Set as current tab and display immediately if it's the first tab
     if #self.tabs == 1 then
         self.currentTab = tab
-        if self.contentArea then
-            self:_updateTabDisplay(tab)
-        end
+        -- Force initial display after a brief delay to ensure everything is loaded
+        spawn(function()
+            wait(0.1)
+            if self.contentArea then
+                self:_updateTabDisplay(tab)
+                self:_updateTabButtons(tab)
+            end
+        end)
     end
     
     print("[RadiantHub] Tab created:", tab.name)
@@ -484,11 +489,10 @@ function RadiantHub:_createSectionFrame(section, parent, yPos)
     local elementY = 35
     for _, element in ipairs(section.elements) do
         if element then
-            -- Clone the element to avoid parenting issues
-            local elementClone = element:Clone()
-            elementClone.Position = UDim2.new(0, 5, 0, elementY)
-            elementClone.Parent = sectionFrame
-            elementY = elementY + elementClone.Size.Y.Offset + 5
+            -- Don't clone, just reparent the original element
+            element.Position = UDim2.new(0, 5, 0, elementY)
+            element.Parent = sectionFrame
+            elementY = elementY + element.Size.Y.Offset + 5
         end
     end
     
@@ -1569,7 +1573,7 @@ end
 function RadiantHub:GetSetting(name)
     return self.settings[name]
 end
-
+warn("balls alert")
 function RadiantHub:SetSetting(name, value)
     self.settings[name] = value
 end
@@ -1581,7 +1585,7 @@ function RadiantHub:DebugSettings()
     end
     print("=== End Debug ===")
 end
-print("diddy did me")
+
 function RadiantHub:Destroy()
     if self.screenGui then
         self.screenGui:Destroy()
