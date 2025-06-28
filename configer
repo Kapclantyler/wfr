@@ -423,7 +423,7 @@ function RadiantHub:_createColorPicker(tab, config)
         warn("RadiantHub: Invalid tab object passed to _createColorPicker! Tab: " .. tostring(tab))
         return
     end
-    -- Mobile-compatible color picker implementation
+    -- Container for the color picker button
     local container = Instance.new("Frame")
     container.Name = (config.Name or "ColorPicker") .. "Container"
     container.Size = UDim2.new(1, -10, 0, 30)
@@ -532,192 +532,14 @@ function RadiantHub:_createColorPicker(tab, config)
     pickerCloseButton.ZIndex = 203
     pickerCloseButton.Parent = pickerTitleBar
 
-    -- Hue/Saturation picker (main color area)
-    local hueSatFrame = Instance.new("TextButton")
-    hueSatFrame.Name = "HueSatFrame"
-    hueSatFrame.Size = UDim2.new(1, -20, 0, 220)
-    hueSatFrame.Position = UDim2.new(0, 10, 0, 50)
-    hueSatFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- will be updated dynamically
-    hueSatFrame.BorderSizePixel = 1
-    hueSatFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
-    hueSatFrame.Text = ""
-    hueSatFrame.ZIndex = 202
-    hueSatFrame.Parent = colorPickerFrame
-
-    -- 1. Saturation (white to transparent, left to right)
-    local saturationOverlay = Instance.new("Frame")
-    saturationOverlay.Size = UDim2.new(1, 0, 1, 0)
-    saturationOverlay.Position = UDim2.new(0, 0, 0, 0)
-    saturationOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    saturationOverlay.BorderSizePixel = 0
-    saturationOverlay.ZIndex = 203
-    saturationOverlay.Parent = hueSatFrame
-    local satGradient = Instance.new("UIGradient")
-    satGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
-        ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1))
-    })
-    satGradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0),
-        NumberSequenceKeypoint.new(1, 1)
-    })
-    satGradient.Rotation = 0 -- left to right
-    satGradient.Parent = saturationOverlay
-    -- 2. Brightness (transparent to black, top to bottom)
-    local brightnessOverlay = Instance.new("Frame")
-    brightnessOverlay.Size = UDim2.new(1, 0, 1, 0)
-    brightnessOverlay.Position = UDim2.new(0, 0, 0, 0)
-    brightnessOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    brightnessOverlay.BorderSizePixel = 0
-    brightnessOverlay.ZIndex = 204
-    brightnessOverlay.Parent = hueSatFrame
-    local brightGradient = Instance.new("UIGradient")
-    brightGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.new(0, 0, 0)),
-        ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0))
-    })
-    brightGradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0),
-        NumberSequenceKeypoint.new(1, 1)
-    })
-    brightGradient.Rotation = 90 -- top to bottom
-    brightGradient.Parent = brightnessOverlay
-
-    -- Color selector circle
-    local colorSelector = Instance.new("Frame")
-    colorSelector.Name = "ColorSelector"
-    colorSelector.Size = UDim2.new(0, 14, 0, 14)
-    colorSelector.Position = UDim2.new(1, -7, 0, -7)
-    colorSelector.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    colorSelector.BorderSizePixel = 2
-    colorSelector.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    colorSelector.ZIndex = 205
-    colorSelector.Parent = hueSatFrame
-
-    local selectorCorner = Instance.new("UICorner")
-    selectorCorner.CornerRadius = UDim.new(0.5, 0)
-    selectorCorner.Parent = colorSelector
-
-    -- Hue slider
-    local hueSliderFrame = Instance.new("TextButton")
-    hueSliderFrame.Name = "HueSliderFrame"
-    hueSliderFrame.Size = UDim2.new(1, -20, 0, 25)
-    hueSliderFrame.Position = UDim2.new(0, 10, 0, 280)
-    hueSliderFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    hueSliderFrame.BorderSizePixel = 1
-    hueSliderFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
-    hueSliderFrame.Text = ""
-    hueSliderFrame.ZIndex = 202
-    hueSliderFrame.Parent = colorPickerFrame
-
-    -- Hue gradient (rainbow, horizontal)
-    local hueGradient = Instance.new("UIGradient")
-    hueGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
-        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
-        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
-        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
-    })
-    hueGradient.Rotation = 0 -- horizontal
-    hueGradient.Parent = hueSliderFrame
-
-    -- Hue slider handle
-    local hueSliderHandle = Instance.new("Frame")
-    hueSliderHandle.Name = "HueSliderHandle"
-    hueSliderHandle.Size = UDim2.new(0, 4, 1, 8)
-    hueSliderHandle.Position = UDim2.new(0, -2, 0, -4)
-    hueSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    hueSliderHandle.BorderSizePixel = 1
-    hueSliderHandle.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    hueSliderHandle.ZIndex = 203
-    hueSliderHandle.Parent = hueSliderFrame
-
-    -- Preview section
-    local previewFrame = Instance.new("Frame")
-    previewFrame.Name = "PreviewFrame"
-    previewFrame.Size = UDim2.new(1, -20, 0, 45)
-    previewFrame.Position = UDim2.new(0, 10, 0, 315)
-    previewFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    previewFrame.BorderSizePixel = 1
-    previewFrame.BorderColor3 = Color3.fromRGB(70, 70, 70)
-    previewFrame.ZIndex = 202
-    previewFrame.Parent = colorPickerFrame
-
-    -- Color preview
-    local colorPreview = Instance.new("Frame")
-    colorPreview.Name = "ColorPreview"
-    colorPreview.Size = UDim2.new(0, 70, 1, -6)
-    colorPreview.Position = UDim2.new(0, 3, 0, 3)
-    colorPreview.BackgroundColor3 = config.Default or Color3.fromRGB(255, 100, 100)
-    colorPreview.BorderSizePixel = 1
-    colorPreview.BorderColor3 = Color3.fromRGB(30, 30, 30)
-    colorPreview.ZIndex = 203
-    colorPreview.Parent = previewFrame
-
-    local previewCorner = Instance.new("UICorner")
-    previewCorner.CornerRadius = UDim.new(0, 4)
-    previewCorner.Parent = colorPreview
-
-    -- RGB values display
-    local rgbLabel = Instance.new("TextLabel")
-    rgbLabel.Size = UDim2.new(1, -80, 1, 0)
-    rgbLabel.Position = UDim2.new(0, 80, 0, 0)
-    rgbLabel.BackgroundTransparency = 1
-    rgbLabel.Text = "RGB: 255, 255, 255"
-    rgbLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    rgbLabel.TextSize = 14
-    rgbLabel.Font = Enum.Font.Gotham
-    rgbLabel.TextXAlignment = Enum.TextXAlignment.Left
-    rgbLabel.TextYAlignment = Enum.TextYAlignment.Center
-    rgbLabel.ZIndex = 203
-    rgbLabel.Parent = previewFrame
-
-    -- Buttons
-    local buttonFrame = Instance.new("Frame")
-    buttonFrame.Name = "ButtonFrame"
-    buttonFrame.Size = UDim2.new(1, -20, 0, 35)
-    buttonFrame.Position = UDim2.new(0, 10, 0, 370)
-    buttonFrame.BackgroundTransparency = 1
-    buttonFrame.ZIndex = 202
-    buttonFrame.Parent = colorPickerFrame
-
-    local confirmButton = Instance.new("TextButton")
-    confirmButton.Name = "ConfirmButton"
-    confirmButton.Size = UDim2.new(0.48, 0, 1, 0)
-    confirmButton.Position = UDim2.new(0, 0, 0, 0)
-    confirmButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-    confirmButton.BorderSizePixel = 0
-    confirmButton.Text = "Confirm"
-    confirmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    confirmButton.TextSize = 16
-    confirmButton.Font = Enum.Font.GothamBold
-    confirmButton.ZIndex = 203
-    confirmButton.Parent = buttonFrame
-
-    local cancelButton = Instance.new("TextButton")
-    cancelButton.Name = "CancelButton"
-    cancelButton.Size = UDim2.new(0.48, 0, 1, 0)
-    cancelButton.Position = UDim2.new(0.52, 0, 0, 0)
-    cancelButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-    cancelButton.BorderSizePixel = 0
-    cancelButton.Text = "Cancel"
-    cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    cancelButton.TextSize = 16
-    cancelButton.Font = Enum.Font.GothamBold
-    cancelButton.ZIndex = 203
-    cancelButton.Parent = buttonFrame
-
-    -- Color picker logic
+    -- HSV state
     local currentHue = 0
     local currentSat = 1
-    local currentBright = 1
+    local currentVal = 1
     local selectedColor = config.Default or Color3.fromRGB(255, 255, 255)
 
+    -- HSV to RGB conversion
     local function hsvToRgb(h, s, v)
-        -- h, s, v in [0,1]
         local r, g, b
         local i = math.floor(h * 6)
         local f = h * 6 - i
@@ -734,87 +556,263 @@ function RadiantHub:_createColorPicker(tab, config)
         return Color3.fromRGB(math.clamp(r * 255, 0, 255), math.clamp(g * 255, 0, 255), math.clamp(b * 255, 0, 255))
     end
 
-    local function updateColorFromHSV()
-        -- Set the base color of the main color area to the current hue (full sat, full bright)
-        local hueColor = hsvToRgb(currentHue, 1, 1)
-        hueSatFrame.BackgroundColor3 = hueColor
-        selectedColor = hsvToRgb(currentHue, currentSat, currentBright)
-        colorPreview.BackgroundColor3 = selectedColor
-        local r = math.floor(selectedColor.R * 255)
-        local g = math.floor(selectedColor.G * 255)
-        local b = math.floor(selectedColor.B * 255)
-        rgbLabel.Text = string.format("RGB: %d, %d, %d", r, g, b)
-    end
+    -- Main color area (hue/sat)
+    local hueSatFrame = Instance.new("TextButton")
+    hueSatFrame.Name = "HueSatFrame"
+    hueSatFrame.Size = UDim2.new(1, -20, 0, 220)
+    hueSatFrame.Position = UDim2.new(0, 10, 0, 50)
+    hueSatFrame.BackgroundColor3 = hsvToRgb(currentHue, 1, 1)
+    hueSatFrame.BorderSizePixel = 1
+    hueSatFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
+    hueSatFrame.Text = ""
+    hueSatFrame.ZIndex = 202
+    hueSatFrame.Parent = colorPickerFrame
 
-    local function updateSelectorPosition()
-        colorSelector.Position = UDim2.new(currentSat, -7, 1 - currentBright, -7)
-    end
+    -- Saturation overlay (white left to right)
+    local saturationOverlay = Instance.new("Frame")
+    saturationOverlay.Size = UDim2.new(1, 0, 1, 0)
+    saturationOverlay.Position = UDim2.new(0, 0, 0, 0)
+    saturationOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    saturationOverlay.BorderSizePixel = 0
+    saturationOverlay.ZIndex = 203
+    saturationOverlay.Parent = hueSatFrame
+    local satGradient = Instance.new("UIGradient")
+    satGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+        ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1))
+    })
+    satGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    satGradient.Rotation = 0
+    satGradient.Parent = saturationOverlay
+    -- Brightness overlay (black top to bottom)
+    local brightnessOverlay = Instance.new("Frame")
+    brightnessOverlay.Size = UDim2.new(1, 0, 1, 0)
+    brightnessOverlay.Position = UDim2.new(0, 0, 0, 0)
+    brightnessOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    brightnessOverlay.BorderSizePixel = 0
+    brightnessOverlay.ZIndex = 204
+    brightnessOverlay.Parent = hueSatFrame
+    local brightGradient = Instance.new("UIGradient")
+    brightGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.new(0, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0))
+    })
+    brightGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    brightGradient.Rotation = 90
+    brightGradient.Parent = brightnessOverlay
 
-    local function updateHueSliderPosition()
+    -- Selector circle
+    local colorSelector = Instance.new("Frame")
+    colorSelector.Name = "ColorSelector"
+    colorSelector.Size = UDim2.new(0, 14, 0, 14)
+    colorSelector.Position = UDim2.new(currentSat, -7, 1 - currentVal, -7)
+    colorSelector.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    colorSelector.BorderSizePixel = 2
+    colorSelector.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    colorSelector.ZIndex = 205
+    colorSelector.Parent = hueSatFrame
+    local selectorCorner = Instance.new("UICorner")
+    selectorCorner.CornerRadius = UDim.new(0.5, 0)
+    selectorCorner.Parent = colorSelector
+
+    -- Hue slider
+    local hueSliderFrame = Instance.new("TextButton")
+    hueSliderFrame.Name = "HueSliderFrame"
+    hueSliderFrame.Size = UDim2.new(1, -20, 0, 25)
+    hueSliderFrame.Position = UDim2.new(0, 10, 0, 280)
+    hueSliderFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    hueSliderFrame.BorderSizePixel = 1
+    hueSliderFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
+    hueSliderFrame.Text = ""
+    hueSliderFrame.ZIndex = 202
+    hueSliderFrame.Parent = colorPickerFrame
+    -- Hue gradient
+    local hueGradient = Instance.new("UIGradient")
+    hueGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
+        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+    })
+    hueGradient.Rotation = 0
+    hueGradient.Parent = hueSliderFrame
+    -- Hue slider handle
+    local hueSliderHandle = Instance.new("Frame")
+    hueSliderHandle.Name = "HueSliderHandle"
+    hueSliderHandle.Size = UDim2.new(0, 4, 1, 8)
+    hueSliderHandle.Position = UDim2.new(currentHue, -2, 0, -4)
+    hueSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    hueSliderHandle.BorderSizePixel = 1
+    hueSliderHandle.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    hueSliderHandle.ZIndex = 203
+    hueSliderHandle.Parent = hueSliderFrame
+
+    -- Preview section
+    local previewFrame = Instance.new("Frame")
+    previewFrame.Name = "PreviewFrame"
+    previewFrame.Size = UDim2.new(1, -20, 0, 45)
+    previewFrame.Position = UDim2.new(0, 10, 0, 315)
+    previewFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    previewFrame.BorderSizePixel = 1
+    previewFrame.BorderColor3 = Color3.fromRGB(70, 70, 70)
+    previewFrame.ZIndex = 202
+    previewFrame.Parent = colorPickerFrame
+    local colorPreview = Instance.new("Frame")
+    colorPreview.Name = "ColorPreview"
+    colorPreview.Size = UDim2.new(0, 70, 1, -6)
+    colorPreview.Position = UDim2.new(0, 3, 0, 3)
+    colorPreview.BackgroundColor3 = selectedColor
+    colorPreview.BorderSizePixel = 1
+    colorPreview.BorderColor3 = Color3.fromRGB(30, 30, 30)
+    colorPreview.ZIndex = 203
+    colorPreview.Parent = previewFrame
+    local previewCorner = Instance.new("UICorner")
+    previewCorner.CornerRadius = UDim.new(0, 4)
+    previewCorner.Parent = colorPreview
+    local rgbLabel = Instance.new("TextLabel")
+    rgbLabel.Size = UDim2.new(1, -80, 1, 0)
+    rgbLabel.Position = UDim2.new(0, 80, 0, 0)
+    rgbLabel.BackgroundTransparency = 1
+    rgbLabel.Text = string.format("RGB: %d, %d, %d", math.floor(selectedColor.R*255), math.floor(selectedColor.G*255), math.floor(selectedColor.B*255))
+    rgbLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    rgbLabel.TextSize = 14
+    rgbLabel.Font = Enum.Font.Gotham
+    rgbLabel.TextXAlignment = Enum.TextXAlignment.Left
+    rgbLabel.TextYAlignment = Enum.TextYAlignment.Center
+    rgbLabel.ZIndex = 203
+    rgbLabel.Parent = previewFrame
+
+    -- Buttons
+    local buttonFrame = Instance.new("Frame")
+    buttonFrame.Name = "ButtonFrame"
+    buttonFrame.Size = UDim2.new(1, -20, 0, 35)
+    buttonFrame.Position = UDim2.new(0, 10, 0, 370)
+    buttonFrame.BackgroundTransparency = 1
+    buttonFrame.ZIndex = 202
+    buttonFrame.Parent = colorPickerFrame
+    local confirmButton = Instance.new("TextButton")
+    confirmButton.Name = "ConfirmButton"
+    confirmButton.Size = UDim2.new(0.48, 0, 1, 0)
+    confirmButton.Position = UDim2.new(0, 0, 0, 0)
+    confirmButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+    confirmButton.BorderSizePixel = 0
+    confirmButton.Text = "Confirm"
+    confirmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    confirmButton.TextSize = 16
+    confirmButton.Font = Enum.Font.GothamBold
+    confirmButton.ZIndex = 203
+    confirmButton.Parent = buttonFrame
+    local cancelButton = Instance.new("TextButton")
+    cancelButton.Name = "CancelButton"
+    cancelButton.Size = UDim2.new(0.48, 0, 1, 0)
+    cancelButton.Position = UDim2.new(0.52, 0, 0, 0)
+    cancelButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+    cancelButton.BorderSizePixel = 0
+    cancelButton.Text = "Cancel"
+    cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    cancelButton.TextSize = 16
+    cancelButton.Font = Enum.Font.GothamBold
+    cancelButton.ZIndex = 203
+    cancelButton.Parent = buttonFrame
+
+    -- Update all visuals
+    local function updateVisuals()
+        hueSatFrame.BackgroundColor3 = hsvToRgb(currentHue, 1, 1)
+        colorSelector.Position = UDim2.new(currentSat, -7, 1 - currentVal, -7)
         hueSliderHandle.Position = UDim2.new(currentHue, -2, 0, -4)
+        selectedColor = hsvToRgb(currentHue, currentSat, currentVal)
+        colorPreview.BackgroundColor3 = selectedColor
+        rgbLabel.Text = string.format("RGB: %d, %d, %d", math.floor(selectedColor.R*255), math.floor(selectedColor.G*255), math.floor(selectedColor.B*255))
     end
 
-    -- On any change, update all UI
-    local function updateAll()
-        updateColorFromHSV()
-        updateSelectorPosition()
-        updateHueSliderPosition()
+    -- Mouse/Touch logic
+    local isDraggingColor = false
+    local isDraggingHue = false
+    local function updateColorFromPosition(inputObject)
+        local pos = inputObject.Position
+        local relX = math.clamp((pos.X - hueSatFrame.AbsolutePosition.X) / hueSatFrame.AbsoluteSize.X, 0, 1)
+        local relY = math.clamp((pos.Y - hueSatFrame.AbsolutePosition.Y) / hueSatFrame.AbsoluteSize.Y, 0, 1)
+        currentSat = relX
+        currentVal = 1 - relY
+        updateVisuals()
     end
+    local function updateHueFromPosition(inputObject)
+        local pos = inputObject.Position
+        local relX = math.clamp((pos.X - hueSliderFrame.AbsolutePosition.X) / hueSliderFrame.AbsoluteSize.X, 0, 1)
+        currentHue = relX
+        updateVisuals()
+    end
+    hueSatFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDraggingColor = true
+            updateColorFromPosition(input)
+        end
+    end)
+    hueSatFrame.InputChanged:Connect(function(input)
+        if isDraggingColor and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            updateColorFromPosition(input)
+        end
+    end)
+    hueSatFrame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDraggingColor = false
+        end
+    end)
+    hueSliderFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDraggingHue = true
+            updateHueFromPosition(input)
+        end
+    end)
+    hueSliderFrame.InputChanged:Connect(function(input)
+        if isDraggingHue and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            updateHueFromPosition(input)
+        end
+    end)
+    hueSliderFrame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDraggingHue = false
+        end
+    end)
 
-    -- Update on open
+    -- Open/close logic
     local function openColorPicker()
         colorPickerOverlay.Visible = true
-        selectedColor = colorButton.BackgroundColor3
-        local r = math.floor(selectedColor.R * 255)
-        local g = math.floor(selectedColor.G * 255)
-        local b = math.floor(selectedColor.B * 255)
-        rgbLabel.Text = string.format("RGB: %d, %d, %d", r, g, b)
-        updateAll()
+        -- Set HSV from current button color
+        local c = colorButton.BackgroundColor3
+        local r, g, b = c.R, c.G, c.B
+        local max, min = math.max(r, g, b), math.min(r, g, b)
+        local h, s, v = 0, 0, max
+        local d = max - min
+        if max ~= 0 then s = d / max end
+        if d ~= 0 then
+            if max == r then
+                h = (g - b) / d
+                if g < b then h = h + 6 end
+            elseif max == g then
+                h = (b - r) / d + 2
+            elseif max == b then
+                h = (r - g) / d + 4
+            end
+            h = h / 6
+        end
+        currentHue, currentSat, currentVal = h, s, v
+        updateVisuals()
         colorPickerFrame.Position = UDim2.new(0.5, -175, 0.5, -250)
         local slideIn = TweenService:Create(colorPickerFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
             Position = UDim2.new(0.5, -175, 0.5, -210)
         })
         slideIn:Play()
     end
-
-    -- Update on drag
-    hueSatFrame.InputBegan:Connect(function(inputObject)
-        if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or inputObject.UserInputType == Enum.UserInputType.Touch then
-            isDraggingColor = true
-            updateColorFromPosition(inputObject)
-            updateAll()
-        end
-    end)
-    hueSatFrame.InputChanged:Connect(function(inputObject)
-        if isDraggingColor and (inputObject.UserInputType == Enum.UserInputType.MouseMovement or inputObject.UserInputType == Enum.UserInputType.Touch) then
-            updateColorFromPosition(inputObject)
-            updateAll()
-        end
-    end)
-    hueSatFrame.InputEnded:Connect(function(inputObject)
-        if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or inputObject.UserInputType == Enum.UserInputType.Touch then
-            isDraggingColor = false
-        end
-    end)
-    hueSliderFrame.InputBegan:Connect(function(inputObject)
-        if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or inputObject.UserInputType == Enum.UserInputType.Touch then
-            isDraggingHue = true
-            updateHueFromPosition(inputObject)
-            updateAll()
-        end
-    end)
-    hueSliderFrame.InputChanged:Connect(function(inputObject)
-        if isDraggingHue and (inputObject.UserInputType == Enum.UserInputType.MouseMovement or inputObject.UserInputType == Enum.UserInputType.Touch) then
-            updateHueFromPosition(inputObject)
-            updateAll()
-        end
-    end)
-    hueSliderFrame.InputEnded:Connect(function(inputObject)
-        if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or inputObject.UserInputType == Enum.UserInputType.Touch then
-            isDraggingHue = false
-        end
-    end)
-
     local function closeColorPicker()
         colorPickerOverlay.Visible = false
     end
@@ -1079,7 +1077,7 @@ function RadiantHub:_createToggle(tab, config)
     container.Name = (config.Name or "Toggle") .. "Container"
     container.Size = UDim2.new(1, -10, 0, 30)
     container.BackgroundTransparency = 1
-
+    
     local textLabel = Instance.new("TextLabel")
     textLabel.Size = UDim2.new(1, -35, 1, 0)
     textLabel.Position = UDim2.new(0, 10, 0, 0)
@@ -1332,9 +1330,9 @@ function RadiantHub:_createSlider(tab, config)
             currentValue = math.clamp(numValue, minVal, maxVal)
             self.settings[config.Name or "Slider"] = currentValue
             local pos = (currentValue - minVal) / (maxVal - minVal)
-            sliderFill.Size = UDim2.new(pos, 0, 1, 0)
-            sliderHandle.Position = UDim2.new(pos, -6, 0.5, -6)
-            valueLabel.Text = tostring(currentValue)
+                sliderFill.Size = UDim2.new(pos, 0, 1, 0)
+                sliderHandle.Position = UDim2.new(pos, -6, 0.5, -6)
+                valueLabel.Text = tostring(currentValue)
             if config.Callback then
                 config.Callback(currentValue)
             end
@@ -2030,7 +2028,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("dadadagfdfdghgdgfd")
+
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
