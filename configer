@@ -588,14 +588,14 @@ function RadiantHub:_updateTabDisplay(tab)
     for _, child in ipairs(self.leftContent:GetChildren()) do
         if child.Name:find("Container") then
             child.Parent = nil
-            child:Destroy()
+            -- child:Destroy() -- Do not destroy, just remove from parent
         end
     end
     
     for _, child in ipairs(self.rightContent:GetChildren()) do
         if child.Name:find("Container") then
             child.Parent = nil
-            child:Destroy()
+            -- child:Destroy() -- Do not destroy, just remove from parent
         end
     end
     
@@ -1374,7 +1374,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-
+print("hi")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
