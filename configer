@@ -664,8 +664,14 @@ function RadiantHub:_createToggle(tab, config)
 end
 
 function RadiantHub:_createSlider(tab, config)
+    -- Safety checks
+    if not config or not config.Name then
+        warn("RadiantHub: Slider config or name is missing")
+        return
+    end
+    
     local container = Instance.new("Frame")
-    container.Name = config.Name .. "Container"
+    container.Name = tostring(config.Name) .. "Container"
     container.Size = UDim2.new(1, -10, 0, 40)
     container.BackgroundTransparency = 1
 
@@ -673,7 +679,7 @@ function RadiantHub:_createSlider(tab, config)
     textLabel.Size = UDim2.new(0.6, 0, 0, 20)
     textLabel.Position = UDim2.new(0, 10, 0, 0)
     textLabel.BackgroundTransparency = 1
-    textLabel.Text = config.Name
+    textLabel.Text = tostring(config.Name)
     textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     textLabel.TextSize = 12
     textLabel.Font = Enum.Font.Gotham
@@ -682,8 +688,10 @@ function RadiantHub:_createSlider(tab, config)
     textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     textLabel.Parent = container
 
+    local minVal = config.Min or 0
+    local maxVal = config.Max or 100
     local currentValue = config.Default or config.Min or 50
-    self.settings[config.Name] = currentValue
+    self.settings[tostring(config.Name)] = currentValue
 
     local valueLabel = Instance.new("TextLabel")
     valueLabel.Size = UDim2.new(0.3, 0, 0, 20)
@@ -707,8 +715,6 @@ function RadiantHub:_createSlider(tab, config)
     sliderBG.Text = ""
     sliderBG.Parent = container
 
-    local minVal = config.Min or 0
-    local maxVal = config.Max or 100
     local initPos = (currentValue - minVal) / (maxVal - minVal)
     
     local sliderFill = Instance.new("Frame")
@@ -733,14 +739,14 @@ function RadiantHub:_createSlider(tab, config)
         local pos = math.clamp((inputPos.X - sliderBG.AbsolutePosition.X) / sliderBG.AbsoluteSize.X, 0, 1)
         local value = math.floor(minVal + (maxVal - minVal) * pos)
         currentValue = value
-        self.settings[config.Name] = value
+        self.settings[tostring(config.Name)] = value
 
         sliderFill.Size = UDim2.new(pos, 0, 1, 0)
         sliderHandle.Position = UDim2.new(pos, -6, 0.5, -6)
         valueLabel.Text = tostring(value)
         
         if config.Callback then
-            config.Callback(value)
+            pcall(config.Callback, value)
         end
     end
 
@@ -783,7 +789,17 @@ function RadiantHub:_createSlider(tab, config)
     return {
         SetValue = function(value)
             currentValue = math.clamp(value, minVal, maxVal)
-            self.settings[config.Name] = currentValue
+            self.settings[tostring(config.Name)] = currentValue
+            local pos = (currentValue - minVal) / (maxVal - minVal)
+            sliderFill.Size = UDim2.new(pos, 0, 1, 0)
+            sliderHandle.Position = UDim2.new(pos, -6, 0.5, -6)
+            valueLabel.Text = tostring(currentValue)
+        end,
+        GetValue = function()
+            return currentValue
+        end
+    }
+endValue
             local pos = (currentValue - minVal) / (maxVal - minVal)
             sliderFill.Size = UDim2.new(pos, 0, 1, 0)
             sliderHandle.Position = UDim2.new(pos, -6, 0.5, -6)
@@ -796,8 +812,14 @@ function RadiantHub:_createSlider(tab, config)
 end
 
 function RadiantHub:_createDropdown(tab, config)
+    -- Safety checks
+    if not config or not config.Name then
+        warn("RadiantHub: Dropdown config or name is missing")
+        return
+    end
+    
     local container = Instance.new("Frame")
-    container.Name = config.Name .. "Container"
+    container.Name = tostring(config.Name) .. "Container"
     container.Size = UDim2.new(1, -10, 0, 35)
     container.BackgroundTransparency = 1
     
@@ -805,7 +827,7 @@ function RadiantHub:_createDropdown(tab, config)
     textLabel.Size = UDim2.new(0.4, 0, 1, 0)
     textLabel.Position = UDim2.new(0, 10, 0, 0)
     textLabel.BackgroundTransparency = 1
-    textLabel.Text = config.Name
+    textLabel.Text = tostring(config.Name)
     textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     textLabel.TextStrokeTransparency = 0
     textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -817,7 +839,7 @@ function RadiantHub:_createDropdown(tab, config)
     
     local currentIndex = 1
     local options = config.Options or {"Option 1", "Option 2"}
-    self.settings[config.Name] = currentIndex
+    self.settings[tostring(config.Name)] = currentIndex
     
     local dropdown = Instance.new("TextButton")
     dropdown.Size = UDim2.new(0.55, -10, 0, 25)
@@ -825,7 +847,7 @@ function RadiantHub:_createDropdown(tab, config)
     dropdown.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     dropdown.BorderSizePixel = 1
     dropdown.BorderColor3 = Color3.fromRGB(100, 100, 100)
-    dropdown.Text = options[currentIndex] .. " ▼"
+    dropdown.Text = tostring(options[currentIndex]) .. " ▼"
     dropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
     dropdown.TextStrokeTransparency = 0
     dropdown.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -853,7 +875,7 @@ function RadiantHub:_createDropdown(tab, config)
         optionButton.Position = UDim2.new(0, 0, 0, (i-1) * 25)
         optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         optionButton.BorderSizePixel = 0
-        optionButton.Text = option
+        optionButton.Text = tostring(option)
         optionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         optionButton.TextStrokeTransparency = 0
         optionButton.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -871,14 +893,14 @@ function RadiantHub:_createDropdown(tab, config)
         end)
         
         optionButton.Activated:Connect(function()
-            dropdown.Text = option .. " ▼"
+            dropdown.Text = tostring(option) .. " ▼"
             currentIndex = i
-            self.settings[config.Name] = i
+            self.settings[tostring(config.Name)] = i
             dropdownMenu.Visible = false
             isOpen = false
             
             if config.Callback then
-                config.Callback(option, i)
+                pcall(config.Callback, option, i)
             end
         end)
     end
@@ -887,9 +909,9 @@ function RadiantHub:_createDropdown(tab, config)
         isOpen = not isOpen
         dropdownMenu.Visible = isOpen
         if isOpen then
-            dropdown.Text = options[currentIndex] .. " ▲"
+            dropdown.Text = tostring(options[currentIndex]) .. " ▲"
         else
-            dropdown.Text = options[currentIndex] .. " ▼"
+            dropdown.Text = tostring(options[currentIndex]) .. " ▼"
         end
     end)
 
@@ -904,8 +926,8 @@ function RadiantHub:_createDropdown(tab, config)
         SetValue = function(value)
             if type(value) == "number" and value >= 1 and value <= #options then
                 currentIndex = value
-                dropdown.Text = options[currentIndex] .. " ▼"
-                self.settings[config.Name] = currentIndex
+                dropdown.Text = tostring(options[currentIndex]) .. " ▼"
+                self.settings[tostring(config.Name)] = currentIndex
             end
         end,
         GetValue = function()
@@ -915,8 +937,14 @@ function RadiantHub:_createDropdown(tab, config)
 end
 
 function RadiantHub:_createButton(tab, config)
+    -- Safety checks
+    if not config or not config.Name then
+        warn("RadiantHub: Button config or name is missing")
+        return
+    end
+    
     local container = Instance.new("Frame")
-    container.Name = config.Name .. "Container"
+    container.Name = tostring(config.Name) .. "Container"
     container.Size = UDim2.new(1, -10, 0, 35)
     container.BackgroundTransparency = 1
     
@@ -926,7 +954,7 @@ function RadiantHub:_createButton(tab, config)
     button.BackgroundColor3 = Color3.fromRGB(220, 50, 47)
     button.BorderSizePixel = 1
     button.BorderColor3 = Color3.fromRGB(150, 150, 150)
-    button.Text = config.Name
+    button.Text = tostring(config.Name)
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
     button.TextSize = 14
     button.Font = Enum.Font.GothamBold
@@ -948,7 +976,7 @@ function RadiantHub:_createButton(tab, config)
     
     button.Activated:Connect(function()
         if config.Callback then
-            config.Callback()
+            pcall(config.Callback)
         end
     end)
 
@@ -961,13 +989,23 @@ function RadiantHub:_createButton(tab, config)
 
     return {
         SetText = function(text)
-            button.Text = text
+            button.Text = tostring(text)
         end
     }
 end
 
 -- Notification System
 function RadiantHub:CreateNotification(title, message, duration)
+    -- Safety checks
+    if not self.notificationContainer then
+        warn("RadiantHub: Notification container not initialized")
+        return
+    end
+    
+    title = title or "Notification"
+    message = message or ""
+    duration = duration or 3
+    
     local notification = Instance.new("Frame")
     notification.Size = UDim2.new(1, 0, 0, 60)
     notification.Position = UDim2.new(1, 0, 1, -60 * (#self.notificationQueue + 1))
@@ -985,7 +1023,7 @@ function RadiantHub:CreateNotification(title, message, duration)
     titleLabel.Size = UDim2.new(1, -10, 0, 20)
     titleLabel.Position = UDim2.new(0, 8, 0, 8)
     titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title
+    titleLabel.Text = tostring(title)
     titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     titleLabel.TextSize = 12
     titleLabel.Font = Enum.Font.GothamBold
@@ -996,7 +1034,7 @@ function RadiantHub:CreateNotification(title, message, duration)
     messageLabel.Size = UDim2.new(1, -10, 0, 25)
     messageLabel.Position = UDim2.new(0, 8, 0, 28)
     messageLabel.BackgroundTransparency = 1
-    messageLabel.Text = message
+    messageLabel.Text = tostring(message)
     messageLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
     messageLabel.TextSize = 10
     messageLabel.Font = Enum.Font.Gotham
@@ -1010,7 +1048,7 @@ function RadiantHub:CreateNotification(title, message, duration)
     slideIn:Play()
     
     spawn(function()
-        wait(duration or 3)
+        wait(duration)
         for i, notif in ipairs(self.notificationQueue) do
             if notif == notification then
                 table.remove(self.notificationQueue, i)
@@ -1133,7 +1171,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-
+print("update")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
@@ -1152,12 +1190,13 @@ function RadiantHub:Destroy()
     end
 end
 
--- Startup notification
-spawn(function()
-    wait(1)
-    if RadiantHub.CreateNotification then
-        RadiantHub:CreateNotification("Library Loaded", "RadiantHub UI Library ready!", 3)
+-- Initialize first tab if exists
+function RadiantHub:_initializeFirstTab()
+    if #self.tabs > 0 then
+        self.currentTab = self.tabs[1]
+        self:_updateTabDisplay(self.tabs[1])
+        self:_updateTabButtons(self.tabs[1])
     end
-end)
+end
 
 return RadiantHub
