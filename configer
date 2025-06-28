@@ -435,8 +435,14 @@ function RadiantHub:CreateTab(config)
         CreateToggle = function(config) return self:_createToggle(tab, config) end,
         CreateSlider = function(config) return self:_createSlider(tab, config) end,
         CreateDropdown = function(config) return self:_createDropdown(tab, config) end,
-        CreateMultiDropdown = function(config) return self:_createMultiDropdown(tab, config) end,
-        CreateColorPicker = function(config) return self:_createColorPicker(tab, config) end,
+        CreateMultiDropdown = function(config)
+            warn("RadiantHub: CreateMultiDropdown is not implemented.")
+            return {}
+        end,
+        CreateColorPicker = function(config)
+            warn("RadiantHub: CreateColorPicker is not implemented.")
+            return {}
+        end,
         CreateButton = function(config) return self:_createButton(tab, config) end
     }
 end
@@ -705,10 +711,15 @@ function RadiantHub:_createToggle(tab, config)
                 checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
                 checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
                 textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+                self:CreateNotification("Setting Enabled", (config.Name or "Toggle") .. " enabled", 2)
             else
                 checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
                 checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
                 textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                self:CreateNotification("Setting Disabled", (config.Name or "Toggle") .. " disabled", 2)
+            end
+            if config.Callback then
+                config.Callback(isEnabled)
             end
         end,
         GetValue = function()
@@ -722,6 +733,17 @@ function RadiantHub:_createSlider(tab, config)
     if not config then
         warn("RadiantHub: Slider config is missing")
         return
+    end
+    
+    -- Debug config values
+    if config.Min and type(config.Min) ~= "number" then
+        warn("RadiantHub: Slider Min should be a number, got " .. type(config.Min) .. ": " .. tostring(config.Min))
+    end
+    if config.Max and type(config.Max) ~= "number" then
+        warn("RadiantHub: Slider Max should be a number, got " .. type(config.Max) .. ": " .. tostring(config.Max))
+    end
+    if config.Default and type(config.Default) ~= "number" then
+        warn("RadiantHub: Slider Default should be a number, got " .. type(config.Default) .. ": " .. tostring(config.Default))
     end
     
     local container = Instance.new("Frame")
@@ -742,9 +764,42 @@ function RadiantHub:_createSlider(tab, config)
     textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     textLabel.Parent = container
 
-    local minVal = tonumber(config.Min) or 0
-    local maxVal = tonumber(config.Max) or 100
-    local currentValue = tonumber(config.Default) or tonumber(config.Min) or 50
+    -- Safe number conversion with fallbacks
+    local minVal = 0
+    local maxVal = 100
+    local currentValue = 50
+    
+    if config.Min then
+        local min = tonumber(config.Min)
+        if min then
+            minVal = min
+        else
+            warn("RadiantHub: Could not convert Min to number: " .. tostring(config.Min))
+        end
+    end
+    
+    if config.Max then
+        local max = tonumber(config.Max)
+        if max then
+            maxVal = max
+        else
+            warn("RadiantHub: Could not convert Max to number: " .. tostring(config.Max))
+        end
+    end
+    
+    if config.Default then
+        local def = tonumber(config.Default)
+        if def then
+            currentValue = def
+        else
+            warn("RadiantHub: Could not convert Default to number: " .. tostring(config.Default))
+        end
+    elseif config.Min then
+        local min = tonumber(config.Min)
+        if min then
+            currentValue = min
+        end
+    end
     
     -- Ensure currentValue is within bounds
     currentValue = math.clamp(currentValue, minVal, maxVal)
@@ -857,19 +912,43 @@ function RadiantHub:_createSlider(tab, config)
 
     return {
         SetValue = function(value)
+            -- Enhanced debugging and type checking
+            if value == nil then
+                warn("RadiantHub: SetValue received nil value")
+                return
+            end
+            
             -- Ensure value is a number
             local numValue = tonumber(value)
             if not numValue then
-                warn("RadiantHub: SetValue expects a number, got " .. type(value))
+                warn("RadiantHub: SetValue expects a number, got " .. type(value) .. " with value: " .. tostring(value))
+                if type(value) == "table" then
+                    warn("RadiantHub: Table contents - this might help debug:")
+                    for k, v in pairs(value) do
+                        warn("  " .. tostring(k) .. " = " .. tostring(v))
+                    end
+                end
                 return
             end
             
             currentValue = math.clamp(numValue, minVal, maxVal)
             self.settings[config.Name or "Slider"] = currentValue
-            local pos = (currentValue - minVal) / (maxVal - minVal)
-            sliderFill.Size = UDim2.new(pos, 0, 1, 0)
-            sliderHandle.Position = UDim2.new(pos, -6, 0.5, -6)
-            valueLabel.Text = tostring(currentValue)
+            
+            -- Safely update UI elements
+            if sliderFill and sliderHandle and valueLabel then
+                local pos = 0
+                if maxVal > minVal then
+                    pos = (currentValue - minVal) / (maxVal - minVal)
+                end
+                pos = math.clamp(pos, 0, 1)
+                
+                sliderFill.Size = UDim2.new(pos, 0, 1, 0)
+                sliderHandle.Position = UDim2.new(pos, -6, 0.5, -6)
+                valueLabel.Text = tostring(currentValue)
+            end
+            if config.Callback then
+                pcall(config.Callback, currentValue)
+            end
         end,
         GetValue = function()
             return currentValue
@@ -999,6 +1078,9 @@ function RadiantHub:_createDropdown(tab, config)
                 currentIndex = numValue
                 dropdown.Text = tostring(options[currentIndex]) .. " ▼"
                 self.settings[config.Name or "Dropdown"] = currentIndex
+                if config.Callback then
+                    pcall(config.Callback, options[currentIndex], currentIndex)
+                end
             else
                 warn("RadiantHub: Dropdown SetValue expects a number between 1 and " .. #options .. ", got " .. tostring(value))
             end
@@ -1248,7 +1330,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-print("ddiddy")
+print("dada")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
@@ -1256,6 +1338,14 @@ end
 
 function RadiantHub:SetSetting(name, value)
     self.settings[name] = value
+end
+
+function RadiantHub:DebugSettings()
+    print("=== RadiantHub Settings Debug ===")
+    for name, value in pairs(self.settings) do
+        print(tostring(name) .. " = " .. tostring(value) .. " (type: " .. type(value) .. ")")
+    end
+    print("=== End Debug ===")
 end
 
 function RadiantHub:Destroy()
