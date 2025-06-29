@@ -370,36 +370,42 @@ function RadiantHub:CreateTab(config)
         function section:CreateToggle(config)
             local element = self._radiantHubInstance:_createToggle(self, config)
             table.insert(self.elementConfigs, {type = "toggle", config = config})
+            table.insert(self.elements, element)
             print("[RadiantHub] Toggle created in section:", section.name)
             return element
         end
         function section:CreateSlider(config)
             local element = self._radiantHubInstance:_createSlider(self, config)
             table.insert(self.elementConfigs, {type = "slider", config = config})
+            table.insert(self.elements, element)
             print("[RadiantHub] Slider created in section:", section.name)
             return element
         end
         function section:CreateDropdown(config)
             local element = self._radiantHubInstance:_createDropdown(self, config)
             table.insert(self.elementConfigs, {type = "dropdown", config = config})
+            table.insert(self.elements, element)
             print("[RadiantHub] Dropdown created in section:", section.name)
             return element
         end
         function section:CreateMultiDropdown(config)
             local element = self._radiantHubInstance:_createMultiDropdown(self, config)
             table.insert(self.elementConfigs, {type = "multidropdown", config = config})
+            table.insert(self.elements, element)
             print("[RadiantHub] MultiDropdown created in section:", section.name)
             return element
         end
         function section:CreateColorPicker(config)
             local element = self._radiantHubInstance:_createColorPicker(self, config)
             table.insert(self.elementConfigs, {type = "colorpicker", config = config})
+            table.insert(self.elements, element)
             print("[RadiantHub] ColorPicker created in section:", section.name)
             return element
         end
         function section:CreateButton(config)
             local element = self._radiantHubInstance:_createButton(self, config)
             table.insert(self.elementConfigs, {type = "button", config = config})
+            table.insert(self.elements, element)
             print("[RadiantHub] Button created in section:", section.name)
             return element
         end
@@ -1122,7 +1128,7 @@ function RadiantHub:_setupControls()
         end
     end)
 end
-
+print("chjsdfohfghsofghsoifhsiofghdslkgdhoklgfdhjkolgdhjoigdfhjgidjgkpdg")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
