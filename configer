@@ -2424,6 +2424,7 @@ end
 function RadiantHub:GetSetting(name)
     return self.settings[name]
 end
+print("HUGE BALLS")
 function RadiantHub:SetSetting(name, value)
     self.settings[name] = value
 end
@@ -2581,10 +2582,7 @@ print("jorking it")
 
 function RadiantHub:_createSettingsTab()
     local tab = self:CreateTab({ Name = "Settings", Icon = "settings" })
-    local section = tab:AddSection("UI")
-
-    -- Config section
-    local configSection = tab:AddSection("Configs")
+    local section = tab:AddSection("Configs")
     local configsFolder = "configs"
     if not isfolder(configsFolder) then
         makefolder(configsFolder)
@@ -2602,7 +2600,7 @@ function RadiantHub:_createSettingsTab()
         return configs
     end
 
-    local configDropdown = configSection:CreateDropdown({
+    local configDropdown = section:CreateDropdown({
         Name = "Config",
         Options = getConfigList(),
         Default = 1,
@@ -2611,12 +2609,12 @@ function RadiantHub:_createSettingsTab()
         end
     })
 
-    local inputBox = configSection:CreateInput({
+    local inputBox = section:CreateInput({
         Name = "Config Name",
         Placeholder = "Enter config name..."
     })
 
-    configSection:CreateButton({
+    section:CreateButton({
         Name = "Save Config",
         ButtonText = "Save",
         Callback = function()
@@ -2630,7 +2628,7 @@ function RadiantHub:_createSettingsTab()
         end
     })
 
-    configSection:CreateButton({
+    section:CreateButton({
         Name = "Load Config",
         ButtonText = "Load",
         Callback = function()
@@ -2681,7 +2679,7 @@ function RadiantHub:_createSettingsTab()
         autoLoadButtonDesc = "Auto-load: " .. autoLoadConfigName
     end
 
-    local autoLoadButton = configSection:CreateButton({
+    local autoLoadButton = section:CreateButton({
         Name = "Auto Load Config",
         ButtonText = "Set Auto Load",
         Description = autoLoadButtonDesc,
@@ -2730,7 +2728,7 @@ function RadiantHub:_createSettingsTab()
         end
     end
 
-    configSection:CreateButton({
+    section:CreateButton({
         Name = "Refresh Configs",
         ButtonText = "Refresh",
         Callback = function()
@@ -2744,7 +2742,7 @@ function RadiantHub:_createSettingsTab()
         end
     })
 
-    configSection:CreateButton({
+    section:CreateButton({
         Name = "Delete Config",
         ButtonText = "Delete",
         Callback = function()
@@ -2766,7 +2764,7 @@ function RadiantHub:_createSettingsTab()
     })
 
     -- Add Overwrite Config button
-    configSection:CreateButton({
+    section:CreateButton({
         Name = "Overwrite Config",
         ButtonText = "Overwrite",
         Callback = function()
@@ -2787,15 +2785,27 @@ function RadiantHub:_createSettingsTab()
             end
         end
     })
+
+    -- Call user hook for custom sections/elements
+    if self.OnSettingsTabLoaded and type(self.OnSettingsTabLoaded) == "function" then
+        self.OnSettingsTabLoaded(tab)
+    end
+end
+warn("gucci belt")
+-- Provide a method to load the settings tab on demand
+function RadiantHub:LoadSettingsTab()
+    -- Only create if not already present
+    if not self._settingsTabLoaded then
+        self:_createSettingsTab()
+        self._settingsTabLoaded = true
+    end
 end
 
--- Patch CreateWindow to add Settings tab if requested
+-- Patch CreateWindow: do NOT auto-load settings tab
 local oldCreateWindow = RadiantHub.CreateWindow
 function RadiantHub:CreateWindow(config)
     local self = oldCreateWindow(self, config)
-    if self.SettingsTab then
-        self:_createSettingsTab()
-    end
+    -- Do not auto-load settings tab here
     return self
 end
 
