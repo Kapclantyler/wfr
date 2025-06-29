@@ -458,7 +458,7 @@ function RadiantHub:_updateTabDisplay(tab)
     local leftY = 0
     for _, section in ipairs(leftSections) do
         if section.elementConfigs and #section.elementConfigs > 0 then
-            local sectionFrame = self:_recreateSectionFrame(section, self.leftContent, leftY)
+            local sectionFrame = self:_createSectionFrame(section, self.leftContent, leftY)
             leftY = leftY + sectionFrame.Size.Y.Offset + 10
         end
     end
@@ -466,7 +466,7 @@ function RadiantHub:_updateTabDisplay(tab)
     local rightY = 0
     for _, section in ipairs(rightSections) do
         if section.elementConfigs and #section.elementConfigs > 0 then
-            local sectionFrame = self:_recreateSectionFrame(section, self.rightContent, rightY)
+            local sectionFrame = self:_createSectionFrame(section, self.rightContent, rightY)
             rightY = rightY + sectionFrame.Size.Y.Offset + 10
         end
     end
@@ -1158,7 +1158,7 @@ end
 function RadiantHub:SetSetting(name, value)
     self.settings[name] = value
 end
-print("gfgfgdfgd")
+
 function RadiantHub:DebugSettings()
     print("=== RadiantHub Settings Debug ===")
     for name, value in pairs(self.settings) do
