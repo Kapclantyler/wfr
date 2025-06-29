@@ -842,6 +842,11 @@ function RadiantHub:_createToggle(section, config)
         textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
     end
     
+    -- Call callback with default value on creation
+    if config.Callback then
+        config.Callback(isEnabled)
+    end
+    
     -- Store connection data for proper updates
     local connections = {}
     
@@ -1343,6 +1348,14 @@ function RadiantHub:_createMultiDropdown(section, config)
     textLabel.Parent = container
     local options = config.Options or {"Option 1", "Option 2"}
     local selectedOptions = config.Default or {}
+    -- If Default is an array, convert to { [option] = true }
+    if type(selectedOptions) == "table" and #selectedOptions > 0 then
+        local arr = selectedOptions
+        selectedOptions = {}
+        for _, v in ipairs(arr) do
+            selectedOptions[v] = true
+        end
+    end
     local defaultText = "Multiple"
     if selectedOptions and type(selectedOptions) == "table" then
         local selectedList = {}
@@ -2638,6 +2651,7 @@ function RadiantHub:_createSettingsTab()
             if name then
                 local data = readfile(configsFolder .. "/" .. name .. ".cfg")
                 local settings = game:GetService("HttpService"):JSONDecode(data)
+                self._lastLoadedConfig = settings -- Store last loaded config
                 for k, v in pairs(settings) do
                     self:SetSetting(k, v)
                     if self._elementsByName and self._elementsByName[k] then
@@ -2694,6 +2708,7 @@ function RadiantHub:_createSettingsTab()
                 if isfile(configsFolder .. "/" .. name .. ".cfg") then
                     local data = readfile(configsFolder .. "/" .. name .. ".cfg")
                     local settings = game:GetService("HttpService"):JSONDecode(data)
+                    self._lastLoadedConfig = settings -- Store last loaded config
                     for k, v in pairs(settings) do
                         self:SetSetting(k, v)
                         if self._elementsByName and self._elementsByName[k] then
@@ -2713,6 +2728,7 @@ function RadiantHub:_createSettingsTab()
     if autoLoadConfigName and isfile(configsFolder .. "/" .. autoLoadConfigName .. ".cfg") then
         local data = readfile(configsFolder .. "/" .. autoLoadConfigName .. ".cfg")
         local settings = game:GetService("HttpService"):JSONDecode(data)
+        self._lastLoadedConfig = settings -- Store last loaded config
         for k, v in pairs(settings) do
             self:SetSetting(k, v)
             if self._elementsByName and self._elementsByName[k] then
@@ -2790,8 +2806,34 @@ function RadiantHub:_createSettingsTab()
     if self.OnSettingsTabLoaded and type(self.OnSettingsTabLoaded) == "function" then
         self.OnSettingsTabLoaded(tab)
     end
+
+    -- After user hook, update all elements with last loaded config if available
+    if self._lastLoadedConfig then
+        for k, v in pairs(self._lastLoadedConfig) do
+            if self._elementsByName and self._elementsByName[k] then
+                if self._elementsByName[k].SetValue then
+                    self._elementsByName[k].SetValue(v)
+                elseif self._elementsByName[k].SetText then
+                    self._elementsByName[k].SetText(v)
+                end
+            end
+        end
+        -- Also update all multi-dropdowns as before
+        for k, element in pairs(self._elementsByName or {}) do
+            if element.SetValue and element.GetValue and type(element.GetValue()) == "table" then
+                local v = self._lastLoadedConfig[k]
+                if type(v) == "table" then
+                    local copy = {}
+                    for k2, v2 in pairs(v) do copy[k2] = v2 end
+                    element.SetValue(copy)
+                else
+                    element.SetValue({})
+                end
+            end
+        end
+    end
 end
-warn("gucci belt")
+warn("loaded!")
 -- Provide a method to load the settings tab on demand
 function RadiantHub:LoadSettingsTab()
     -- Only create if not already present
@@ -2808,5 +2850,11 @@ function RadiantHub:CreateWindow(config)
     -- Do not auto-load settings tab here
     return self
 end
+
+
+
+
+
+
 
 return RadiantHub
