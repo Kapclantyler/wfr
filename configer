@@ -526,6 +526,9 @@ function RadiantHub:CreateTab(config)
         function section:CreateButton(config)
             return self._radiantHubInstance:_createButton(self, config)
         end
+        function section:CreateParagraph(config)
+            return self._radiantHubInstance:_createParagraph(self, config)
+        end
         table.insert(tab.sections, section)
         table.insert(tab.sectionOrder, section)
         return section
@@ -2306,5 +2309,58 @@ function RadiantHub:Destroy()
     if self.watermarkGui then
         self.watermarkGui:Destroy()
     end
+end
+
+function RadiantHub:_createParagraph(section, config)
+    config = config or {}
+    if not section or not section.elements then
+        warn("RadiantHub: Invalid section object passed to _createParagraph!")
+        return
+    end
+    local container = Instance.new("Frame")
+    container.Name = (config.Name or "Paragraph") .. "Container"
+    container.Size = UDim2.new(1, -20, 0, 55)
+    container.BackgroundTransparency = 1
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, 0, 0, 20)
+    titleLabel.Position = UDim2.new(0, 0, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = config.Title or config.Name or "Paragraph"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextStrokeTransparency = 0
+    titleLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    titleLabel.TextSize = 14
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.TextYAlignment = Enum.TextYAlignment.Center
+    titleLabel.Parent = container
+
+    local descLabel = Instance.new("TextLabel")
+    descLabel.Size = UDim2.new(1, 0, 0, 30)
+    descLabel.Position = UDim2.new(0, 0, 0, 22)
+    descLabel.BackgroundTransparency = 1
+    descLabel.Text = config.Description or "Description goes here."
+    descLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    descLabel.TextStrokeTransparency = 0
+    descLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    descLabel.TextSize = 12
+    descLabel.Font = Enum.Font.Gotham
+    descLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descLabel.TextYAlignment = Enum.TextYAlignment.Top
+    descLabel.TextWrapped = true
+    descLabel.Parent = container
+
+    table.insert(section.elements, container)
+    print("[RadiantHub] Paragraph created in section:", section.name)
+
+    return {
+        SetTitle = function(text)
+            titleLabel.Text = tostring(text or "Paragraph")
+        end,
+        SetDescription = function(text)
+            descLabel.Text = tostring(text or "")
+        end
+    }
 end
 return RadiantHub
