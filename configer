@@ -149,9 +149,6 @@ function RadiantHub:_createMainUI()
     
     -- Minimized icon
     self:_createMinimizedIcon()
-    
-    -- Initialize content sections immediately
-    self:_createContentSections()
 end
 
 function RadiantHub:_createControlButtons()
@@ -1152,7 +1149,7 @@ function RadiantHub:_createTabButton(tab, index)
         self:_updateTabButtons(tab)
     end)
 end
-print("updated")
+
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
@@ -1161,7 +1158,7 @@ end
 function RadiantHub:SetSetting(name, value)
     self.settings[name] = value
 end
-
+print("gfgfgdfgd")
 function RadiantHub:DebugSettings()
     print("=== RadiantHub Settings Debug ===")
     for name, value in pairs(self.settings) do
