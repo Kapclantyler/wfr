@@ -529,6 +529,9 @@ function RadiantHub:CreateTab(config)
         function section:CreateParagraph(config)
             return self._radiantHubInstance:_createParagraph(self, config)
         end
+        function section:CreateInput(config)
+            return self._radiantHubInstance:_createInput(self, config)
+        end
         table.insert(tab.sections, section)
         table.insert(tab.sectionOrder, section)
         return section
@@ -2363,5 +2366,80 @@ function RadiantHub:_createParagraph(section, config)
         end
     }
 end
+
+function RadiantHub:_createInput(section, config)
+    config = config or {}
+    if not section or not section.elements then
+        warn("RadiantHub: Invalid section object passed to _createInput!")
+        return
+    end
+    local container = Instance.new("Frame")
+    container.Name = (config.Name or "Input") .. "Container"
+    container.Size = UDim2.new(1, -20, 0, 35)
+    container.BackgroundTransparency = 1
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(0.4, 0, 1, 0)
+    textLabel.Position = UDim2.new(0, 0, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = config.Name or "Input"
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.Gotham
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.Parent = container
+
+    local inputBox = Instance.new("TextBox")
+    inputBox.Size = UDim2.new(0.55, 0, 0, 25)
+    inputBox.Position = UDim2.new(0.45, 0, 0.5, -12.5)
+    inputBox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    inputBox.BorderSizePixel = 1
+    inputBox.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    inputBox.Text = config.Default or ""
+    inputBox.PlaceholderText = config.Placeholder or "Enter text..."
+    inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    inputBox.TextStrokeTransparency = 0
+    inputBox.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    inputBox.TextSize = 11
+    inputBox.Font = Enum.Font.Gotham
+    inputBox.ClearTextOnFocus = false
+    inputBox.ZIndex = 2
+    inputBox.Parent = container
+
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 4)
+    inputCorner.Parent = inputBox
+
+    -- Callback on text change or enter
+    if config.Callback then
+        inputBox.FocusLost:Connect(function(enterPressed)
+            if enterPressed then
+                config.Callback(inputBox.Text)
+            end
+        end)
+        inputBox:GetPropertyChangedSignal("Text"):Connect(function()
+            config.Callback(inputBox.Text)
+        end)
+    end
+
+    table.insert(section.elements, container)
+    print("[RadiantHub] Input created in section:", section.name)
+
+    return {
+        SetText = function(text)
+            inputBox.Text = tostring(text or "")
+        end,
+        GetText = function()
+            return inputBox.Text
+        end,
+        SetPlaceholder = function(text)
+            inputBox.PlaceholderText = tostring(text or "")
+        end
+    }
+end
+print("jorking it")
 return RadiantHub
 
