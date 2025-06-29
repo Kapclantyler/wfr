@@ -557,7 +557,18 @@ function RadiantHub:_updateTabDisplay(tab)
     -- Only clear content area, not tab buttons/sidebar
     for _, child in ipairs(self.contentArea:GetChildren()) do
         if child.Name ~= "LeftSection" and child.Name ~= "RightSection" then
-            child:Destroy()
+            child.Visible = false
+        end
+    end
+    -- Hide previous tab's elements from left/right content
+    if self.leftContent then
+        for _, child in ipairs(self.leftContent:GetChildren()) do
+            child.Visible = false
+        end
+    end
+    if self.rightContent then
+        for _, child in ipairs(self.rightContent:GetChildren()) do
+            child.Visible = false
         end
     end
     self:_createContentSections()
@@ -575,11 +586,13 @@ function RadiantHub:_updateTabDisplay(tab)
     local leftY = 0
     for _, section in ipairs(leftSections) do
         local sectionFrame = self:_createSectionFrame(section, self.leftContent, leftY, true)
+        sectionFrame.Visible = true
         leftY = leftY + sectionFrame.Size.Y.Offset + 10
     end
     local rightY = 0
     for _, section in ipairs(rightSections) do
         local sectionFrame = self:_createSectionFrame(section, self.rightContent, rightY, true)
+        sectionFrame.Visible = true
         rightY = rightY + sectionFrame.Size.Y.Offset + 10
     end
 end
@@ -2285,7 +2298,7 @@ function RadiantHub:DebugSettings()
     end
     print("=== End Debug ===")
 end
-print("big balls")
+print("bigger damn balls")
 function RadiantHub:Destroy()
     if self.screenGui then
         self.screenGui:Destroy()
