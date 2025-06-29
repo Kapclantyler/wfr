@@ -2833,7 +2833,7 @@ function RadiantHub:_createSettingsTab()
         end
     end
 end
-warn("loaded!")
+
 -- Provide a method to load the settings tab on demand
 function RadiantHub:LoadSettingsTab()
     -- Only create if not already present
@@ -2850,6 +2850,24 @@ function RadiantHub:CreateWindow(config)
     -- Do not auto-load settings tab here
     return self
 end
+
+function RadiantHub:UpdateAllDefaults()
+    if not self._elementsByName then return end
+    for name, element in pairs(self._elementsByName) do
+        local default
+        if element.GetValue then
+            default = element.GetValue()
+        end
+        if element.SetValue and default ~= nil then
+            element.SetValue(default)
+        elseif element.SetText and default ~= nil then
+            element.SetText(default)
+        end
+    end
+end
+print("blackk")
+-- Example usage:
+-- window:UpdateAllDefaults()
 
 
 
