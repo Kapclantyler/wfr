@@ -1056,7 +1056,8 @@ function RadiantHub:_createDropdown(section, config)
         warn("RadiantHub: Invalid section object passed to _createDropdown!")
         return
     end
-    
+    -- Add Searchable property default
+    if config.Searchable == nil then config.Searchable = false end
     local container = Instance.new("Frame")
     container.Name = (config.Name or "Dropdown") .. "Container"
     container.Size = UDim2.new(1, -20, 0, 35)
@@ -1259,6 +1260,8 @@ function RadiantHub:_createMultiDropdown(section, config)
         warn("RadiantHub: Invalid section object passed to _createMultiDropdown!")
         return
     end
+    -- Add Searchable property default
+    if config.Searchable == nil then config.Searchable = false end
     local container = Instance.new("Frame")
     container.Name = (config.Name or "MultiDropdown") .. "Container"
     container.Size = UDim2.new(1, -20, 0, 35)
@@ -1303,7 +1306,9 @@ function RadiantHub:_createMultiDropdown(section, config)
     -- FIXED DROPDOWN MENU POSITIONING (OPENS BELOW THE BUTTON)
     local dropdownMenu = Instance.new("Frame")
     dropdownMenu.Name = "MultiDropdownMenu"
-    dropdownMenu.Size = UDim2.new(0.55, 0, 0, math.min(#options, 6) * 30 + 10)
+    -- Adjust menu height for search box if needed
+    local menuBaseHeight = math.min(#options, 6) * 30 + 10
+    dropdownMenu.Size = UDim2.new(0.55, 0, 0, menuBaseHeight + (config.Searchable and 30 or 0))
     dropdownMenu.Position = UDim2.new(0.45, 0, 1, 5) -- Properly positioned below dropdown button
     dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     dropdownMenu.BorderSizePixel = 2
@@ -1326,6 +1331,46 @@ function RadiantHub:_createMultiDropdown(section, config)
     menuShadow.ZIndex = 2
     menuShadow.Parent = dropdownMenu
     
+    -- Searchable support
+    local searchBox
+    local optionsFrame
+    if config.Searchable then
+        searchBox = Instance.new("TextBox")
+        searchBox.Name = "SearchBox"
+        searchBox.Size = UDim2.new(1, -10, 0, 25)
+        searchBox.Position = UDim2.new(0, 5, 0, 2.5)
+        searchBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        searchBox.BorderSizePixel = 1
+        searchBox.BorderColor3 = Color3.fromRGB(100, 100, 100)
+        searchBox.Text = ""
+        searchBox.PlaceholderText = "Search..."
+        searchBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+        searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+        searchBox.TextStrokeTransparency = 0
+        searchBox.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        searchBox.TextSize = 10
+        searchBox.Font = Enum.Font.Gotham
+        searchBox.ZIndex = 4
+        searchBox.Parent = dropdownMenu
+        local searchCorner = Instance.new("UICorner")
+        searchCorner.CornerRadius = UDim.new(0, 3)
+        searchCorner.Parent = searchBox
+        optionsFrame = Instance.new("ScrollingFrame")
+        optionsFrame.Name = "OptionsFrame"
+        optionsFrame.Size = UDim2.new(1, 0, 1, -30)
+        optionsFrame.Position = UDim2.new(0, 0, 0, 30)
+    else
+        optionsFrame = Instance.new("ScrollingFrame")
+        optionsFrame.Name = "OptionsFrame"
+        optionsFrame.Size = UDim2.new(1, 0, 1, 0)
+        optionsFrame.Position = UDim2.new(0, 0, 0, 0)
+    end
+    optionsFrame.BackgroundTransparency = 1
+    optionsFrame.BorderSizePixel = 0
+    optionsFrame.ScrollBarThickness = 6
+    optionsFrame.ZIndex = 4
+    optionsFrame.Parent = dropdownMenu
+    
     local optionButtons = {}
     for i, option in ipairs(options) do
         local optionRow = Instance.new("Frame")
@@ -1333,7 +1378,7 @@ function RadiantHub:_createMultiDropdown(section, config)
         optionRow.Position = UDim2.new(0, 0, 0, (i-1) * 30)
         optionRow.BackgroundTransparency = 1
         optionRow.ZIndex = 4
-        optionRow.Parent = dropdownMenu
+        optionRow.Parent = optionsFrame
         
         -- Option label (left)
         local optionLabel = Instance.new("TextButton")
@@ -2440,6 +2485,5 @@ function RadiantHub:_createInput(section, config)
         end
     }
 end
-print("jorking it")
-return RadiantHub
 
+return RadiantHub
