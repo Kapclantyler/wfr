@@ -77,7 +77,7 @@ function RadiantHub:CreateWindow(config)
         Size = config.Size or UDim2.new(0, 700, 0, 450),
         Position = config.Position or UDim2.new(0.5, -350, 0.5, -225),
         Theme = tostring(config.Theme or "Dark"),
-        Premium = true
+        Premium = config.Premium or false  -- Now respects the config parameter
     }
     self.settings = {}
     self.tabs = {}
@@ -2286,7 +2286,7 @@ end
 function RadiantHub:GetSetting(name)
     return self.settings[name]
 end
-
+print("HUGE BALLS")
 function RadiantHub:SetSetting(name, value)
     self.settings[name] = value
 end
@@ -2298,7 +2298,7 @@ function RadiantHub:DebugSettings()
     end
     print("=== End Debug ===")
 end
-print("bigger damn balls")
+
 function RadiantHub:Destroy()
     if self.screenGui then
         self.screenGui:Destroy()
