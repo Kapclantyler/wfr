@@ -1347,15 +1347,30 @@ function RadiantHub:_createMultiDropdown(section, config)
     textLabel.TextYAlignment = Enum.TextYAlignment.Center
     textLabel.Parent = container
     local options = config.Options or {"Option 1", "Option 2"}
-    local selectedOptions = config.Default or {}
-    -- If Default is an array, convert to { [option] = true }
-    if type(selectedOptions) == "table" and #selectedOptions > 0 then
-        local arr = selectedOptions
-        selectedOptions = {}
-        for _, v in ipairs(arr) do
-            selectedOptions[v] = true
+    local selectedOptions = {}
+
+    -- Handle default selections more reliably
+    if config.Default and type(config.Default) == "table" then
+        -- Support both array-style and key-value style defaults
+        for i, option in ipairs(config.Default) do
+            if type(option) == "string" then
+                selectedOptions[option] = true
+            end
+        end
+        -- Also support key-value pairs
+        for key, value in pairs(config.Default) do
+            if type(key) == "string" and value then
+                selectedOptions[key] = true
+            end
         end
     end
+
+    -- Debug print to verify selectedOptions is populated correctly
+    print("Debug - selectedOptions after default setup:")
+    for k, v in pairs(selectedOptions) do
+        print("  ", k, "=", v)
+    end
+
     local defaultText = "Multiple"
     if selectedOptions and type(selectedOptions) == "table" then
         local selectedList = {}
@@ -1453,17 +1468,21 @@ function RadiantHub:_createMultiDropdown(section, config)
     optionsFrame.Parent = dropdownMenu
     local optionButtons = {}
     for i, option in ipairs(options) do
+        -- Capture the option in a local variable to fix closure issues
+        local currentOption = option
+        
         local optionRow = Instance.new("Frame")
         optionRow.Size = UDim2.new(1, 0, 0, 30)
         optionRow.Position = UDim2.new(0, 0, 0, (i-1) * 30)
         optionRow.BackgroundTransparency = 1
         optionRow.ZIndex = 4
         optionRow.Parent = optionsFrame
+
         local optionLabel = Instance.new("TextButton")
         optionLabel.Size = UDim2.new(1, -40, 1, 0)
         optionLabel.Position = UDim2.new(0, 10, 0, 0)
         optionLabel.BackgroundTransparency = 1
-        optionLabel.Text = option
+        optionLabel.Text = currentOption
         optionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         optionLabel.TextStrokeTransparency = 0
         optionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -1472,6 +1491,7 @@ function RadiantHub:_createMultiDropdown(section, config)
         optionLabel.TextXAlignment = Enum.TextXAlignment.Left
         optionLabel.ZIndex = 5
         optionLabel.Parent = optionRow
+
         local checkbox = Instance.new("TextButton")
         checkbox.Name = "Checkbox"
         checkbox.Size = UDim2.new(0, 18, 0, 18)
@@ -1482,9 +1502,11 @@ function RadiantHub:_createMultiDropdown(section, config)
         checkbox.Text = ""
         checkbox.ZIndex = 5
         checkbox.Parent = optionRow
+
         local checkboxCorner = Instance.new("UICorner")
         checkboxCorner.CornerRadius = UDim.new(0, 2)
         checkboxCorner.Parent = checkbox
+
         local gradient = Instance.new("UIGradient")
         gradient.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
@@ -1493,6 +1515,7 @@ function RadiantHub:_createMultiDropdown(section, config)
         gradient.Rotation = 45
         gradient.Parent = checkbox
         gradient.Enabled = false
+
         local checkmark = Instance.new("TextLabel")
         checkmark.Size = UDim2.new(1, 0, 1, 0)
         checkmark.BackgroundTransparency = 1
@@ -1505,14 +1528,19 @@ function RadiantHub:_createMultiDropdown(section, config)
         checkmark.Visible = false
         checkmark.ZIndex = 6
         checkmark.Parent = checkbox
+
+        -- Fixed updateCheckbox function with proper closure
         local function updateCheckbox()
-            if selectedOptions[option] then
+            print("Debug updateCheckbox - Option:", currentOption, "Selected:", selectedOptions[currentOption])
+            
+            if selectedOptions[currentOption] then
                 gradient.Enabled = false
                 checkbox.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
                 checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
                 checkmark.Visible = true
                 optionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
                 optionRow.BackgroundTransparency = 1
+                print("Debug: Set", currentOption, "to GREEN (selected)")
             else
                 gradient.Enabled = false
                 checkbox.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
@@ -1520,11 +1548,14 @@ function RadiantHub:_createMultiDropdown(section, config)
                 checkmark.Visible = false
                 optionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
                 optionRow.BackgroundTransparency = 1
+                print("Debug: Set", currentOption, "to RED (not selected)")
             end
         end
+
         local function toggleOption()
-            selectedOptions[option] = not selectedOptions[option]
+            selectedOptions[currentOption] = not selectedOptions[currentOption]
             updateCheckbox()
+            
             local selectedList = {}
             for _, opt in ipairs(options) do
                 if selectedOptions[opt] then table.insert(selectedList, opt) end
@@ -1540,29 +1571,54 @@ function RadiantHub:_createMultiDropdown(section, config)
                 config.Callback(selectedOptions)
             end
         end
+
         checkbox.Activated:Connect(toggleOption)
         optionLabel.Activated:Connect(toggleOption)
+
         optionRow.MouseEnter:Connect(function()
-            if not selectedOptions[option] then
+            if not selectedOptions[currentOption] then
                 optionRow.BackgroundTransparency = 0.9
                 optionRow.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
             end
         end)
+
         optionRow.MouseLeave:Connect(function()
-            if not selectedOptions[option] then
+            if not selectedOptions[currentOption] then
                 optionRow.BackgroundTransparency = 1
             end
         end)
+
+        -- Call updateCheckbox immediately to set initial state
         updateCheckbox()
+
         table.insert(optionButtons, {
             row = optionRow, 
             checkbox = checkbox, 
             label = optionLabel, 
             checkmark = checkmark, 
-            option = option, 
+            option = currentOption,  -- Use currentOption instead of option
             updateCheckbox = updateCheckbox
         })
     end
+
+    -- Force update all checkboxes to reflect the default selections
+    for _, buttonData in ipairs(optionButtons) do
+        buttonData.updateCheckbox()
+    end
+
+    -- Also update the dropdown display text to show the correct initial state
+    local selectedList = {}
+    for _, opt in ipairs(options) do
+        if selectedOptions[opt] then table.insert(selectedList, opt) end
+    end
+    local displayText = "Multiple"
+    if #selectedList == 1 then
+        displayText = selectedList[1]
+    elseif #selectedList > 1 then
+        displayText = selectedList[1] .. "," .. tostring(#selectedList-1) .. "+"
+    end
+    dropdown.Text = displayText .. " ▼"
+
     dropdown.MouseButton1Click:Connect(function()
         dropdownMenu.Visible = not dropdownMenu.Visible
     end)
@@ -1571,11 +1627,11 @@ function RadiantHub:_createMultiDropdown(section, config)
     local elementObject = {
         SetValue = function(value)
             if type(value) ~= "table" then return end
-            -- Clear all previous selections
+            -- Clear all previous selections (in-place)
             for k in pairs(selectedOptions) do
                 selectedOptions[k] = nil
             end
-            -- Apply new selections (shallow copy)
+            -- Apply new selections (shallow copy, in-place)
             for k, v in pairs(value) do
                 selectedOptions[k] = v
             end
@@ -2843,7 +2899,7 @@ function RadiantHub:LoadSettingsTab()
         self._settingsTabLoaded = true
     end
 end
-warn("ddgfdgg")
+
 -- Patch CreateWindow: do NOT auto-load settings tab
 local oldCreateWindow = RadiantHub.CreateWindow
 function RadiantHub:CreateWindow(config)
@@ -2855,27 +2911,48 @@ end
 function RadiantHub:UpdateAllDefaults()
     if not self._elementsByName then return end
     for name, element in pairs(self._elementsByName) do
-        local default
-        if element.GetValue then
-            default = element.GetValue()
-        end
-        if element.SetValue and default ~= nil then
-            element.SetValue(default)
-            -- Special handling for multi-dropdown: update checkboxes visually
-            if element.GetValue and type(element.GetValue()) == "table" and element._optionButtons then
+        -- Skip MultiDropdowns to avoid clearing their defaults
+        if element._optionButtons then
+            print("Skipping UpdateAllDefaults for MultiDropdown:", name)
+            -- Force update the visual state without changing the underlying data
+            if element._optionButtons then
                 for _, btn in ipairs(element._optionButtons) do
                     if btn.updateCheckbox then btn.updateCheckbox() end
                 end
             end
-        elseif element.SetText and default ~= nil then
-            element.SetText(default)
+        else
+            local default
+            if element.GetValue then
+                default = element.GetValue()
+            end
+            if element.SetValue and default ~= nil then
+                element.SetValue(default)
+            elseif element.SetText and default ~= nil then
+                element.SetText(default)
+            end
         end
     end
 end
 
 
+--[[
+-- Example usage for MultiDropdown and UpdateAllDefaults
+local window = RadiantHub:CreateWindow({ Name = "Demo" })
+local tab = window:CreateTab({ Name = "TestTab", Icon = "home" })
+local section = tab:AddSection("Test Section")
 
+section:CreateMultiDropdown({
+    Name = "Test MultiDropdown",
+    Options = {"Apple", "Banana", "Cherry"},
+    Default = {"Banana", "Cherry"},
+    Callback = function(selectedTable)
+        print("MultiDropdown callback:", selectedTable)
+    end
+})
 
+window:UpdateAllDefaults() -- This will force all UI elements to update to their default values and call their callbacks
+
+]]
 
 
 return RadiantHub
