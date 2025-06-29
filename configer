@@ -439,32 +439,24 @@ function RadiantHub:_updateTabDisplay(tab)
         warn("[RadiantHub] Content area not initialized")
         return
     end
-    
     -- Clear existing content
     for _, child in ipairs(self.contentArea:GetChildren()) do
         child:Destroy()
     end
-    
-    -- Re-create the left and right sections for side-by-side layout
-    self:_createContentSections()
-    
     -- Only display sections if there are any
     if not tab.sectionOrder or #tab.sectionOrder == 0 then
         return
     end
-    
-    -- Separate sections into left and right
+    -- Separate sections into left and right (if you want to keep this logic, otherwise stack vertically)
     local leftSections = {}
     local rightSections = {}
-    
     for i, section in ipairs(tab.sectionOrder) do
-        if i % 2 == 1 then -- Odd sections go to left
+        if i % 2 == 1 then
             table.insert(leftSections, section)
-        else -- Even sections go to right
+        else
             table.insert(rightSections, section)
         end
     end
-    
     -- Create left sections
     local leftY = 0
     for _, section in ipairs(leftSections) do
@@ -473,8 +465,7 @@ function RadiantHub:_updateTabDisplay(tab)
             leftY = leftY + sectionFrame.Size.Y.Offset + 10
         end
     end
-    
-    -- Create right sections  
+    -- Create right sections
     local rightY = 0
     for _, section in ipairs(rightSections) do
         if section.elementConfigs and #section.elementConfigs > 0 then
@@ -1161,7 +1152,7 @@ function RadiantHub:_createTabButton(tab, index)
         self:_updateTabButtons(tab)
     end)
 end
-
+print("updated")
 -- Utility Functions
 function RadiantHub:GetSetting(name)
     return self.settings[name]
