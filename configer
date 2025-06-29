@@ -2285,7 +2285,7 @@ function RadiantHub:DebugSettings()
     end
     print("=== End Debug ===")
 end
-
+print("big balls")
 function RadiantHub:Destroy()
     if self.screenGui then
         self.screenGui:Destroy()
@@ -2294,3 +2294,4 @@ function RadiantHub:Destroy()
         self.watermarkGui:Destroy()
     end
 end
+return RadiantHub
