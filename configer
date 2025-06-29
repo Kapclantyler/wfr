@@ -1060,7 +1060,7 @@ function RadiantHub:_createDropdown(section, config)
     if config.Searchable == nil then config.Searchable = false end
     local container = Instance.new("Frame")
     container.Name = (config.Name or "Dropdown") .. "Container"
-    container.Size = UDim2.new(1, -20, 0, 35)
+    container.Size = UDim2.new(0, -20, 0, 28) -- Slightly smaller container
     container.BackgroundTransparency = 1
     
     local textLabel = Instance.new("TextLabel")
@@ -1077,12 +1077,13 @@ function RadiantHub:_createDropdown(section, config)
     textLabel.TextYAlignment = Enum.TextYAlignment.Center
     textLabel.Parent = container
     
-    local currentIndex = config.Default or 1
     local options = config.Options or {"Option 1", "Option 2"}
+    local currentIndex = config.Default or 1
+    if not options[currentIndex] then currentIndex = 1 end
     
     local dropdown = Instance.new("TextButton")
-    dropdown.Size = UDim2.new(0.55, 0, 0, 25)
-    dropdown.Position = UDim2.new(0.45, 0, 0.5, -12.5)
+    dropdown.Size = UDim2.new(0.55, 0, 0, 20) -- Smaller button
+    dropdown.Position = UDim2.new(0.45, 0, 0.5, -10)
     dropdown.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     dropdown.BorderSizePixel = 1
     dropdown.BorderColor3 = Color3.fromRGB(100, 100, 100)
@@ -1101,9 +1102,9 @@ function RadiantHub:_createDropdown(section, config)
     
     local dropdownMenu = Instance.new("Frame")
     dropdownMenu.Name = "DropdownMenu"
-    local maxVisible = 6
-    local menuHeight = math.min(#options, maxVisible) * 25 + (config.Searchable and 30 or 0)
-    dropdownMenu.Size = UDim2.new(0.55, 0, 0, menuHeight)
+    local maxVisible = 8
+    local menuHeight = math.min(#options, 50) * 25 + (config.Searchable and 30 or 0)
+    dropdownMenu.Size = UDim2.new(0.55, 0, 0, math.min(menuHeight, 200)) -- Up to 200px tall
     dropdownMenu.Position = UDim2.new(0.45, 0, 1, 0)
     dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     dropdownMenu.BorderSizePixel = 1
@@ -1136,11 +1137,9 @@ function RadiantHub:_createDropdown(section, config)
         searchBox.Font = Enum.Font.Gotham
         searchBox.ZIndex = 4
         searchBox.Parent = dropdownMenu
-        
         local searchCorner = Instance.new("UICorner")
         searchCorner.CornerRadius = UDim.new(0, 3)
         searchCorner.Parent = searchBox
-        
         optionsFrame = Instance.new("ScrollingFrame")
         optionsFrame.Name = "OptionsFrame"
         optionsFrame.Size = UDim2.new(1, 0, 1, -30)
@@ -1151,16 +1150,15 @@ function RadiantHub:_createDropdown(section, config)
         optionsFrame.Size = UDim2.new(1, 0, 1, 0)
         optionsFrame.Position = UDim2.new(0, 0, 0, 0)
     end
-    
     optionsFrame.BackgroundTransparency = 1
     optionsFrame.BorderSizePixel = 0
     optionsFrame.ScrollBarThickness = 6
     optionsFrame.ZIndex = 4
+    optionsFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 25)
     optionsFrame.Parent = dropdownMenu
     
     local isOpen = false
     local optionButtons = {}
-    
     for i, option in ipairs(options) do
         local optionButton = Instance.new("TextButton")
         optionButton.Size = UDim2.new(1, 0, 0, 25)
@@ -1175,17 +1173,13 @@ function RadiantHub:_createDropdown(section, config)
         optionButton.Font = Enum.Font.Gotham
         optionButton.ZIndex = 5
         optionButton.Parent = optionsFrame
-        
         table.insert(optionButtons, {button = optionButton, text = option, index = i})
-        
         optionButton.MouseEnter:Connect(function()
             optionButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
         end)
-        
         optionButton.MouseLeave:Connect(function()
             optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         end)
-        
         optionButton.MouseButton1Click:Connect(function()
             dropdown.Text = option .. " ▼"
             currentIndex = i
@@ -1197,9 +1191,7 @@ function RadiantHub:_createDropdown(section, config)
             end
         end)
     end
-    
     optionsFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 25)
-    
     if searchBox then
         searchBox:GetPropertyChangedSignal("Text"):Connect(function()
             local searchTerm = searchBox.Text:lower()
@@ -1214,10 +1206,9 @@ function RadiantHub:_createDropdown(section, config)
                 end
             end
             optionsFrame.CanvasSize = UDim2.new(0, 0, 0, visibleCount * 25)
-            dropdownMenu.Size = UDim2.new(0.55, 0, 0, math.min(visibleCount * 25 + 30, 200))
+            dropdownMenu.Size = UDim2.new(0.55, 0, 0, math.min(visibleCount * 25 + (config.Searchable and 30 or 0), 200))
         end)
     end
-    
     dropdown.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         dropdownMenu.Visible = isOpen
@@ -1231,10 +1222,8 @@ function RadiantHub:_createDropdown(section, config)
             dropdown.Text = tostring(options[currentIndex]) .. " ▼"
         end
     end)
-    
     table.insert(section.elements, container)
     print("[RadiantHub] Dropdown created in section:", section.name)
-    
     return {
         SetValue = function(value)
             if type(value) == "table" or type(value) == "function" then return end
@@ -1260,67 +1249,67 @@ function RadiantHub:_createMultiDropdown(section, config)
         warn("RadiantHub: Invalid section object passed to _createMultiDropdown!")
         return
     end
-    -- Add Searchable property default
     if config.Searchable == nil then config.Searchable = false end
     local container = Instance.new("Frame")
     container.Name = (config.Name or "MultiDropdown") .. "Container"
-    container.Size = UDim2.new(1, -20, 0, 35)
+    container.Size = UDim2.new(1, -20, 0, 28) -- Slightly smaller container
     container.BackgroundTransparency = 1
-    
     local textLabel = Instance.new("TextLabel")
     textLabel.Size = UDim2.new(0.4, 0, 1, 0)
     textLabel.Position = UDim2.new(0, 0, 0, 0)
     textLabel.BackgroundTransparency = 1
     textLabel.Text = config.Name or "MultiDropdown"
     textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    textLabel.TextStrokeTransparency = 0 -- Text outline back
+    textLabel.TextStrokeTransparency = 0
     textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     textLabel.TextSize = 12
     textLabel.Font = Enum.Font.Gotham
     textLabel.TextXAlignment = Enum.TextXAlignment.Left
     textLabel.TextYAlignment = Enum.TextYAlignment.Center
     textLabel.Parent = container
-    
+    local options = config.Options or {"Option 1", "Option 2"}
+    local selectedOptions = config.Default or {}
+    local defaultText = "Multiple"
+    if selectedOptions and type(selectedOptions) == "table" then
+        local selectedList = {}
+        for _, opt in ipairs(options) do
+            if selectedOptions[opt] then table.insert(selectedList, opt) end
+        end
+        if #selectedList > 0 then
+            defaultText = table.concat(selectedList, ", ")
+        end
+    end
     local dropdown = Instance.new("TextButton")
-    dropdown.Size = UDim2.new(0.55, 0, 0, 25)
-    dropdown.Position = UDim2.new(0.45, 0, 0.5, -12.5)
+    dropdown.Size = UDim2.new(0.55, 0, 0, 20) -- Smaller button
+    dropdown.Position = UDim2.new(0.45, 0, 0.5, -10)
     dropdown.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     dropdown.BorderSizePixel = 1
     dropdown.BorderColor3 = Color3.fromRGB(100, 100, 100)
-    dropdown.Text = "Multiple ▼"
+    dropdown.Text = defaultText .. " ▼"
     dropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
-    dropdown.TextStrokeTransparency = 0 -- Text outline back
+    dropdown.TextStrokeTransparency = 0
     dropdown.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     dropdown.TextSize = 11
     dropdown.Font = Enum.Font.Gotham
     dropdown.ZIndex = 2
     dropdown.Parent = container
-    
     local dropdownCorner = Instance.new("UICorner")
     dropdownCorner.CornerRadius = UDim.new(0, 4)
     dropdownCorner.Parent = dropdown
-    
-    local options = config.Options or {"Option 1", "Option 2"}
-    local selectedOptions = config.Default or {}
-    
-    -- FIXED DROPDOWN MENU POSITIONING (OPENS BELOW THE BUTTON)
     local dropdownMenu = Instance.new("Frame")
     dropdownMenu.Name = "MultiDropdownMenu"
-    -- Adjust menu height for search box if needed
-    local menuBaseHeight = math.min(#options, 6) * 30 + 10
-    dropdownMenu.Size = UDim2.new(0.55, 0, 0, menuBaseHeight + (config.Searchable and 30 or 0))
-    dropdownMenu.Position = UDim2.new(0.45, 0, 1, 5) -- Properly positioned below dropdown button
+    local menuBaseHeight = math.min(#options, 50) * 30 + 10
+    dropdownMenu.Size = UDim2.new(0.55, 0, 0, math.min(menuBaseHeight + (config.Searchable and 30 or 0), 200))
+    dropdownMenu.Position = UDim2.new(0.45, 0, 1, 5)
     dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     dropdownMenu.BorderSizePixel = 2
-    dropdownMenu.BorderColor3 = Color3.fromRGB(100, 100, 100) -- Better border color
+    dropdownMenu.BorderColor3 = Color3.fromRGB(100, 100, 100)
     dropdownMenu.Visible = false
     dropdownMenu.ZIndex = 3
     dropdownMenu.Parent = container
-    
     local menuCorner = Instance.new("UICorner")
     menuCorner.CornerRadius = UDim.new(0, 4)
     menuCorner.Parent = dropdownMenu
-    
     local menuShadow = Instance.new("ImageLabel")
     menuShadow.Name = "MenuShadow"
     menuShadow.Image = "rbxassetid://1316045217"
@@ -1330,8 +1319,6 @@ function RadiantHub:_createMultiDropdown(section, config)
     menuShadow.ImageTransparency = 0.7
     menuShadow.ZIndex = 2
     menuShadow.Parent = dropdownMenu
-    
-    -- Searchable support
     local searchBox
     local optionsFrame
     if config.Searchable then
@@ -1369,8 +1356,8 @@ function RadiantHub:_createMultiDropdown(section, config)
     optionsFrame.BorderSizePixel = 0
     optionsFrame.ScrollBarThickness = 6
     optionsFrame.ZIndex = 4
+    optionsFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 30)
     optionsFrame.Parent = dropdownMenu
-    
     local optionButtons = {}
     for i, option in ipairs(options) do
         local optionRow = Instance.new("Frame")
@@ -1379,39 +1366,32 @@ function RadiantHub:_createMultiDropdown(section, config)
         optionRow.BackgroundTransparency = 1
         optionRow.ZIndex = 4
         optionRow.Parent = optionsFrame
-        
-        -- Option label (left)
         local optionLabel = Instance.new("TextButton")
         optionLabel.Size = UDim2.new(1, -40, 1, 0)
         optionLabel.Position = UDim2.new(0, 10, 0, 0)
         optionLabel.BackgroundTransparency = 1
         optionLabel.Text = option
         optionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        optionLabel.TextStrokeTransparency = 0 -- Text outline back
+        optionLabel.TextStrokeTransparency = 0
         optionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         optionLabel.TextSize = 13
         optionLabel.Font = Enum.Font.Gotham
         optionLabel.TextXAlignment = Enum.TextXAlignment.Left
         optionLabel.ZIndex = 5
         optionLabel.Parent = optionRow
-        
-        -- CHECKBOX WITH BORDER (RED UNSELECTED, GREEN SELECTED)
         local checkbox = Instance.new("TextButton")
         checkbox.Name = "Checkbox"
         checkbox.Size = UDim2.new(0, 18, 0, 18)
         checkbox.Position = UDim2.new(1, -24, 0.5, -9)
-        checkbox.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Red unselected
+        checkbox.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
         checkbox.BorderSizePixel = 2
-        checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150) -- Border around checkbox
+        checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
         checkbox.Text = ""
         checkbox.ZIndex = 5
         checkbox.Parent = optionRow
-        
         local checkboxCorner = Instance.new("UICorner")
         checkboxCorner.CornerRadius = UDim.new(0, 2)
         checkboxCorner.Parent = checkbox
-        
-        -- GRADIENT (ONLY SHOWN WHEN SELECTED)
         local gradient = Instance.new("UIGradient")
         gradient.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
@@ -1419,9 +1399,7 @@ function RadiantHub:_createMultiDropdown(section, config)
         })
         gradient.Rotation = 45
         gradient.Parent = checkbox
-        gradient.Enabled = false -- Hidden by default
-        
-        -- CHECKMARK (ONLY SHOWN WHEN SELECTED)
+        gradient.Enabled = false
         local checkmark = Instance.new("TextLabel")
         checkmark.Size = UDim2.new(1, 0, 1, 0)
         checkmark.BackgroundTransparency = 1
@@ -1429,60 +1407,58 @@ function RadiantHub:_createMultiDropdown(section, config)
         checkmark.TextColor3 = Color3.fromRGB(255, 255, 255)
         checkmark.TextSize = 12
         checkmark.Font = Enum.Font.SourceSansBold
-        checkmark.TextStrokeTransparency = 0 -- Text outline back
+        checkmark.TextStrokeTransparency = 0
         checkmark.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        checkmark.Visible = false -- Hidden by default
+        checkmark.Visible = false
         checkmark.ZIndex = 6
         checkmark.Parent = checkbox
-        
         local function updateCheckbox()
             if selectedOptions[option] then
-                -- SELECTED STATE: Green checkbox with checkmark
-                gradient.Enabled = false -- No gradient, just solid green
-                checkbox.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Green selected
-                checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150) -- Keep border
-                checkmark.Visible = true -- Show checkmark
-                optionLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- Keep normal text color
-                optionRow.BackgroundTransparency = 1 -- No row highlight
+                gradient.Enabled = false
+                checkbox.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+                checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
+                checkmark.Visible = true
+                optionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                optionRow.BackgroundTransparency = 1
             else
-                -- UNSELECTED STATE: Red checkbox 
-                gradient.Enabled = false -- No gradient
-                checkbox.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Red unselected
-                checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150) -- Keep border
-                checkmark.Visible = false -- Hide checkmark
-                optionLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- Normal text
-                optionRow.BackgroundTransparency = 1 -- No row highlight
+                gradient.Enabled = false
+                checkbox.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
+                checkmark.Visible = false
+                optionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                optionRow.BackgroundTransparency = 1
             end
         end
-        
         local function toggleOption()
             selectedOptions[option] = not selectedOptions[option]
             updateCheckbox()
+            local selectedList = {}
+            for _, opt in ipairs(options) do
+                if selectedOptions[opt] then table.insert(selectedList, opt) end
+            end
+            if #selectedList > 0 then
+                dropdown.Text = table.concat(selectedList, ", ") .. " ▼"
+            else
+                dropdown.Text = "Multiple ▼"
+            end
             if config.Callback then
                 config.Callback(selectedOptions)
             end
         end
-        
         checkbox.Activated:Connect(toggleOption)
         optionLabel.Activated:Connect(toggleOption)
-        
-        -- HOVER EFFECTS
         optionRow.MouseEnter:Connect(function()
             if not selectedOptions[option] then
                 optionRow.BackgroundTransparency = 0.9
                 optionRow.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
             end
         end)
-        
         optionRow.MouseLeave:Connect(function()
             if not selectedOptions[option] then
                 optionRow.BackgroundTransparency = 1
             end
         end)
-        
-        -- Initialize checkbox state
         updateCheckbox()
-        
         table.insert(optionButtons, {
             row = optionRow, 
             checkbox = checkbox, 
@@ -1492,20 +1468,26 @@ function RadiantHub:_createMultiDropdown(section, config)
             updateCheckbox = updateCheckbox
         })
     end
-    
     dropdown.MouseButton1Click:Connect(function()
         dropdownMenu.Visible = not dropdownMenu.Visible
     end)
-    
     table.insert(section.elements, container)
     print("[RadiantHub] Improved MultiDropdown created in section:", section.name)
-    
     return {
         SetValue = function(value)
             if type(value) ~= "table" then return end
             selectedOptions = value
             for _, btn in ipairs(optionButtons) do
                 btn.updateCheckbox()
+            end
+            local selectedList = {}
+            for _, opt in ipairs(options) do
+                if selectedOptions[opt] then table.insert(selectedList, opt) end
+            end
+            if #selectedList > 0 then
+                dropdown.Text = table.concat(selectedList, ", ") .. " ▼"
+            else
+                dropdown.Text = "Multiple ▼"
             end
             if config.Callback then
                 config.Callback(selectedOptions)
@@ -2485,5 +2467,34 @@ function RadiantHub:_createInput(section, config)
         end
     }
 end
+print("jorking it")
+
+--
+-- Example usage for regular dropdown (Searchable = true):
+local window = RadiantHub:CreateWindow({ Name = "Demo" })
+local tab = window:CreateTab({ Name = "Main", Icon = "home" })
+local section = tab:AddSection("Dropdowns")
+
+section:CreateDropdown({
+    Name = "Fruit",
+    Options = {"Apple", "Banana", "Cherry", "Date", "Elderberry", "Fig", "Grape", "Honeydew"},
+    Default = 1,
+    Searchable = true, -- Enable search box
+    Callback = function(selected, index)
+        print("Selected fruit:", selected, index)
+    end
+})
+
+-- Example usage for multi-dropdown (Searchable = false):
+section:CreateMultiDropdown({
+    Name = "Toppings",
+    Options = {"Pepperoni", "Mushrooms", "Onions", "Sausage", "Bacon", "Extra cheese", "Black olives", "Green peppers"},
+    Default = {},
+    Searchable = false, -- No search box
+    Callback = function(selectedTable)
+        print("Selected toppings:", selectedTable)
+    end
+})
+
 
 return RadiantHub
