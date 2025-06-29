@@ -1,276 +1,2403 @@
--- RadiantHub Example Usage
--- This shows how to use the RadiantHub UI library
+-- RadiantHub UI Library
+-- Mobile-Compatible Roblox UI Library with Modern Design
 
--- First, load the library (assuming it's in the same location)
-local RadiantHub = loadstring(game:HttpGet("YOUR_RAW_GITHUB_LINK_HERE"))()
+local RadiantHub = {}
+RadiantHub.__index = RadiantHub
 
--- Create the main window
-local Window = RadiantHub:CreateWindow({
-    Name = "Example Script Hub",
-    Size = UDim2.new(0, 700, 0, 450),
-    Theme = "Dark"
-})
+-- Services
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
 
--- Create the first tab (Main)
-local MainTab = Window:CreateTab({
-    Name = "Main",
-    Icon = "🏠"
-})
+-- Variables
+local player = Players.LocalPlayer
 
--- Create sections for the Main tab
-local CombatSection = MainTab:AddSection("Combat Features")  -- Will go to LEFT side
-local MovementSection = MainTab:AddSection("Movement")       -- Will go to RIGHT side
-local VisualsSection = MainTab:AddSection("Visuals")        -- Will go to LEFT side
-local SettingsSection = MainTab:AddSection("Settings")      -- Will go to RIGHT side
 
--- Add elements to Combat Section (LEFT side)
-local autoAttackToggle = CombatSection:CreateToggle({
-    Name = "Auto Attack",
-    Default = false,
-    Callback = function(value)
-        print("Auto Attack set to:", value)
-        if value then
-            Window:CreateNotification("Combat", "Auto Attack enabled!", 3)
-        else
-            Window:CreateNotification("Combat", "Auto Attack disabled!", 3)
+
+
+-- Icon System
+local Icons = {}
+local function loadIcons()
+    local success, result = pcall(function()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/src/Icons.lua"))()
+    end)
+    
+    if success and result and result.assets then
+        Icons = result.assets
+        print("[RadiantHub] Successfully loaded", #Icons, "icons from Fluent")
+    else
+        warn("[RadiantHub] Failed to load icons, using fallbacks")
+        -- Fallback icons if loading fails
+        Icons = {
+            ["lucide-home"] = "rbxassetid://10709766889",
+            ["lucide-settings"] = "rbxassetid://10734950309",
+            ["lucide-user"] = "rbxassetid://10709769426",
+            ["lucide-folder"] = "rbxassetid://10709761530",
+            ["lucide-search"] = "rbxassetid://10709771539",
+        }
+    end
+end
+
+-- Load icons immediately
+loadIcons()
+
+-- Icon helper function
+local function getIcon(iconName)
+    if not iconName then return Icons["lucide-home"] or "" end
+    
+    -- If it's already an rbxassetid, return as-is
+    if type(iconName) == "string" and iconName:find("rbxassetid://") then
+        return iconName
+    end
+    
+    -- Add lucide- prefix if not present
+    local fullIconName = iconName
+    if not iconName:find("lucide-") then
+        fullIconName = "lucide-" .. iconName
+    end
+    
+    return Icons[fullIconName] or Icons["lucide-home"] or ""
+end
+
+
+
+
+
+
+
+
+-- Library Constructor
+function RadiantHub:CreateWindow(config)
+    local self = setmetatable({}, RadiantHub)
+    config = config or {}
+    self.config = {
+        Name = tostring(config.Name or "RadiantHub"),
+        Size = config.Size or UDim2.new(0, 700, 0, 450),
+        Position = config.Position or UDim2.new(0.5, -350, 0.5, -225),
+        Theme = tostring(config.Theme or "Dark"),
+        Premium = true
+    }
+    self.settings = {}
+    self.tabs = {}
+    self.currentTab = nil
+    self.isMinimized = false
+    self.notificationQueue = {}
+    self:_createMainUI()
+    self:_createWatermark()
+    self:_createNotificationSystem()
+    self:_setupAnimations()
+    self:_setupControls()
+    -- Ensure first tab is displayed if it exists
+    -- If a tab was created before the UI, show it now
+    -- If we already have tabs, show the first one
+    if #self.tabs > 0 and not self.currentTab then
+        self.currentTab = self.tabs[1]
+        spawn(function()
+            wait(0.05)
+            self:_updateTabDisplay(self.currentTab)
+            self:_updateTabButtons(self.currentTab)
+        end)
+    elseif self.currentTab then
+        spawn(function()
+            wait(0.05)
+            self:_updateTabDisplay(self.currentTab)
+            self:_updateTabButtons(self.currentTab)
+        end)
+    end
+    return self
+end
+
+-- Main UI Creation
+function RadiantHub:_createMainUI()
+    -- Create ScreenGui
+    self.screenGui = Instance.new("ScreenGui")
+    self.screenGui.Name = "RadiantHub_" .. self.config.Name
+    self.screenGui.ResetOnSpawn = false
+    self.screenGui.Parent = CoreGui
+    
+    -- Main Frame
+    self.mainFrame = Instance.new("Frame")
+    self.mainFrame.Name = "MainFrame"
+    self.mainFrame.Size = self.config.Size
+    self.mainFrame.Position = self.config.Position
+    self.mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    self.mainFrame.BorderSizePixel = 0
+    self.mainFrame.Parent = self.screenGui
+    
+    -- Main gradient
+    local mainGradient = Instance.new("UIGradient")
+    mainGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 60, 80)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 40))
+    }
+    mainGradient.Rotation = 135
+    mainGradient.Parent = self.mainFrame
+    
+    -- Rainbow border
+    self.borderFrame = Instance.new("Frame")
+    self.borderFrame.Name = "BorderFrame"
+    self.borderFrame.Size = UDim2.new(1, 8, 1, 8)
+    self.borderFrame.Position = UDim2.new(0, -4, 0, -4)
+    self.borderFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    self.borderFrame.BorderSizePixel = 0
+    self.borderFrame.ZIndex = 0
+    self.borderFrame.Parent = self.mainFrame
+    
+    self.borderGradient = Instance.new("UIGradient")
+    self.borderGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 150)),
+        ColorSequenceKeypoint.new(0.2, Color3.fromRGB(0, 255, 255)),
+        ColorSequenceKeypoint.new(0.4, Color3.fromRGB(0, 255, 0)),
+        ColorSequenceKeypoint.new(0.6, Color3.fromRGB(255, 255, 0)),
+        ColorSequenceKeypoint.new(0.8, Color3.fromRGB(255, 100, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 150))
+    }
+    self.borderGradient.Rotation = 45
+    self.borderGradient.Parent = self.borderFrame
+    
+    -- Title Bar
+    self.titleBar = Instance.new("Frame")
+    self.titleBar.Name = "TitleBar"
+    self.titleBar.Size = UDim2.new(1, 0, 0, 40)
+    self.titleBar.Position = UDim2.new(0, 0, 0, 0)
+    self.titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    self.titleBar.BorderSizePixel = 1
+    self.titleBar.BorderColor3 = Color3.fromRGB(70, 70, 70)
+    self.titleBar.Parent = self.mainFrame
+    
+    -- Title
+    self.titleLabel = Instance.new("TextLabel")
+    self.titleLabel.Name = "TitleLabel"
+    self.titleLabel.Size = UDim2.new(1, -100, 1, 0)
+    self.titleLabel.Position = UDim2.new(0, 20, 0, 0)
+    self.titleLabel.BackgroundTransparency = 1
+    self.titleLabel.Text = self.config.Name:upper()
+    self.titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    self.titleLabel.TextSize = 18
+    self.titleLabel.TextStrokeTransparency = 0
+    self.titleLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    self.titleLabel.Font = Enum.Font.GothamBold
+    self.titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    self.titleLabel.Parent = self.titleBar
+    
+    -- Control buttons
+    self:_createControlButtons()
+    
+    -- Left Sidebar
+    self.leftSidebar = Instance.new("Frame")
+    self.leftSidebar.Name = "LeftSidebar"
+    self.leftSidebar.Size = UDim2.new(0, 150, 1, -50)
+    self.leftSidebar.Position = UDim2.new(0, 5, 0, 45)
+    self.leftSidebar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    self.leftSidebar.BorderSizePixel = 0
+    self.leftSidebar.Parent = self.mainFrame
+    
+    local sidebarCorner = Instance.new("UICorner")
+    sidebarCorner.CornerRadius = UDim.new(0, 6)
+    sidebarCorner.Parent = self.leftSidebar
+    
+    -- Content Area
+    self.contentArea = Instance.new("Frame")
+    self.contentArea.Name = "ContentArea"
+    self.contentArea.Size = UDim2.new(1, -170, 1, -50)
+    self.contentArea.Position = UDim2.new(0, 165, 0, 45)
+    self.contentArea.BackgroundTransparency = 1
+    self.contentArea.BorderSizePixel = 0
+    self.contentArea.Parent = self.mainFrame
+    
+    -- User profile
+    self:_createUserProfile()
+    
+    -- Minimized icon
+    self:_createMinimizedIcon()
+    -- If a tab was created before the UI, show it now
+    -- Force update if we have a current tab
+    if self.currentTab then
+        self:_updateTabDisplay(self.currentTab)
+        self:_updateTabButtons(self.currentTab)
+    end
+end
+
+function RadiantHub:_createControlButtons()
+    -- Minimize button
+    self.minimizeButton = Instance.new("TextButton")
+    self.minimizeButton.Name = "MinimizeButton"
+    self.minimizeButton.Size = UDim2.new(0, 30, 0, 30)
+    self.minimizeButton.Position = UDim2.new(1, -70, 0, 5)
+    self.minimizeButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    self.minimizeButton.BorderSizePixel = 0
+    self.minimizeButton.Text = "−"
+    self.minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    self.minimizeButton.TextSize = 18
+    self.minimizeButton.Font = Enum.Font.GothamBold
+    self.minimizeButton.Parent = self.titleBar
+    
+    -- Close button
+    self.closeButton = Instance.new("TextButton")
+    self.closeButton.Name = "CloseButton"
+    self.closeButton.Size = UDim2.new(0, 30, 0, 30)
+    self.closeButton.Position = UDim2.new(1, -35, 0, 5)
+    self.closeButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    self.closeButton.BorderSizePixel = 0
+    self.closeButton.Text = "×"
+    self.closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    self.closeButton.TextSize = 18
+    self.closeButton.Font = Enum.Font.GothamBold
+    self.closeButton.Parent = self.titleBar
+end
+
+function RadiantHub:_createUserProfile()
+    local userProfileFrame = Instance.new("Frame")
+    userProfileFrame.Name = "UserProfileFrame"
+    userProfileFrame.Size = UDim2.new(1, -16, 0, 50)
+    userProfileFrame.Position = UDim2.new(0, 8, 1, -58)
+    userProfileFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    userProfileFrame.BorderSizePixel = 0
+    userProfileFrame.Parent = self.leftSidebar
+    
+    local profileCorner = Instance.new("UICorner")
+    profileCorner.CornerRadius = UDim.new(0, 6)
+    profileCorner.Parent = userProfileFrame
+    
+    -- Enhanced user avatar
+    local userAvatar = Instance.new("ImageLabel")
+    userAvatar.Name = "UserAvatar"
+    userAvatar.Size = UDim2.new(0, 35, 0, 35)
+    userAvatar.Position = UDim2.new(0, 8, 0.5, -17.5)
+    userAvatar.BackgroundColor3 = Color3.fromRGB(255, 150, 100)
+    userAvatar.BorderSizePixel = 0
+    userAvatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
+    userAvatar.Parent = userProfileFrame
+    
+    local avatarCorner = Instance.new("UICorner")
+    avatarCorner.CornerRadius = UDim.new(0.5, 0)
+    avatarCorner.Parent = userAvatar
+    
+    -- Username with improved layout
+    local usernameLabel = Instance.new("TextLabel")
+    usernameLabel.Name = "UsernameLabel"
+    usernameLabel.Size = UDim2.new(1, -50, 0, 16)
+    usernameLabel.Position = UDim2.new(0, 45, 0, 6)
+    usernameLabel.BackgroundTransparency = 1
+    usernameLabel.Text = player.Name
+    usernameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    usernameLabel.TextSize = 13
+    usernameLabel.Font = Enum.Font.GothamSemibold
+    usernameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    usernameLabel.TextYAlignment = Enum.TextYAlignment.Center
+    usernameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    usernameLabel.Parent = userProfileFrame
+    
+    -- Status container for premium/free with indicator
+    local statusContainer = Instance.new("Frame")
+    statusContainer.Name = "StatusContainer"
+    statusContainer.Size = UDim2.new(0, 80, 0, 18)
+    statusContainer.Position = UDim2.new(0, 45, 0, 26)
+    statusContainer.BackgroundTransparency = 1
+    statusContainer.Parent = userProfileFrame
+    
+    -- Status indicator circle
+    local statusIndicator = Instance.new("Frame")
+    statusIndicator.Name = "StatusIndicator"
+    statusIndicator.Size = UDim2.new(0, 6, 0, 6)
+    statusIndicator.Position = UDim2.new(0, 0, 0.5, -3)
+    statusIndicator.BorderSizePixel = 0
+    statusIndicator.BackgroundColor3 = self.config.Premium and Color3.fromRGB(52, 199, 89) or Color3.fromRGB(255, 69, 58)
+    statusIndicator.Parent = statusContainer
+    
+    local indicatorCorner = Instance.new("UICorner")
+    indicatorCorner.CornerRadius = UDim.new(0.5, 0)
+    indicatorCorner.Parent = statusIndicator
+    
+    -- Status text
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Name = "StatusLabel"
+    statusLabel.Size = UDim2.new(1, -12, 1, 0)
+    statusLabel.Position = UDim2.new(0, 12, 0, 0)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = self.config.Premium and "PREMIUM" or "FREE"
+    statusLabel.TextColor3 = self.config.Premium and Color3.fromRGB(52, 199, 89) or Color3.fromRGB(200, 200, 200)
+    statusLabel.TextSize = 10
+    statusLabel.Font = Enum.Font.GothamSemibold
+    statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statusLabel.TextYAlignment = Enum.TextYAlignment.Center
+    statusLabel.Parent = statusContainer
+end
+
+
+function RadiantHub:_createMinimizedIcon()
+    self.minimizedIcon = Instance.new("ImageButton")
+    self.minimizedIcon.Name = "MinimizedIcon"
+    self.minimizedIcon.Size = UDim2.new(0, 50, 0, 50)
+    self.minimizedIcon.Position = UDim2.new(0, 50, 0, 50)
+    self.minimizedIcon.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    self.minimizedIcon.BackgroundTransparency = 1
+    self.minimizedIcon.BorderSizePixel = 2
+    self.minimizedIcon.BorderColor3 = Color3.fromRGB(0, 150, 255)
+    self.minimizedIcon.Image = "rbxassetid://139404696073599"
+    self.minimizedIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    self.minimizedIcon.ImageTransparency = 0.1
+    self.minimizedIcon.Visible = false
+    self.minimizedIcon.Parent = self.screenGui
+
+    -- Drag tracking variables
+    local minimizedDragging = false
+    local minimizedDragStart = nil
+    local minimizedStartPos = nil
+    local wasDragged = false
+    local dragThreshold = 5 -- Pixels moved before considering it a drag
+    local currentInput = nil -- Track the specific input
+
+    self.minimizedIcon.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            minimizedDragging = true
+            minimizedDragStart = Vector2.new(input.Position.X, input.Position.Y)
+            minimizedStartPos = self.minimizedIcon.Position
+            wasDragged = false
+            currentInput = input -- Store the specific input
+        end
+    end)
+
+    self.minimizedIcon.InputEnded:Connect(function(input)
+        if input == currentInput then -- Only handle the input that started on this icon
+            minimizedDragging = false
+            
+            -- Only open UI if it wasn't dragged
+            if not wasDragged then
+                -- Your UI opening code here
+            end
+            currentInput = nil 
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if minimizedDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local currentPos = Vector2.new(input.Position.X, input.Position.Y)
+            local delta = currentPos - minimizedDragStart
+            local dragDistance = delta.Magnitude
+            
+            if dragDistance > dragThreshold then
+                wasDragged = true
+                self.minimizedIcon.Position = UDim2.new(
+                    minimizedStartPos.X.Scale, 
+                    minimizedStartPos.X.Offset + delta.X, 
+                    minimizedStartPos.Y.Scale, 
+                    minimizedStartPos.Y.Offset + delta.Y
+                )
+            end
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if minimizedDragging then
+                minimizedDragging = false
+            end
+        end
+    end)
+end
+
+
+function RadiantHub:_createWatermark()
+    self.watermarkGui = Instance.new("ScreenGui")
+    self.watermarkGui.Name = "RadiantHub_Watermark"
+    self.watermarkGui.ResetOnSpawn = false
+    self.watermarkGui.Parent = CoreGui
+    
+    local watermarkFrame = Instance.new("Frame")
+    watermarkFrame.Name = "WatermarkFrame"
+    watermarkFrame.Size = UDim2.new(0, 250, 0, 25)
+    watermarkFrame.Position = UDim2.new(1, -260, 0, 10)
+    watermarkFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    watermarkFrame.BorderSizePixel = 0
+    watermarkFrame.Parent = self.watermarkGui
+    
+    local watermarkCorner = Instance.new("UICorner")
+    watermarkCorner.CornerRadius = UDim.new(0, 3)
+    watermarkCorner.Parent = watermarkFrame
+    
+    -- Accent line
+    local accentLine = Instance.new("Frame")
+    accentLine.Name = "AccentLine"
+    accentLine.Size = UDim2.new(0, 3, 1, 0)
+    accentLine.Position = UDim2.new(0, 0, 0, 0)
+    accentLine.BackgroundColor3 = Color3.fromRGB(220, 50, 47)
+    accentLine.BorderSizePixel = 0
+    accentLine.Parent = watermarkFrame
+    
+    local accentCorner = Instance.new("UICorner")
+    accentCorner.CornerRadius = UDim.new(0, 3)
+    accentCorner.Parent = accentLine
+    
+    -- Content frame
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Size = UDim2.new(1, -8, 1, 0)
+    contentFrame.Position = UDim2.new(0, 8, 0, 0)
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Parent = watermarkFrame
+    
+    -- RadiantHub label
+    self.radiantLabel = Instance.new("TextLabel")
+    self.radiantLabel.Size = UDim2.new(0, 80, 1, 0)
+    self.radiantLabel.Position = UDim2.new(0, 0, 0, 0)
+    self.radiantLabel.BackgroundTransparency = 1
+    self.radiantLabel.Text = self.config.Name
+    self.radiantLabel.TextColor3 = Color3.fromRGB(255, 0, 128)
+    self.radiantLabel.TextSize = 12
+    self.radiantLabel.Font = Enum.Font.GothamBold
+    self.radiantLabel.TextXAlignment = Enum.TextXAlignment.Left
+    self.radiantLabel.TextYAlignment = Enum.TextYAlignment.Center
+    self.radiantLabel.Parent = contentFrame
+    
+    -- FPS Counter
+    self.fpsLabel = Instance.new("TextLabel")
+    self.fpsLabel.Size = UDim2.new(0, 50, 1, 0)
+    self.fpsLabel.Position = UDim2.new(0, 90, 0, 0)
+    self.fpsLabel.BackgroundTransparency = 1
+    self.fpsLabel.Text = "60 FPS"
+    self.fpsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    self.fpsLabel.TextSize = 11
+    self.fpsLabel.Font = Enum.Font.Gotham
+    self.fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    self.fpsLabel.TextYAlignment = Enum.TextYAlignment.Center
+    self.fpsLabel.Parent = contentFrame
+    
+    -- User info
+    local userLabel = Instance.new("TextLabel")
+    userLabel.Size = UDim2.new(1, -150, 1, 0)
+    userLabel.Position = UDim2.new(0, 150, 0, 0)
+    userLabel.BackgroundTransparency = 1
+    userLabel.Text = player.Name
+    userLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
+    userLabel.TextSize = 11
+    userLabel.Font = Enum.Font.Gotham
+    userLabel.TextXAlignment = Enum.TextXAlignment.Left
+    userLabel.TextYAlignment = Enum.TextYAlignment.Center
+    userLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    userLabel.Parent = contentFrame
+end
+
+function RadiantHub:_createNotificationSystem()
+    self.notificationContainer = Instance.new("Frame")
+    self.notificationContainer.Name = "NotificationContainer"
+    self.notificationContainer.Size = UDim2.new(0, 300, 0, 200)
+    self.notificationContainer.Position = UDim2.new(1, -310, 1, -210)
+    self.notificationContainer.BackgroundTransparency = 1
+    self.notificationContainer.Parent = self.watermarkGui
+end
+
+-- Tab System
+function RadiantHub:CreateTab(config)
+    config = config or {}
+    if not config then
+        warn("RadiantHub: CreateTab requires a config table")
+        return nil
+    end
+    local tab = {
+        name = tostring(config.Name or "Tab"),
+        icon = getIcon(config.Icon),
+        sections = {},
+        sectionOrder = {},
+        _radiantHubInstance = self
+    }
+    function tab:AddSection(sectionName)
+        local section = {
+            name = sectionName or "Section",
+            elements = {},
+            _radiantHubInstance = self._radiantHubInstance
+        }
+        function section:CreateToggle(config)
+            return self._radiantHubInstance:_createToggle(self, config)
+        end
+        function section:CreateSlider(config)
+            return self._radiantHubInstance:_createSlider(self, config)
+        end
+        function section:CreateDropdown(config)
+            return self._radiantHubInstance:_createDropdown(self, config)
+        end
+        function section:CreateMultiDropdown(config)
+            return self._radiantHubInstance:_createMultiDropdown(self, config)
+        end
+        function section:CreateColorPicker(config)
+            return self._radiantHubInstance:_createColorPicker(self, config)
+        end
+        function section:CreateButton(config)
+            return self._radiantHubInstance:_createButton(self, config)
+        end
+        table.insert(tab.sections, section)
+        table.insert(tab.sectionOrder, section)
+        return section
+    end
+    table.insert(self.tabs, tab)
+    self:_createTabButton(tab, #self.tabs - 1)
+    
+    -- Auto-open first tab immediately
+    if #self.tabs == 1 then
+        self.currentTab = tab
+        -- Use spawn to ensure UI is ready
+        spawn(function()
+            wait(0.05) -- Small delay to ensure UI elements exist
+            if self.contentArea then
+                self:_updateTabDisplay(tab)
+                self:_updateTabButtons(tab)
+            end
+        end)
+    end
+    
+    return tab
+end
+
+function RadiantHub:_updateTabDisplay(tab)
+    if not self.contentArea then
+        warn("[RadiantHub] Content area not initialized")
+        return
+    end
+    -- Only clear content area, not tab buttons/sidebar
+    for _, child in ipairs(self.contentArea:GetChildren()) do
+        if child.Name ~= "LeftSection" and child.Name ~= "RightSection" then
+            child:Destroy()
         end
     end
-})
-
-local attackSpeedSlider = CombatSection:CreateSlider({
-    Name = "Attack Speed",
-    Min = 1,
-    Max = 10,
-    Default = 5,
-    Callback = function(value)
-        print("Attack Speed:", value)
+    self:_createContentSections()
+    local leftSections = {}
+    local rightSections = {}
+    for i, section in ipairs(tab.sectionOrder or {}) do
+        if i % 2 == 1 then
+            table.insert(leftSections, section)
+        else
+            table.insert(rightSections, section)
+        end
     end
-})
-
-local weaponDropdown = CombatSection:CreateDropdown({
-    Name = "Weapon Type",
-    Options = {"Sword", "Bow", "Staff", "Dagger", "Axe"},
-    Default = 1,
-    Searchable = true,
-    Callback = function(option, index)
-        print("Selected weapon:", option, "at index:", index)
-        Window:CreateNotification("Combat", "Weapon changed to " .. option, 2)
+    self.leftHeader.Text = leftSections[1] and leftSections[1].name or ""
+    self.rightHeader.Text = rightSections[1] and rightSections[1].name or ""
+    local leftY = 0
+    for _, section in ipairs(leftSections) do
+        local sectionFrame = self:_createSectionFrame(section, self.leftContent, leftY, true)
+        leftY = leftY + sectionFrame.Size.Y.Offset + 10
     end
-})
-
--- Add elements to Movement Section (RIGHT side)
-local flyToggle = MovementSection:CreateToggle({
-    Name = "Fly Mode",
-    Default = false,
-    Callback = function(value)
-        print("Fly Mode:", value)
+    local rightY = 0
+    for _, section in ipairs(rightSections) do
+        local sectionFrame = self:_createSectionFrame(section, self.rightContent, rightY, true)
+        rightY = rightY + sectionFrame.Size.Y.Offset + 10
     end
-})
+end
 
-local speedSlider = MovementSection:CreateSlider({
-    Name = "Walk Speed",
-    Min = 16,
-    Max = 100,
-    Default = 16,
-    Callback = function(value)
-        print("Walk Speed:", value)
+function RadiantHub:_createSectionFrame(section, parent, yPos, noLabel)
+    local sectionFrame = Instance.new("Frame")
+    sectionFrame.Name = section.name .. "Section"
+    sectionFrame.Size = UDim2.new(1, -10, 0, 0)
+    sectionFrame.Position = UDim2.new(0, 5, 0, yPos)
+    sectionFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    sectionFrame.BorderSizePixel = 1
+    sectionFrame.BorderColor3 = Color3.fromRGB(70, 70, 70)
+    sectionFrame.Parent = parent
+    local sectionCorner = Instance.new("UICorner")
+    sectionCorner.CornerRadius = UDim.new(0, 6)
+    sectionCorner.Parent = sectionFrame
+    local elementY = 10
+    for _, element in ipairs(section.elements) do
+        if element then
+            element.Position = UDim2.new(0, 5, 0, elementY)
+            element.Parent = sectionFrame
+            element.Visible = true
+            elementY = elementY + element.Size.Y.Offset + 5
+        end
     end
-})
+    sectionFrame.Size = UDim2.new(1, -10, 0, math.max(elementY + 10, 50))
+    return sectionFrame
+end
 
-local jumpPowerSlider = MovementSection:CreateSlider({
-    Name = "Jump Power",
-    Min = 50,
-    Max = 200,
-    Default = 50,
-    Callback = function(value)
-        print("Jump Power:", value)
-    end
-})
+function RadiantHub:_createContentSections()
+    -- Left Section
+    self.leftSection = Instance.new("Frame")
+    self.leftSection.Name = "LeftSection"
+    self.leftSection.Size = UDim2.new(0.495, -5, 1, 0)
+    self.leftSection.Position = UDim2.new(0, 0, 0, 0)
+    self.leftSection.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    self.leftSection.BorderSizePixel = 1
+    self.leftSection.BorderColor3 = Color3.fromRGB(70, 70, 70)
+    self.leftSection.Parent = self.contentArea
+    -- Right Section
+    self.rightSection = Instance.new("Frame")
+    self.rightSection.Name = "RightSection"
+    self.rightSection.Size = UDim2.new(0.495, -5, 1, 0)
+    self.rightSection.Position = UDim2.new(0.505, 0, 0, 0)
+    self.rightSection.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    self.rightSection.BorderSizePixel = 1
+    self.rightSection.BorderColor3 = Color3.fromRGB(70, 70, 70)
+    self.rightSection.Parent = self.contentArea
+    -- Headers (will be set dynamically)
+    self.leftHeader = Instance.new("TextLabel")
+    self.leftHeader.Name = "LeftHeader"
+    self.leftHeader.Size = UDim2.new(1, 0, 0, 30)
+    self.leftHeader.Position = UDim2.new(0, 0, 0, 5)
+    self.leftHeader.BackgroundTransparency = 1
+    self.leftHeader.Text = ""
+    self.leftHeader.TextColor3 = Color3.fromRGB(255, 255, 255)
+    self.leftHeader.TextSize = 14
+    self.leftHeader.Font = Enum.Font.GothamBold
+    self.leftHeader.TextXAlignment = Enum.TextXAlignment.Center
+    self.leftHeader.Parent = self.leftSection
+    self.rightHeader = Instance.new("TextLabel")
+    self.rightHeader.Name = "RightHeader"
+    self.rightHeader.Size = UDim2.new(1, 0, 0, 30)
+    self.rightHeader.Position = UDim2.new(0, 0, 0, 5)
+    self.rightHeader.BackgroundTransparency = 1
+    self.rightHeader.Text = ""
+    self.rightHeader.TextColor3 = Color3.fromRGB(255, 255, 255)
+    self.rightHeader.TextSize = 14
+    self.rightHeader.Font = Enum.Font.GothamBold
+    self.rightHeader.TextXAlignment = Enum.TextXAlignment.Center
+    self.rightHeader.Parent = self.rightSection
+    -- Content containers
+    self.leftContent = Instance.new("Frame")
+    self.leftContent.Name = "LeftContent"
+    self.leftContent.Size = UDim2.new(1, -10, 1, -45)
+    self.leftContent.Position = UDim2.new(0, 5, 0, 40)
+    self.leftContent.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    self.leftContent.BorderSizePixel = 1
+    self.leftContent.BorderColor3 = Color3.fromRGB(80, 80, 80)
+    self.leftContent.Parent = self.leftSection
+    self.rightContent = Instance.new("Frame")
+    self.rightContent.Name = "RightContent"
+    self.rightContent.Size = UDim2.new(1, -10, 1, -45)
+    self.rightContent.Position = UDim2.new(0, 5, 0, 40)
+    self.rightContent.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    self.rightContent.BorderSizePixel = 1
+    self.rightContent.BorderColor3 = Color3.fromRGB(80, 80, 80)
+    self.rightContent.Parent = self.rightSection
+end
 
--- Add elements to Visuals Section (LEFT side)
-local espToggle = VisualsSection:CreateToggle({
-    Name = "Player ESP",
-    Default = false,
-    Callback = function(value)
-        print("Player ESP:", value)
-    end
-})
-
-local themeColorPicker = VisualsSection:CreateColorPicker({
-    Name = "Theme Color",
-    Default = Color3.fromRGB(220, 50, 47),
-    Callback = function(color)
-        print("Theme color changed to:", color)
-    end
-})
-
-local fullbrightToggle = VisualsSection:CreateToggle({
-    Name = "Fullbright",
-    Default = false,
-    Callback = function(value)
-        print("Fullbright:", value)
-    end
-})
-
--- Add elements to Settings Section (RIGHT side)
-local autoSaveToggle = SettingsSection:CreateToggle({
-    Name = "Auto Save Config",
-    Default = true,
-    Callback = function(value)
-        print("Auto Save:", value)
-    end
-})
-
-local keybindButton = SettingsSection:CreateButton({
-    Name = "Set Keybind",
-    Callback = function()
-        print("Keybind button clicked!")
-        Window:CreateNotification("Settings", "Keybind feature coming soon!", 3)
-    end
-})
-
-local configDropdown = SettingsSection:CreateDropdown({
-    Name = "Load Config",
-    Options = {"Default", "Combat", "Stealth", "Speed Run"},
-    Default = 1,
-    Callback = function(option, index)
-        print("Loading config:", option)
-        Window:CreateNotification("Settings", "Loaded " .. option .. " config", 2)
-    end
-})
-
--- Create a second tab (Teleports)
-local TeleportTab = Window:CreateTab({
-    Name = "Teleports",
-    Icon = "🌍"
-})
-
-local LocationsSection = TeleportTab:AddSection("Locations")     -- LEFT side
-local PlayersSection = TeleportTab:AddSection("Players")        -- RIGHT side
-
--- Add teleport locations
-local locationDropdown = LocationsSection:CreateDropdown({
-    Name = "Teleport To",
-    Options = {"Spawn", "Shop", "Arena", "Secret Area", "Boss Room"},
-    Default = 1,
-    Searchable = true,
-    Callback = function(option, index)
-        print("Teleporting to:", option)
-        Window:CreateNotification("Teleport", "Teleported to " .. option, 2)
-    end
-})
-
-local saveLocationButton = LocationsSection:CreateButton({
-    Name = "Save Current Location",
-    Callback = function()
-        print("Location saved!")
-        Window:CreateNotification("Teleport", "Current location saved!", 2)
-    end
-})
-
--- Add player teleports
-local playerESP = PlayersSection:CreateToggle({
-    Name = "Show Players",
-    Default = false,
-    Callback = function(value)
-        print("Show Players:", value)
-    end
-})
-
-local teleportToPlayerButton = PlayersSection:CreateButton({
-    Name = "Teleport to Random Player",
-    Callback = function()
-        local players = game:GetService("Players"):GetPlayers()
-        if #players > 1 then
-            local randomPlayer = players[math.random(1, #players)]
-            if randomPlayer ~= game:GetService("Players").LocalPlayer then
-                print("Teleporting to:", randomPlayer.Name)
-                Window:CreateNotification("Teleport", "Teleporting to " .. randomPlayer.Name, 2)
+function RadiantHub:_updateTabButtons(selectedTab)
+    if not self.leftSidebar then return end
+    
+    for _, tabContainer in ipairs(self.leftSidebar:GetChildren()) do
+        if tabContainer.Name:find("Container") and tabContainer ~= self.leftSidebar:FindFirstChild("UserProfileFrame") then
+            local indicator = tabContainer:FindFirstChild("Indicator")
+            local button = nil
+            
+            -- Find the button (should be a TextButton)
+            for _, child in ipairs(tabContainer:GetChildren()) do
+                if child:IsA("TextButton") then
+                    button = child
+                    break
+                end
+            end
+            
+            if button then
+                local iconLabel = button:FindFirstChild("Icon")
+                local separator = button:FindFirstChild("Separator")
+                local textLabel = button:FindFirstChild("Text")
+                
+                -- Get the tab name from the container name
+                local tabName = tabContainer.Name:gsub("Container", "")
+                local isSelected = (selectedTab.name == tabName)
+                
+                if indicator then indicator.Visible = isSelected end
+                if iconLabel then 
+                    iconLabel.ImageColor3 = isSelected and Color3.fromRGB(220, 50, 47) or Color3.fromRGB(160, 160, 160)
+                end
+                if separator then 
+                    separator.BackgroundColor3 = isSelected and Color3.fromRGB(220, 50, 47) or Color3.fromRGB(80, 80, 80)
+                end
+                if textLabel then 
+                    textLabel.TextColor3 = isSelected and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 160, 160)
+                end
             end
         end
     end
-})
+end
 
--- Create a third tab (Misc)
-local MiscTab = Window:CreateTab({
-    Name = "Misc",
-    Icon = "⚙️"
-})
-
-local UtilitySection = MiscTab:AddSection("Utility")         -- LEFT side
-local FunSection = MiscTab:AddSection("Fun Features")       -- RIGHT side
-
--- Utility features
-local antiAFKToggle = UtilitySection:CreateToggle({
-    Name = "Anti AFK",
-    Default = false,
-    Callback = function(value)
-        print("Anti AFK:", value)
+-- Element Creation Functions
+function RadiantHub:_createToggle(section, config)
+    config = config or {}
+    if not section or not section.elements then
+        warn("RadiantHub: Invalid section object passed to _createToggle!")
+        return
     end
-})
+    
+    local container = Instance.new("Frame")
+    container.Name = (config.Name or "Toggle") .. "Container"
+    container.Size = UDim2.new(1, -20, 0, 30)
+    container.BackgroundTransparency = 1
+    local textLabel = Instance.new("TextLabel")
+    if config.Description and config.Description ~= "" then
+        textLabel.Size = UDim2.new(1, -35, 1, -30)
+        textLabel.Position = UDim2.new(0, 0, 0, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Text = config.Name or "Toggle"
+        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        textLabel.TextSize = 14
+        textLabel.Font = Enum.Font.Gotham
+        textLabel.TextXAlignment = Enum.TextXAlignment.Left
+        textLabel.TextYAlignment = Enum.TextYAlignment.Center
+        textLabel.TextStrokeTransparency = 0
+        textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        textLabel.Parent = container
 
-local chatSpamToggle = UtilitySection:CreateToggle({
-    Name = "Chat Spam",
-    Default = false,
-    Callback = function(value)
-        print("Chat Spam:", value)
+
+
+        local textLabel2 = Instance.new("TextLabel")
+        textLabel2.Size = UDim2.new(1, -35, 1, 5)
+        textLabel2.Position = UDim2.new(0, 0, 0, 0)
+        textLabel2.BackgroundTransparency = 1
+        textLabel2.Text = config.Description or "Toggle"
+        textLabel2.TextColor3 = Color3.fromRGB(255, 255, 255)
+        textLabel2.TextSize = 10
+        textLabel2.Font = Enum.Font.Gotham
+        textLabel2.TextXAlignment = Enum.TextXAlignment.Left
+        textLabel2.TextYAlignment = Enum.TextYAlignment.Center
+        textLabel2.TextStrokeTransparency = 0
+        textLabel2.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        textLabel2.Parent = container
+    else
+        textLabel.Size = UDim2.new(1, -35, 1, 0)
+        textLabel.Position = UDim2.new(0, 0, 0, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Text = config.Name or "Toggle"
+        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        textLabel.TextSize = 14
+        textLabel.Font = Enum.Font.Gotham
+        textLabel.TextXAlignment = Enum.TextXAlignment.Left
+        textLabel.TextYAlignment = Enum.TextYAlignment.Center
+        textLabel.TextStrokeTransparency = 0
+        textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        textLabel.Parent = container
     end
-})
+    
 
--- Fun features
-local bigHeadToggle = FunSection:CreateToggle({
-    Name = "Big Head",
-    Default = false,
-    Callback = function(value)
-        print("Big Head:", value)
+    
+        -- OUTER BORDER/OUTLINE (stays visible)
+    -- OUTER BORDER/OUTLINE (smaller and dark)
+    local checkboxout = Instance.new("Frame")
+    checkboxout.Size = UDim2.new(0, 22, 0, 22) -- Smaller outline
+    checkboxout.Position = UDim2.new(1, -26, 0.5, -11)
+    checkboxout.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Dark outline
+    checkboxout.BorderSizePixel = 0
+    checkboxout.Parent = container
+
+    -- INNER CHECKBOX (the actual checkbox)
+    local checkbox = Instance.new("TextButton")
+    checkbox.Size = UDim2.new(0, 20, 0, 20) -- Inner size
+    checkbox.Position = UDim2.new(0, 1, 0, 1) -- Centered in outline (1px offset)
+    checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    checkbox.BorderSizePixel = 0 -- No border on inner
+    checkbox.Text = ""
+    checkbox.Parent = checkboxout -- Parent to the outline
+    
+    
+    --[[local checkboxCorner = Instance.new("UICorner")
+    checkboxCorner.CornerRadius = UDim.new(0, 3)
+    checkboxCorner.Parent = checkbox]]
+    
+    -- Gradient for toggle
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+    })
+    gradient.Rotation = 45
+    gradient.Parent = checkbox
+    
+    local checkmark = Instance.new("TextLabel")
+    checkmark.Size = UDim2.new(1, 0, 1, 0)
+    checkmark.BackgroundTransparency = 1
+    checkmark.Text = "✓"
+    checkmark.TextColor3 = Color3.fromRGB(0, 255, 100)
+    checkmark.TextSize = 14
+    checkmark.Font = Enum.Font.GothamBold
+    checkmark.TextStrokeTransparency = 0
+    checkmark.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    checkmark.Visible = config.Default or false
+    checkmark.Parent = checkbox
+    
+    
+    local isEnabled = config.Default or false
+    if isEnabled then
+        checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
+        checkmark.Visible = true
+        textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
     end
-})
-
-local rainbowCharacterToggle = FunSection:CreateToggle({
-    Name = "Rainbow Character",
-    Default = false,
-    Callback = function(value)
-        print("Rainbow Character:", value)
+    
+    -- Store connection data for proper updates
+    local connections = {}
+    
+    local function updateToggle()
+        if isEnabled then
+            checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
+            checkmark.Visible = true
+            textLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+        else
+            checkbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+            checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
+            checkmark.Visible = false
+            textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        end
     end
-})
+    
+    connections.activated = checkbox.Activated:Connect(function()
+        isEnabled = not isEnabled
+        updateToggle()
+        if config.Callback then
+            config.Callback(isEnabled)
+        end
+    end)
+    
+    -- Store connections in the container for cleanup
+    container:SetAttribute("HasConnections", true)
+    
+    table.insert(section.elements, container)
+    print("[RadiantHub] Toggle created in section:", section.name)
+    
+    return {
+        SetValue = function(value)
+            if type(value) == "table" or type(value) == "function" then return end
+            local boolValue = value
+            if type(value) == "string" then
+                boolValue = value:lower() == "true"
+            elseif type(value) == "number" then
+                boolValue = value ~= 0
+            else
+                boolValue = not not value
+            end
+            isEnabled = boolValue
+            updateToggle()
+            if config.Callback then
+                config.Callback(isEnabled)
+            end
+        end,
+        GetValue = function()
+            return isEnabled
+        end,
+        Destroy = function()
+            for _, connection in pairs(connections) do
+                if connection then connection:Disconnect() end
+            end
+        end
+    }
+end
 
-local musicVolumeSlider = FunSection:CreateSlider({
-    Name = "Music Volume",
-    Min = 0,
-    Max = 100,
-    Default = 50,
-    Callback = function(value)
-        print("Music Volume:", value)
+
+function RadiantHub:_createSlider(section, config)
+    config = config or {}
+    if not section or not section.elements then
+        warn("RadiantHub: Invalid section object passed to _createSlider!")
+        return
     end
-})
+    
+    local container = Instance.new("Frame")
+    container.Name = (config.Name or "Slider") .. "Container"
+    container.Size = UDim2.new(1, -20, 0, 40)
+    container.BackgroundTransparency = 1
 
--- Example of using the API functions
-print("=== RadiantHub Example Started ===")
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    textLabel.Position = UDim2.new(0, 0, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = config.Name or "Slider"
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.Gotham
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.Parent = container
 
--- Wait a bit then demonstrate some features
-wait(2)
-Window:CreateNotification("Welcome", "RadiantHub loaded successfully!", 3)
+    local minVal = tonumber(config.Min) or 0
+    local maxVal = tonumber(config.Max) or 100
+    local currentValue = tonumber(config.Default) or minVal
+    self.settings[config.Name or "Slider"] = currentValue
 
-wait(1)
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Size = UDim2.new(0.3, 0, 0, 20)
+    valueLabel.Position = UDim2.new(0.7, 0, 0, 0)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = tostring(currentValue)
+    valueLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    valueLabel.TextSize = 12
+    valueLabel.Font = Enum.Font.Gotham
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valueLabel.TextStrokeTransparency = 0
+    valueLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    valueLabel.Parent = container
 
--- Demonstrate setting values programmatically
-autoAttackToggle.SetValue(true)
-attackSpeedSlider.SetValue(8)
-weaponDropdown.SetValue(3) -- Staff
+    -- MODERN SQUARE SLIDER BACKGROUND (NO ROUNDED CORNERS)
+    local sliderBG = Instance.new("TextButton")
+    sliderBG.Size = UDim2.new(1, 0, 0, 14)
+    sliderBG.Position = UDim2.new(0, 0, 1, -18)
+    sliderBG.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    sliderBG.BorderSizePixel = 1
+    sliderBG.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    sliderBG.Text = ""
+    sliderBG.Parent = container
 
-wait(2)
-Window:CreateNotification("Demo", "Settings have been automatically configured!", 3)
+    local initPos = (currentValue - minVal) / (maxVal - minVal)
+    
+    -- MODERN SQUARE SLIDER FILL (NO ROUNDED CORNERS)
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Size = UDim2.new(initPos, 0, 1, 0)
+    sliderFill.Position = UDim2.new(0, 0, 0, 0)
+    sliderFill.BackgroundTransparency = 0
+    sliderFill.BackgroundColor3 = Color3.fromRGB(120, 80, 255)
+    sliderFill.BorderSizePixel = 0
+    sliderFill.Parent = sliderBG
 
--- Show debug information
-wait(2)
-Window:DebugSettings()
+    -- MODERN PURPLE TO BLUE GRADIENT
+    local sliderGradient = Instance.new("UIGradient")
+    sliderGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0)),
+       
+    })
+    sliderGradient.Rotation = 0
+    sliderGradient.Parent = sliderFill
 
-print("=== Example Complete ===")
-print("Try these features:")
-print("- Toggle switches on the left and right")
-print("- Adjust sliders") 
-print("- Select from dropdowns")
-print("- Click buttons")
-print("- Switch between tabs")
-print("- Use Right Ctrl to minimize/restore")
-print("- Drag the window around by the title bar")
+    -- MODERN SQUARE SLIDER HANDLE (WHITE SQUARE)
+    local sliderHandle = Instance.new("TextButton")
+    sliderHandle.Size = UDim2.new(0, 14, 0, 14)
+    sliderHandle.Position = UDim2.new(initPos, -7, 0, 0)
+    sliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    sliderHandle.BorderSizePixel = 1
+    sliderHandle.BorderColor3 = Color3.fromRGB(120, 120, 130)
+    sliderHandle.Text = ""
+    sliderHandle.Parent = sliderBG
+
+    local isDragging = false
+    local function updateSlider(inputPos)
+        local pos = math.clamp((inputPos.X - sliderBG.AbsolutePosition.X) / sliderBG.AbsoluteSize.X, 0, 1)
+        local value = math.floor(minVal + (maxVal - minVal) * pos)
+        currentValue = value
+        self.settings[config.Name or "Slider"] = value
+        sliderFill.Size = UDim2.new(pos, 0, 1, 0)
+        -- Fixed positioning - handle stays aligned with track
+        sliderHandle.Position = UDim2.new(pos, -7, 0, 0)
+        valueLabel.Text = tostring(value)
+        if config.Callback then
+            config.Callback(value)
+        end
+    end
+    
+    sliderHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = true
+            updateSlider(input.Position)
+        end
+    end)
+    
+    sliderBG.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            updateSlider(input.Position)
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            updateSlider(input.Position)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = false
+        end
+    end)
+    
+    table.insert(section.elements, container)
+    print("[RadiantHub] Modern Slider created in section:", section.name)
+    
+    return {
+        SetValue = function(value)
+            if value == nil or type(value) == "table" or type(value) == "function" then return end
+            local numValue = tonumber(value)
+            if not numValue then return end
+            currentValue = math.clamp(numValue, minVal, maxVal)
+            self.settings[config.Name or "Slider"] = currentValue
+            local pos = (currentValue - minVal) / (maxVal - minVal)
+            sliderFill.Size = UDim2.new(pos, 0, 1, 0)
+            sliderHandle.Position = UDim2.new(pos, -7, 0, 0)
+            valueLabel.Text = tostring(currentValue)
+            if config.Callback then
+                config.Callback(currentValue)
+            end
+        end,
+        GetValue = function()
+            return currentValue
+        end
+    }
+end
+
+
+function RadiantHub:_createDropdown(section, config)
+    config = config or {}
+    if not section or not section.elements then
+        warn("RadiantHub: Invalid section object passed to _createDropdown!")
+        return
+    end
+    
+    local container = Instance.new("Frame")
+    container.Name = (config.Name or "Dropdown") .. "Container"
+    container.Size = UDim2.new(1, -20, 0, 35)
+    container.BackgroundTransparency = 1
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(0.4, 0, 1, 0)
+    textLabel.Position = UDim2.new(0, 0, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = config.Name or "Dropdown"
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.Gotham
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.Parent = container
+    
+    local currentIndex = config.Default or 1
+    local options = config.Options or {"Option 1", "Option 2"}
+    
+    local dropdown = Instance.new("TextButton")
+    dropdown.Size = UDim2.new(0.55, 0, 0, 25)
+    dropdown.Position = UDim2.new(0.45, 0, 0.5, -12.5)
+    dropdown.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    dropdown.BorderSizePixel = 1
+    dropdown.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    dropdown.Text = tostring(options[currentIndex]) .. " ▼"
+    dropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
+    dropdown.TextStrokeTransparency = 0
+    dropdown.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    dropdown.TextSize = 11
+    dropdown.Font = Enum.Font.Gotham
+    dropdown.ZIndex = 2
+    dropdown.Parent = container
+    
+    local dropdownCorner = Instance.new("UICorner")
+    dropdownCorner.CornerRadius = UDim.new(0, 4)
+    dropdownCorner.Parent = dropdown
+    
+    local dropdownMenu = Instance.new("Frame")
+    dropdownMenu.Name = "DropdownMenu"
+    local maxVisible = 6
+    local menuHeight = math.min(#options, maxVisible) * 25 + (config.Searchable and 30 or 0)
+    dropdownMenu.Size = UDim2.new(0.55, 0, 0, menuHeight)
+    dropdownMenu.Position = UDim2.new(0.45, 0, 1, 0)
+    dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    dropdownMenu.BorderSizePixel = 1
+    dropdownMenu.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    dropdownMenu.Visible = false
+    dropdownMenu.ZIndex = 3
+    dropdownMenu.Parent = container
+    
+    local menuCorner = Instance.new("UICorner")
+    menuCorner.CornerRadius = UDim.new(0, 4)
+    menuCorner.Parent = dropdownMenu
+    
+    local searchBox
+    local optionsFrame
+    if config.Searchable then
+        searchBox = Instance.new("TextBox")
+        searchBox.Name = "SearchBox"
+        searchBox.Size = UDim2.new(1, -10, 0, 25)
+        searchBox.Position = UDim2.new(0, 5, 0, 2.5)
+        searchBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        searchBox.BorderSizePixel = 1
+        searchBox.BorderColor3 = Color3.fromRGB(100, 100, 100)
+        searchBox.Text = ""
+        searchBox.PlaceholderText = "Search..."
+        searchBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+        searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+        searchBox.TextStrokeTransparency = 0
+        searchBox.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        searchBox.TextSize = 10
+        searchBox.Font = Enum.Font.Gotham
+        searchBox.ZIndex = 4
+        searchBox.Parent = dropdownMenu
+        
+        local searchCorner = Instance.new("UICorner")
+        searchCorner.CornerRadius = UDim.new(0, 3)
+        searchCorner.Parent = searchBox
+        
+        optionsFrame = Instance.new("ScrollingFrame")
+        optionsFrame.Name = "OptionsFrame"
+        optionsFrame.Size = UDim2.new(1, 0, 1, -30)
+        optionsFrame.Position = UDim2.new(0, 0, 0, 30)
+    else
+        optionsFrame = Instance.new("ScrollingFrame")
+        optionsFrame.Name = "OptionsFrame"
+        optionsFrame.Size = UDim2.new(1, 0, 1, 0)
+        optionsFrame.Position = UDim2.new(0, 0, 0, 0)
+    end
+    
+    optionsFrame.BackgroundTransparency = 1
+    optionsFrame.BorderSizePixel = 0
+    optionsFrame.ScrollBarThickness = 6
+    optionsFrame.ZIndex = 4
+    optionsFrame.Parent = dropdownMenu
+    
+    local isOpen = false
+    local optionButtons = {}
+    
+    for i, option in ipairs(options) do
+        local optionButton = Instance.new("TextButton")
+        optionButton.Size = UDim2.new(1, 0, 0, 25)
+        optionButton.Position = UDim2.new(0, 0, 0, (i-1) * 25)
+        optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        optionButton.BorderSizePixel = 0
+        optionButton.Text = option
+        optionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        optionButton.TextStrokeTransparency = 0
+        optionButton.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        optionButton.TextSize = 11
+        optionButton.Font = Enum.Font.Gotham
+        optionButton.ZIndex = 5
+        optionButton.Parent = optionsFrame
+        
+        table.insert(optionButtons, {button = optionButton, text = option, index = i})
+        
+        optionButton.MouseEnter:Connect(function()
+            optionButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        end)
+        
+        optionButton.MouseLeave:Connect(function()
+            optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        end)
+        
+        optionButton.MouseButton1Click:Connect(function()
+            dropdown.Text = option .. " ▼"
+            currentIndex = i
+            self.settings[config.Name or "Dropdown"] = i
+            dropdownMenu.Visible = false
+            isOpen = false
+            if config.Callback then
+                config.Callback(option, i)
+            end
+        end)
+    end
+    
+    optionsFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 25)
+    
+    if searchBox then
+        searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+            local searchTerm = searchBox.Text:lower()
+            local visibleCount = 0
+            for _, optionData in ipairs(optionButtons) do
+                if searchTerm == "" or optionData.text:lower():find(searchTerm) then
+                    optionData.button.Visible = true
+                    optionData.button.Position = UDim2.new(0, 0, 0, visibleCount * 25)
+                    visibleCount = visibleCount + 1
+                else
+                    optionData.button.Visible = false
+                end
+            end
+            optionsFrame.CanvasSize = UDim2.new(0, 0, 0, visibleCount * 25)
+            dropdownMenu.Size = UDim2.new(0.55, 0, 0, math.min(visibleCount * 25 + 30, 200))
+        end)
+    end
+    
+    dropdown.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        dropdownMenu.Visible = isOpen
+        if isOpen then
+            dropdown.Text = tostring(options[currentIndex]) .. " ▲"
+            if searchBox then
+                searchBox.Text = ""
+                searchBox:CaptureFocus()
+            end
+        else
+            dropdown.Text = tostring(options[currentIndex]) .. " ▼"
+        end
+    end)
+    
+    table.insert(section.elements, container)
+    print("[RadiantHub] Dropdown created in section:", section.name)
+    
+    return {
+        SetValue = function(value)
+            if type(value) == "table" or type(value) == "function" then return end
+            local numValue = tonumber(value)
+            if numValue and numValue >= 1 and numValue <= #options then
+                currentIndex = numValue
+                dropdown.Text = tostring(options[currentIndex]) .. " ▼"
+                self.settings[config.Name or "Dropdown"] = currentIndex
+                if config.Callback then
+                    config.Callback(options[currentIndex], currentIndex)
+                end
+            end
+        end,
+        GetValue = function()
+            return currentIndex, options[currentIndex]
+        end
+    }
+end
+
+function RadiantHub:_createMultiDropdown(section, config)
+    config = config or {}
+    if not section or not section.elements then
+        warn("RadiantHub: Invalid section object passed to _createMultiDropdown!")
+        return
+    end
+    local container = Instance.new("Frame")
+    container.Name = (config.Name or "MultiDropdown") .. "Container"
+    container.Size = UDim2.new(1, -20, 0, 35)
+    container.BackgroundTransparency = 1
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(0.4, 0, 1, 0)
+    textLabel.Position = UDim2.new(0, 0, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = config.Name or "MultiDropdown"
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextStrokeTransparency = 0 -- Text outline back
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.Gotham
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.Parent = container
+    
+    local dropdown = Instance.new("TextButton")
+    dropdown.Size = UDim2.new(0.55, 0, 0, 25)
+    dropdown.Position = UDim2.new(0.45, 0, 0.5, -12.5)
+    dropdown.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    dropdown.BorderSizePixel = 1
+    dropdown.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    dropdown.Text = "Multiple ▼"
+    dropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
+    dropdown.TextStrokeTransparency = 0 -- Text outline back
+    dropdown.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    dropdown.TextSize = 11
+    dropdown.Font = Enum.Font.Gotham
+    dropdown.ZIndex = 2
+    dropdown.Parent = container
+    
+    local dropdownCorner = Instance.new("UICorner")
+    dropdownCorner.CornerRadius = UDim.new(0, 4)
+    dropdownCorner.Parent = dropdown
+    
+    local options = config.Options or {"Option 1", "Option 2"}
+    local selectedOptions = config.Default or {}
+    
+    -- FIXED DROPDOWN MENU POSITIONING (OPENS BELOW THE BUTTON)
+    local dropdownMenu = Instance.new("Frame")
+    dropdownMenu.Name = "MultiDropdownMenu"
+    dropdownMenu.Size = UDim2.new(0.55, 0, 0, math.min(#options, 6) * 30 + 10)
+    dropdownMenu.Position = UDim2.new(0.45, 0, 1, 5) -- Properly positioned below dropdown button
+    dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    dropdownMenu.BorderSizePixel = 2
+    dropdownMenu.BorderColor3 = Color3.fromRGB(100, 100, 100) -- Better border color
+    dropdownMenu.Visible = false
+    dropdownMenu.ZIndex = 3
+    dropdownMenu.Parent = container
+    
+    local menuCorner = Instance.new("UICorner")
+    menuCorner.CornerRadius = UDim.new(0, 4)
+    menuCorner.Parent = dropdownMenu
+    
+    local menuShadow = Instance.new("ImageLabel")
+    menuShadow.Name = "MenuShadow"
+    menuShadow.Image = "rbxassetid://1316045217"
+    menuShadow.Size = UDim2.new(1, 8, 1, 8)
+    menuShadow.Position = UDim2.new(0, -4, 0, -4)
+    menuShadow.BackgroundTransparency = 1
+    menuShadow.ImageTransparency = 0.7
+    menuShadow.ZIndex = 2
+    menuShadow.Parent = dropdownMenu
+    
+    local optionButtons = {}
+    for i, option in ipairs(options) do
+        local optionRow = Instance.new("Frame")
+        optionRow.Size = UDim2.new(1, 0, 0, 30)
+        optionRow.Position = UDim2.new(0, 0, 0, (i-1) * 30)
+        optionRow.BackgroundTransparency = 1
+        optionRow.ZIndex = 4
+        optionRow.Parent = dropdownMenu
+        
+        -- Option label (left)
+        local optionLabel = Instance.new("TextButton")
+        optionLabel.Size = UDim2.new(1, -40, 1, 0)
+        optionLabel.Position = UDim2.new(0, 10, 0, 0)
+        optionLabel.BackgroundTransparency = 1
+        optionLabel.Text = option
+        optionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        optionLabel.TextStrokeTransparency = 0 -- Text outline back
+        optionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        optionLabel.TextSize = 13
+        optionLabel.Font = Enum.Font.Gotham
+        optionLabel.TextXAlignment = Enum.TextXAlignment.Left
+        optionLabel.ZIndex = 5
+        optionLabel.Parent = optionRow
+        
+        -- CHECKBOX WITH BORDER (RED UNSELECTED, GREEN SELECTED)
+        local checkbox = Instance.new("TextButton")
+        checkbox.Name = "Checkbox"
+        checkbox.Size = UDim2.new(0, 18, 0, 18)
+        checkbox.Position = UDim2.new(1, -24, 0.5, -9)
+        checkbox.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Red unselected
+        checkbox.BorderSizePixel = 2
+        checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150) -- Border around checkbox
+        checkbox.Text = ""
+        checkbox.ZIndex = 5
+        checkbox.Parent = optionRow
+        
+        local checkboxCorner = Instance.new("UICorner")
+        checkboxCorner.CornerRadius = UDim.new(0, 2)
+        checkboxCorner.Parent = checkbox
+        
+        -- GRADIENT (ONLY SHOWN WHEN SELECTED)
+        local gradient = Instance.new("UIGradient")
+        gradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+        })
+        gradient.Rotation = 45
+        gradient.Parent = checkbox
+        gradient.Enabled = false -- Hidden by default
+        
+        -- CHECKMARK (ONLY SHOWN WHEN SELECTED)
+        local checkmark = Instance.new("TextLabel")
+        checkmark.Size = UDim2.new(1, 0, 1, 0)
+        checkmark.BackgroundTransparency = 1
+        checkmark.Text = "✓"
+        checkmark.TextColor3 = Color3.fromRGB(255, 255, 255)
+        checkmark.TextSize = 12
+        checkmark.Font = Enum.Font.SourceSansBold
+        checkmark.TextStrokeTransparency = 0 -- Text outline back
+        checkmark.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        checkmark.Visible = false -- Hidden by default
+        checkmark.ZIndex = 6
+        checkmark.Parent = checkbox
+        
+        local function updateCheckbox()
+            if selectedOptions[option] then
+                -- SELECTED STATE: Green checkbox with checkmark
+                gradient.Enabled = false -- No gradient, just solid green
+                checkbox.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Green selected
+                checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150) -- Keep border
+                checkmark.Visible = true -- Show checkmark
+                optionLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- Keep normal text color
+                optionRow.BackgroundTransparency = 1 -- No row highlight
+            else
+                -- UNSELECTED STATE: Red checkbox 
+                gradient.Enabled = false -- No gradient
+                checkbox.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Red unselected
+                checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150) -- Keep border
+                checkmark.Visible = false -- Hide checkmark
+                optionLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- Normal text
+                optionRow.BackgroundTransparency = 1 -- No row highlight
+            end
+        end
+        
+        local function toggleOption()
+            selectedOptions[option] = not selectedOptions[option]
+            updateCheckbox()
+            if config.Callback then
+                config.Callback(selectedOptions)
+            end
+        end
+        
+        checkbox.Activated:Connect(toggleOption)
+        optionLabel.Activated:Connect(toggleOption)
+        
+        -- HOVER EFFECTS
+        optionRow.MouseEnter:Connect(function()
+            if not selectedOptions[option] then
+                optionRow.BackgroundTransparency = 0.9
+                optionRow.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
+            end
+        end)
+        
+        optionRow.MouseLeave:Connect(function()
+            if not selectedOptions[option] then
+                optionRow.BackgroundTransparency = 1
+            end
+        end)
+        
+        -- Initialize checkbox state
+        updateCheckbox()
+        
+        table.insert(optionButtons, {
+            row = optionRow, 
+            checkbox = checkbox, 
+            label = optionLabel, 
+            checkmark = checkmark, 
+            option = option, 
+            updateCheckbox = updateCheckbox
+        })
+    end
+    
+    dropdown.MouseButton1Click:Connect(function()
+        dropdownMenu.Visible = not dropdownMenu.Visible
+    end)
+    
+    table.insert(section.elements, container)
+    print("[RadiantHub] Improved MultiDropdown created in section:", section.name)
+    
+    return {
+        SetValue = function(value)
+            if type(value) ~= "table" then return end
+            selectedOptions = value
+            for _, btn in ipairs(optionButtons) do
+                btn.updateCheckbox()
+            end
+            if config.Callback then
+                config.Callback(selectedOptions)
+            end
+        end,
+        GetValue = function()
+            return selectedOptions
+        end
+    }
+end
+
+
+function RadiantHub:_createColorPicker(section, config)
+    config = config or {}
+    if not section or not section.elements then
+        warn("RadiantHub: Invalid section object passed to _createColorPicker! Section: " .. tostring(section and section.name or 'nil'))
+        return
+    end
+
+    local container = Instance.new("Frame")
+    container.Name = (config.Name or "ColorPicker") .. "Container"
+    container.Size = UDim2.new(1, -20, 0, 35)
+    container.BackgroundTransparency = 1
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, -50, 1, 0)
+    textLabel.Position = UDim2.new(0, 0, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = config.Name or "ColorPicker"
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextSize = 14
+    textLabel.Font = Enum.Font.GothamMedium
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.Parent = container
+    
+    local colorButton = Instance.new("TextButton")
+    colorButton.Size = UDim2.new(0, 35, 0, 28)
+    colorButton.Position = UDim2.new(1, -40, 0.5, -14)
+    colorButton.BackgroundColor3 = config.Default or Color3.fromRGB(255, 100, 100)
+    colorButton.BorderSizePixel = 0
+    colorButton.Text = ""
+    colorButton.ZIndex = 2
+    colorButton.Parent = container
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 8)
+    buttonCorner.Parent = colorButton
+    
+    local buttonStroke = Instance.new("UIStroke")
+    buttonStroke.Color = Color3.fromRGB(255, 255, 255)
+    buttonStroke.Transparency = 0.7
+    buttonStroke.Thickness = 2
+    buttonStroke.Parent = colorButton
+    
+    -- ENHANCED COLOR PICKER POPUP (WITH PROPER HSV MATH)
+    local colorPicker = Instance.new("Frame")
+    colorPicker.Name = "ColorPicker"
+    colorPicker.Size = UDim2.new(0, 250, 0, 155)
+    colorPicker.Position = UDim2.new(1, -250, 0, 35)
+    colorPicker.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    colorPicker.BorderSizePixel = 2
+    colorPicker.BorderColor3 = Color3.fromRGB(70, 70, 70)
+    colorPicker.Visible = false
+    colorPicker.ZIndex = 50
+    colorPicker.Parent = container
+    
+    local pickerCorner = Instance.new("UICorner")
+    pickerCorner.CornerRadius = UDim.new(0, 8)
+    pickerCorner.Parent = colorPicker
+    
+    -- Add a subtle glow effect
+    local glowFrame = Instance.new("Frame")
+    glowFrame.Size = UDim2.new(1, 6, 1, 6)
+    glowFrame.Position = UDim2.new(0, -3, 0, -3)
+    glowFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    glowFrame.BackgroundTransparency = 0.3
+    glowFrame.BorderSizePixel = 0
+    glowFrame.ZIndex = 49
+    glowFrame.Parent = colorPicker
+    
+    local glowCorner = Instance.new("UICorner")
+    glowCorner.CornerRadius = UDim.new(0, 10)
+    glowCorner.Parent = glowFrame
+    
+    -- 2D SATURATION/BRIGHTNESS PICKER (MAIN AREA)
+    local satBrightPicker = Instance.new("TextButton")
+    satBrightPicker.Size = UDim2.new(0, 180, 0, 120)
+    satBrightPicker.Position = UDim2.new(0, 10, 0, 10)
+    satBrightPicker.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Will be updated based on hue
+    satBrightPicker.BorderSizePixel = 2
+    satBrightPicker.BorderColor3 = Color3.fromRGB(200, 200, 200)
+    satBrightPicker.Text = ""
+    satBrightPicker.ZIndex = 51
+    satBrightPicker.Parent = colorPicker
+    
+    -- White to transparent gradient (horizontal - saturation)
+    local saturationOverlay = Instance.new("Frame")
+    saturationOverlay.Size = UDim2.new(1, 0, 1, 0)
+    saturationOverlay.Position = UDim2.new(0, 0, 0, 0)
+    saturationOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    saturationOverlay.BorderSizePixel = 0
+    saturationOverlay.ZIndex = 52
+    saturationOverlay.Parent = satBrightPicker
+    
+    local satGradient = Instance.new("UIGradient")
+    satGradient.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1)
+    }
+    satGradient.Rotation = 0
+    satGradient.Parent = saturationOverlay
+    
+    -- Black overlay (vertical - brightness)
+    local brightnessOverlay = Instance.new("Frame")
+    brightnessOverlay.Size = UDim2.new(1, 0, 1, 0)
+    brightnessOverlay.Position = UDim2.new(0, 0, 0, 0)
+    brightnessOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    brightnessOverlay.BorderSizePixel = 0
+    brightnessOverlay.ZIndex = 53
+    brightnessOverlay.Parent = saturationOverlay
+    
+    local brightGradient = Instance.new("UIGradient")
+    brightGradient.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(1, 0)
+    }
+    brightGradient.Rotation = 90
+    brightGradient.Parent = brightnessOverlay
+    
+    -- Color picker selector with better visibility
+    local colorSelector = Instance.new("Frame")
+    colorSelector.Size = UDim2.new(0, 12, 0, 12)
+    colorSelector.Position = UDim2.new(1, -6, 0, -6) -- Start at top right (full saturation, full brightness)
+    colorSelector.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    colorSelector.BorderSizePixel = 3
+    colorSelector.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    colorSelector.ZIndex = 55
+    colorSelector.Parent = satBrightPicker
+    
+    local selectorCorner = Instance.new("UICorner")
+    selectorCorner.CornerRadius = UDim.new(0.5, 0)
+    selectorCorner.Parent = colorSelector
+    
+    -- Add white inner ring for better visibility
+    local innerSelector = Instance.new("Frame")
+    innerSelector.Size = UDim2.new(0, 6, 0, 6)
+    innerSelector.Position = UDim2.new(0.5, -3, 0.5, -3)
+    innerSelector.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    innerSelector.BorderSizePixel = 1
+    innerSelector.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    innerSelector.ZIndex = 56
+    innerSelector.Parent = colorSelector
+    
+    local innerCorner = Instance.new("UICorner")
+    innerCorner.CornerRadius = UDim.new(0.5, 0)
+    innerCorner.Parent = innerSelector
+    
+    -- HUE BAR (VERTICAL ON RIGHT SIDE)
+    local hueBar = Instance.new("TextButton")
+    hueBar.Size = UDim2.new(0, 25, 0, 120)
+    hueBar.Position = UDim2.new(0, 200, 0, 10)
+    hueBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    hueBar.BorderSizePixel = 2
+    hueBar.BorderColor3 = Color3.fromRGB(200, 200, 200)
+    hueBar.Text = ""
+    hueBar.ZIndex = 51
+    hueBar.Parent = colorPicker
+    
+    -- PERFECT HUE GRADIENT (PROPER RAINBOW COLORS)
+    local hueGradient = Instance.new("UIGradient")
+    hueGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),      -- Red
+        ColorSequenceKeypoint.new(0.167, Color3.fromRGB(255, 255, 0)), -- Yellow
+        ColorSequenceKeypoint.new(0.333, Color3.fromRGB(0, 255, 0)),   -- Green
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),   -- Cyan
+        ColorSequenceKeypoint.new(0.667, Color3.fromRGB(0, 0, 255)),   -- Blue
+        ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 0, 255)), -- Magenta
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))        -- Red
+    }
+    hueGradient.Rotation = 90 -- Vertical
+    hueGradient.Parent = hueBar
+    
+    -- Hue selector with better visibility
+    local hueSelector = Instance.new("Frame")
+    hueSelector.Size = UDim2.new(1, 6, 0, 6)
+    hueSelector.Position = UDim2.new(0, -3, 0, -3) -- Start at top (red)
+    hueSelector.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    hueSelector.BorderSizePixel = 2
+    hueSelector.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    hueSelector.ZIndex = 52
+    hueSelector.Parent = hueBar
+    
+    local hueSelectorCorner = Instance.new("UICorner")
+    hueSelectorCorner.CornerRadius = UDim.new(0, 3)
+    hueSelectorCorner.Parent = hueSelector
+    
+    -- Current color values (HSV format)
+    local currentHue = 0     -- 0-1
+    local currentSat = 1     -- 0-1  
+    local currentBright = 1  -- 0-1
+    
+    -- PROPER HSV TO RGB CONVERSION FUNCTION
+    local function HSVtoRGB(h, s, v)
+        local r, g, b
+        
+        local i = math.floor(h * 6)
+        local f = h * 6 - i
+        local p = v * (1 - s)
+        local q = v * (1 - f * s)
+        local t = v * (1 - (1 - f) * s)
+        
+        local imod = i % 6
+        
+        if imod == 0 then
+            r, g, b = v, t, p
+        elseif imod == 1 then
+            r, g, b = q, v, p
+        elseif imod == 2 then
+            r, g, b = p, v, t
+        elseif imod == 3 then
+            r, g, b = p, q, v
+        elseif imod == 4 then
+            r, g, b = t, p, v
+        elseif imod == 5 then
+            r, g, b = v, p, q
+        end
+        
+        return math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5)
+    end
+    
+    -- Function to get hue color (pure hue at full saturation and brightness)
+    local function getHueColor(hue)
+        return HSVtoRGB(hue, 1, 1)
+    end
+    
+    -- RGB TO HSV CONVERSION (for setting initial values)
+    local function RGBtoHSV(r, g, b)
+        r, g, b = r / 255, g / 255, b / 255
+        local max, min = math.max(r, g, b), math.min(r, g, b)
+        local h, s, v
+        
+        v = max
+        local d = max - min
+        if max == 0 then s = 0 else s = d / max end
+        
+        if max == min then
+            h = 0 -- achromatic
+        else
+            if max == r then
+                h = (g - b) / d
+                if g < b then h = h + 6 end
+            elseif max == g then
+                h = (b - r) / d + 2
+            elseif max == b then
+                h = (r - g) / d + 4
+            end
+            h = h / 6
+        end
+        
+        return h, s, v
+    end
+    
+    -- Set initial HSV values from the current color
+    local initialColor = colorButton.BackgroundColor3
+    currentHue, currentSat, currentBright = RGBtoHSV(
+        initialColor.R * 255, 
+        initialColor.G * 255, 
+        initialColor.B * 255
+    )
+    
+    -- Update color function
+    local function updateColor()
+        local r, g, b = HSVtoRGB(currentHue, currentSat, currentBright)
+        local newColor = Color3.fromRGB(r, g, b)
+        colorButton.BackgroundColor3 = newColor
+        
+        -- Update the base hue for the 2D picker
+        local hueR, hueG, hueB = getHueColor(currentHue)
+        satBrightPicker.BackgroundColor3 = Color3.fromRGB(hueR, hueG, hueB)
+        
+        -- Call callback if provided
+        if config.Callback then
+            config.Callback(newColor)
+        end
+    end
+    
+    -- Update selector positions
+    local function updateSelectorPositions()
+        colorSelector.Position = UDim2.new(currentSat, -6, 1 - currentBright, -6)
+        hueSelector.Position = UDim2.new(0, -3, currentHue, -3)
+    end
+    
+    -- Handle 2D picker dragging (Mobile-compatible)
+    local isPickerDragging = false
+    
+    local function updateSatBright(inputPos)
+        local relativeX = math.clamp((inputPos.X - satBrightPicker.AbsolutePosition.X) / satBrightPicker.AbsoluteSize.X, 0, 1)
+        local relativeY = math.clamp((inputPos.Y - satBrightPicker.AbsolutePosition.Y) / satBrightPicker.AbsoluteSize.Y, 0, 1)
+        
+        currentSat = relativeX
+        currentBright = 1 - relativeY
+        
+        colorSelector.Position = UDim2.new(relativeX, -6, relativeY, -6)
+        updateColor()
+    end
+    
+    -- Enhanced mobile input handling for 2D picker
+    satBrightPicker.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            isPickerDragging = true
+            updateSatBright(input.Position)
+        end
+    end)
+    
+    satBrightPicker.InputChanged:Connect(function(input)
+        if isPickerDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or 
+                                input.UserInputType == Enum.UserInputType.Touch) then
+            updateSatBright(input.Position)
+        end
+    end)
+    
+    satBrightPicker.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            isPickerDragging = false
+        end
+    end)
+    
+    -- Handle hue bar dragging (Mobile-compatible)
+    local isHueDragging = false
+    
+    local function updateHue(inputPos)
+        local relativeY = math.clamp((inputPos.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
+        
+        currentHue = relativeY
+        hueSelector.Position = UDim2.new(0, -3, relativeY, -3)
+        updateColor()
+    end
+    
+    -- Enhanced mobile input handling for hue bar
+    hueBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            isHueDragging = true
+            updateHue(input.Position)
+        end
+    end)
+    
+    hueBar.InputChanged:Connect(function(input)
+        if isHueDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or 
+                             input.UserInputType == Enum.UserInputType.Touch) then
+            updateHue(input.Position)
+        end
+    end)
+    
+    hueBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            isHueDragging = false
+        end
+    end)
+    
+    -- Close button with better styling
+    local closeButton = Instance.new("TextButton")
+    closeButton.Size = UDim2.new(0, 22, 0, 22)
+    closeButton.Position = UDim2.new(1.02, -27, 0, 5)
+    closeButton.BackgroundColor3 = Color3.fromRGB(220, 50, 47)
+    closeButton.BorderSizePixel = 1
+    closeButton.BorderColor3 = Color3.fromRGB(150, 150, 150)
+    closeButton.Text = "×"
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.TextSize = 14
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.ZIndex = 52
+    closeButton.Parent = colorPicker
+    
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 6)
+    closeCorner.Parent = closeButton
+    
+    -- Mobile-compatible close button
+    closeButton.MouseButton1Click:Connect(function()
+        colorPicker.Visible = false
+    end)
+    
+    closeButton.TouchTap:Connect(function()
+        colorPicker.Visible = false
+    end)
+    
+    -- Toggle color picker visibility (Mobile-compatible)
+    local isOpen = false
+    
+    colorButton.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        colorPicker.Visible = isOpen
+        if isOpen then
+            updateSelectorPositions()
+        end
+    end)
+    
+    colorButton.TouchTap:Connect(function()
+        isOpen = not isOpen
+        colorPicker.Visible = isOpen
+        if isOpen then
+            updateSelectorPositions()
+        end
+    end)
+    
+    -- Close picker when clicking outside
+    local outsideClickConnection = UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and colorPicker.Visible then
+            local mousePos = UserInputService:GetMouseLocation()
+            
+            local pickerPos = colorPicker.AbsolutePosition
+            local pickerSize = colorPicker.AbsoluteSize
+            local insidePicker = mousePos.X >= pickerPos.X and mousePos.X <= pickerPos.X + pickerSize.X 
+                           and mousePos.Y >= pickerPos.Y and mousePos.Y <= pickerPos.Y + pickerSize.Y
+            
+            local buttonPos = colorButton.AbsolutePosition
+            local buttonSize = colorButton.AbsoluteSize
+            local insideButton = mousePos.X >= buttonPos.X and mousePos.X <= buttonPos.X + buttonSize.X 
+                            and mousePos.Y >= buttonPos.Y and mousePos.Y <= buttonPos.Y + buttonSize.Y
+            
+            if not insidePicker and not insideButton then
+                colorPicker.Visible = false
+                isOpen = false
+            end
+        end
+    end)
+    
+    -- Initialize with current color
+    updateColor()
+    updateSelectorPositions()
+    
+    table.insert(section.elements, container)
+    print("[RadiantHub] Enhanced ColorPicker created in section:", section.name)
+    
+    return {
+        SetValue = function(value)
+            if typeof(value) == "Color3" then
+                colorButton.BackgroundColor3 = value
+                currentHue, currentSat, currentBright = RGBtoHSV(
+                    value.R * 255, 
+                    value.G * 255, 
+                    value.B * 255
+                )
+                updateColor()
+                updateSelectorPositions()
+            end
+        end,
+        GetValue = function()
+            return colorButton.BackgroundColor3
+        end,
+        SetVisible = function(visible)
+            colorPicker.Visible = visible
+            isOpen = visible
+            if visible then
+                updateSelectorPositions()
+            end
+        end,
+        Destroy = function()
+            if outsideClickConnection then
+                outsideClickConnection:Disconnect()
+            end
+        end
+    }
+end
+
+
+function RadiantHub:_createButton(section, config)
+    config = config or {}
+    if not section or not section.elements then
+        warn("RadiantHub: Invalid section object passed to _createButton!")
+        return
+    end
+    
+    -- Calculate container height based on whether description exists
+    local hasDescription = config.Description and config.Description ~= ""
+    local containerHeight = hasDescription and 55 or 20
+    
+    local container = Instance.new("Frame")
+    container.Name = (config.Name or "Button") .. "Container"
+    container.Size = UDim2.new(1, -20, 0, containerHeight)
+    container.BackgroundTransparency = 1
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(0.4, 0, 0, 20)
+    textLabel.Position = UDim2.new(0, 0, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = config.Name or "Button"
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.Gotham
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.Parent = container
+    
+    -- DESCRIPTION LABEL (only if description provided)
+    local descriptionLabel = nil
+    if hasDescription then
+        descriptionLabel = Instance.new("TextLabel")
+        descriptionLabel.Size = UDim2.new(0.4, 0, 0, 15)
+        descriptionLabel.Position = UDim2.new(0, 0, 0, 20)
+        descriptionLabel.BackgroundTransparency = 1
+        descriptionLabel.Text = config.Description
+        descriptionLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+        descriptionLabel.TextStrokeTransparency = 0
+        descriptionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        descriptionLabel.TextSize = 10
+        descriptionLabel.Font = Enum.Font.Gotham
+        descriptionLabel.TextXAlignment = Enum.TextXAlignment.Left
+        descriptionLabel.TextYAlignment = Enum.TextYAlignment.Center
+        descriptionLabel.TextWrapped = true
+        descriptionLabel.Parent = container
+    end
+    
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0.2, 0, 0, 25)
+    button.Position = UDim2.new(0.8, 0, 0.5, -12.5)
+    button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    button.BorderSizePixel = 1
+    button.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    button.Text = config.ButtonText or "Click"
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextStrokeTransparency = 0
+    button.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    button.TextSize = 11
+    button.Font = Enum.Font.Gotham
+    button.ZIndex = 2
+    button.Parent = container
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 4)
+    buttonCorner.Parent = button
+    
+    -- HOVER EFFECTS (like dropdown)
+    button.MouseEnter:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(85, 85, 85)
+    end)
+    
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    end)
+    
+    -- CLICK EFFECT
+    button.MouseButton1Down:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    end)
+    
+    button.MouseButton1Up:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(85, 85, 85)
+    end)
+    
+    button.Activated:Connect(function()
+        if config.Callback then
+            pcall(config.Callback)
+        end
+    end)
+
+    table.insert(section.elements, container)
+    print("[RadiantHub] Modern Button created in section:", section.name)
+    
+    return {
+        SetText = function(text)
+            button.Text = tostring(text or "Click")
+        end,
+        SetButtonText = function(text)
+            button.Text = tostring(text or "Click")
+        end,
+        SetLabelText = function(text)
+            textLabel.Text = tostring(text or "Button")
+        end,
+        SetDescription = function(text)
+            if descriptionLabel then
+                descriptionLabel.Text = tostring(text or "")
+            end
+        end
+    }
+end
+
+-- Notification System
+function RadiantHub:CreateNotification(title, message, duration)
+    if not self.notificationContainer then
+        warn("RadiantHub: Notification container not initialized")
+        return
+    end
+    
+    title = tostring(title or "Notification")
+    message = tostring(message or "")
+    duration = duration or 3
+    
+    local notification = Instance.new("Frame")
+    notification.Size = UDim2.new(1, 0, 0, 60)
+    notification.Position = UDim2.new(1, 0, 1, -60 * (#self.notificationQueue + 1))
+    notification.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    notification.BorderSizePixel = 0
+    notification.Parent = self.notificationContainer
+    
+    table.insert(self.notificationQueue, notification)
+    
+    local notifCorner = Instance.new("UICorner")
+    notifCorner.CornerRadius = UDim.new(0, 6)
+    notifCorner.Parent = notification
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -10, 0, 20)
+    titleLabel.Position = UDim2.new(0, 8, 0, 8)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 12
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = notification
+    
+    local messageLabel = Instance.new("TextLabel")
+    messageLabel.Size = UDim2.new(1, -10, 0, 25)
+    messageLabel.Position = UDim2.new(0, 8, 0, 28)
+    messageLabel.BackgroundTransparency = 1
+    messageLabel.Text = message
+    messageLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    messageLabel.TextSize = 10
+    messageLabel.Font = Enum.Font.Gotham
+    messageLabel.TextXAlignment = Enum.TextXAlignment.Left
+    messageLabel.TextWrapped = true
+    messageLabel.Parent = notification
+    
+    local slideIn = TweenService:Create(notification, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0, 0, 1, -60 * #self.notificationQueue)
+    })
+    slideIn:Play()
+    
+    spawn(function()
+        wait(duration)
+        for i, notif in ipairs(self.notificationQueue) do
+            if notif == notification then
+                table.remove(self.notificationQueue, i)
+                break
+            end
+        end
+        
+        local slideOut = TweenService:Create(notification, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Position = UDim2.new(1, 0, notification.Position.Y.Scale, notification.Position.Y.Offset)
+        })
+        slideOut:Play()
+        slideOut.Completed:Connect(function()
+            notification:Destroy()
+        end)
+    end)
+end
+
+-- Setup Functions
+function RadiantHub:_setupAnimations()
+    -- Border gradient animation
+    local function animateGradient()
+        local tweenInfo = TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1)
+        local tween = TweenService:Create(self.borderGradient, tweenInfo, {Rotation = 405})
+        tween:Play()
+    end
+    
+    -- RGB text animation
+    local function animateRGBText()
+        local hue = 0
+        RunService.Heartbeat:Connect(function()
+            hue = (hue + 2) % 360
+            local r = math.floor(127.5 * (1 + math.sin(math.rad(hue))))
+            local g = math.floor(127.5 * (1 + math.sin(math.rad(hue + 120))))
+            local b = math.floor(127.5 * (1 + math.sin(math.rad(hue + 240))))
+            self.radiantLabel.TextColor3 = Color3.fromRGB(r, g, b)
+        end)
+    end
+    
+    -- FPS counter
+    local function updateFPS()
+        local lastTime = tick()
+        local frameCount = 0
+        
+        RunService.Heartbeat:Connect(function()
+            frameCount = frameCount + 1
+            local currentTime = tick()
+            if currentTime - lastTime >= 1 then
+                local fps = math.floor(frameCount / (currentTime - lastTime))
+                self.fpsLabel.Text = fps .. " FPS"
+                frameCount = 0
+                lastTime = currentTime
+            end
+        end)
+    end
+    
+    animateGradient()
+    animateRGBText()
+    updateFPS()
+end
+
+function RadiantHub:_setupControls()
+    -- Minimize/Restore functionality
+    local function minimizeUI()
+        self.isMinimized = true
+        self.mainFrame.Visible = false
+        self.minimizedIcon.Visible = true
+    end
+
+    local function restoreUI()
+        self.isMinimized = false
+        self.mainFrame.Visible = true
+        self.minimizedIcon.Visible = false
+    end
+
+    self.minimizeButton.Activated:Connect(minimizeUI)
+    self.minimizedIcon.Activated:Connect(restoreUI)
+
+    -- Dragging functionality
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+
+    self.titleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = self.mainFrame.Position
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or 
+                         input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            self.mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    -- Close button
+    self.closeButton.Activated:Connect(function()
+        self:Destroy()
+    end)
+
+    -- Keyboard shortcut (Right Ctrl to toggle)
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if not gameProcessed and input.KeyCode == Enum.KeyCode.RightControl then
+            if self.isMinimized then
+                restoreUI()
+            else
+                minimizeUI()
+            end
+        end
+    end)
+end
+
+function RadiantHub:_createTabButton(tab, index)
+    if not self.leftSidebar then
+        warn("RadiantHub: Left sidebar not initialized")
+        return
+    end
+    local container = Instance.new("Frame")
+    container.Name = tab.name .. "Container"
+    container.Size = UDim2.new(1, 0, 0, 45)
+    container.Position = UDim2.new(0, -10, 0, 15 + (index * 45))
+    container.BackgroundTransparency = 1
+    container.Parent = self.leftSidebar
+    local indicator = Instance.new("Frame")
+    indicator.Name = "Indicator"
+    indicator.Size = UDim2.new(0, 3, 0, 25)
+    indicator.Position = UDim2.new(0, 10, 0.5, -12.5)
+    indicator.BackgroundColor3 = Color3.fromRGB(220, 50, 47)
+    indicator.BorderSizePixel = 0
+    indicator.Visible = index == 0
+    indicator.Parent = container
+    local indicatorCorner = Instance.new("UICorner")
+    indicatorCorner.CornerRadius = UDim.new(0, 2)
+    indicatorCorner.Parent = indicator
+    local button = Instance.new("TextButton")
+    button.Name = tab.name .. "Tab"
+    button.Size = UDim2.new(1, -10, 1, 0)
+    button.Position = UDim2.new(0, 10, 0, 0)
+    button.BackgroundTransparency = 1
+    button.BorderSizePixel = 0
+    button.Text = ""
+    button.Parent = container
+    local iconLabel = Instance.new("ImageLabel")
+    iconLabel.Name = "Icon"
+    iconLabel.Size = UDim2.new(0, 16, 0, 16)
+    iconLabel.Position = UDim2.new(0, 12, 0.5, -8)
+    iconLabel.BackgroundTransparency = 1
+    iconLabel.Image = tab.icon
+    iconLabel.ImageColor3 = index == 0 and Color3.fromRGB(220, 50, 47) or Color3.fromRGB(160, 160, 160)
+    iconLabel.Parent = button
+    local separator = Instance.new("Frame")
+    separator.Name = "Separator"
+    separator.Size = UDim2.new(0, 1, 0, 16)
+    separator.Position = UDim2.new(0, 34, 0.5, -8)
+    separator.BackgroundColor3 = index == 0 and Color3.fromRGB(220, 50, 47) or Color3.fromRGB(80, 80, 80)
+    separator.BorderSizePixel = 0
+    separator.Parent = button
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = "Text"
+    textLabel.Size = UDim2.new(1, -45, 1, 0)
+    textLabel.Position = UDim2.new(0, 40, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = tab.name
+    textLabel.TextColor3 = index == 0 and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 160, 160)
+    textLabel.TextSize = 15
+    textLabel.Font = Enum.Font.GothamSemibold
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.Parent = button
+    button.Activated:Connect(function()
+        self.currentTab = tab
+        self:_updateTabDisplay(tab)
+        self:_updateTabButtons(tab)
+    end)
+end
+
+-- Utility Functions
+function RadiantHub:GetSetting(name)
+    return self.settings[name]
+end
+
+function RadiantHub:SetSetting(name, value)
+    self.settings[name] = value
+end
+
+function RadiantHub:DebugSettings()
+    print("=== RadiantHub Settings Debug ===")
+    for name, value in pairs(self.settings) do
+        print(tostring(name) .. " = " .. tostring(value) .. " (type: " .. type(value) .. ")")
+    end
+    print("=== End Debug ===")
+end
+
+function RadiantHub:Destroy()
+    if self.screenGui then
+        self.screenGui:Destroy()
+    end
+    if self.watermarkGui then
+        self.watermarkGui:Destroy()
+    end
+end
+
+
+-- Expanded example usage for quick testing (uncomment to use)
+if pcall(function() return game and game:IsLoaded() end) then
+    local window = RadiantHub:CreateWindow({
+        Name = "RadiantHub Example",
+        Size = UDim2.new(0, 700, 0, 450),
+        Theme = "Dark"
+    })
+    local tab = window:CreateTab({ Name = "Main", Icon = "🏠" })
+    local section1 = tab:AddSection("General Controls")
+    local section2 = tab:AddSection("Advanced Settings")
+    section1:CreateToggle({
+        Name = "Enable Feature",
+        Default = false,
+        Description = "hii",
+        Callback = function(state)
+            print("Section 1 Toggle state:", state)
+        end
+    })
+    section1:CreateSlider({
+        Name = "Volume",
+        Min = 0,
+        Max = 100,
+        Default = 50,
+        Callback = function(value)
+            print("Section 1 Slider value:", value)
+        end
+    })
+    section1:CreateDropdown({
+        Name = "Mode",
+        Options = { "Easy", "Medium", "Hard" },
+        Default = 2,
+        Callback = function(option, index)
+            print("Section 1 Dropdown selected:", option, index)
+        end
+    })
+    section1:CreateMultiDropdown({
+        Name = "Select Options",
+        Options = { "Option A", "Option B", "Option C" },
+        Default = { ["Option A"] = true },
+        Searchable = true,
+        Callback = function(selected)
+            print("Section 1 MultiDropdown selected:", selected)
+        end
+    })
+    section1:CreateColorPicker({
+        Name = "Accent Color",
+        Default = Color3.fromRGB(255, 100, 100),
+        Callback = function(color)
+            print("Section 1 Color picked:", color)
+        end
+    })
+    section1:CreateButton({
+        Name = "Section 1 Button",
+        Callback = function()
+            window:CreateNotification("Section 1", "Button clicked!", 2)
+        end
+    })
+    section2:CreateToggle({
+        Name = "Advanced Toggle",
+        Default = true,
+        Callback = function(state)
+            print("Section 2 Toggle state:", state)
+        end
+    })
+    section2:CreateSlider({
+        Name = "Advanced Slider",
+        Min = 1,
+        Max = 10,
+        Default = 5,
+        Callback = function(value)
+            print("Section 2 Slider value:", value)
+        end
+    })
+    section2:CreateDropdown({
+        Name = "Advanced Mode",
+        Options = { "Alpha", "Beta", "Gamma" },
+        Default = 1,
+        Callback = function(option, index)
+            print("Section 2 Dropdown selected:", option, index)
+        end
+    })
+    section2:CreateMultiDropdown({
+        Name = "Advanced Multi",
+        Options = { "X", "Y", "Z" },
+        Default = { ["Y"] = true },
+        Searchable = false,
+        Callback = function(selected)
+            print("Section 2 MultiDropdown selected:", selected)
+        end
+    })
+    section2:CreateColorPicker({
+        Name = "Advanced Color",
+        Default = Color3.fromRGB(100, 255, 100),
+        Callback = function(color)
+            print("Section 2 Color picked:", color)
+        end
+    })
+    section2:CreateButton({
+        Name = "Section 2 Button",
+        Callback = function()
+            window:CreateNotification("Section 2", "Advanced button clicked!", 2)
+        end
+    })
+end
+return RadiantHub
