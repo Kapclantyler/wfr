@@ -79,6 +79,7 @@ function RadiantHub:CreateWindow(config)
         Theme = tostring(config.Theme or "Dark"),
         Premium = config.Premium or false  -- Now respects the config parameter
     }
+    self.SettingsTab = config.SettingsTab
     self.settings = {}
     self.tabs = {}
     self.currentTab = nil
@@ -872,7 +873,7 @@ function RadiantHub:_createToggle(section, config)
     table.insert(section.elements, container)
     print("[RadiantHub] Toggle created in section:", section.name)
     
-    return {
+    local elementObject = {
         SetValue = function(value)
             if type(value) == "table" or type(value) == "function" then return end
             local boolValue = value
@@ -898,6 +899,11 @@ function RadiantHub:_createToggle(section, config)
             end
         end
     }
+    self._elementsByName = self._elementsByName or {}
+    if config.Name then
+        self._elementsByName[config.Name] = elementObject
+    end
+    return elementObject
 end
 
 
@@ -1028,7 +1034,7 @@ function RadiantHub:_createSlider(section, config)
     table.insert(section.elements, container)
     print("[RadiantHub] Modern Slider created in section:", section.name)
     
-    return {
+    local elementObject = {
         SetValue = function(value)
             if value == nil or type(value) == "table" or type(value) == "function" then return end
             local numValue = tonumber(value)
@@ -1047,6 +1053,11 @@ function RadiantHub:_createSlider(section, config)
             return currentValue
         end
     }
+    self._elementsByName = self._elementsByName or {}
+    if config.Name then
+        self._elementsByName[config.Name] = elementObject
+    end
+    return elementObject
 end
 
 
@@ -1060,7 +1071,7 @@ function RadiantHub:_createDropdown(section, config)
     if config.Searchable == nil then config.Searchable = false end
     local container = Instance.new("Frame")
     container.Name = (config.Name or "Dropdown") .. "Container"
-    container.Size = UDim2.new(0, -20, 0, 28) -- Slightly smaller container
+    container.Size = UDim2.new(1, -20, 0, 35)
     container.BackgroundTransparency = 1
     
     local textLabel = Instance.new("TextLabel")
@@ -1082,8 +1093,8 @@ function RadiantHub:_createDropdown(section, config)
     if not options[currentIndex] then currentIndex = 1 end
     
     local dropdown = Instance.new("TextButton")
-    dropdown.Size = UDim2.new(0.55, 0, 0, 20) -- Smaller button
-    dropdown.Position = UDim2.new(0.45, 0, 0.5, -10)
+    dropdown.Size = UDim2.new(0.55, 0, 0, 25)
+    dropdown.Position = UDim2.new(0.45, 0, 0.5, -12.5)
     dropdown.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     dropdown.BorderSizePixel = 1
     dropdown.BorderColor3 = Color3.fromRGB(100, 100, 100)
@@ -1102,9 +1113,9 @@ function RadiantHub:_createDropdown(section, config)
     
     local dropdownMenu = Instance.new("Frame")
     dropdownMenu.Name = "DropdownMenu"
-    local maxVisible = 8
-    local menuHeight = math.min(#options, 50) * 25 + (config.Searchable and 30 or 0)
-    dropdownMenu.Size = UDim2.new(0.55, 0, 0, math.min(menuHeight, 200)) -- Up to 200px tall
+    local maxVisible = 6
+    local menuHeight = math.min(#options, maxVisible) * 25 + (config.Searchable and 30 or 0)
+    dropdownMenu.Size = UDim2.new(0.55, 0, 0, menuHeight)
     dropdownMenu.Position = UDim2.new(0.45, 0, 1, 0)
     dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     dropdownMenu.BorderSizePixel = 1
@@ -1154,9 +1165,7 @@ function RadiantHub:_createDropdown(section, config)
     optionsFrame.BorderSizePixel = 0
     optionsFrame.ScrollBarThickness = 6
     optionsFrame.ZIndex = 4
-    optionsFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 25)
     optionsFrame.Parent = dropdownMenu
-    
     local isOpen = false
     local optionButtons = {}
     for i, option in ipairs(options) do
@@ -1206,7 +1215,7 @@ function RadiantHub:_createDropdown(section, config)
                 end
             end
             optionsFrame.CanvasSize = UDim2.new(0, 0, 0, visibleCount * 25)
-            dropdownMenu.Size = UDim2.new(0.55, 0, 0, math.min(visibleCount * 25 + (config.Searchable and 30 or 0), 200))
+            dropdownMenu.Size = UDim2.new(0.55, 0, 0, math.min(visibleCount * 25 + 30, 200))
         end)
     end
     dropdown.MouseButton1Click:Connect(function()
@@ -1224,23 +1233,88 @@ function RadiantHub:_createDropdown(section, config)
     end)
     table.insert(section.elements, container)
     print("[RadiantHub] Dropdown created in section:", section.name)
-    return {
+    local elementObject = {
         SetValue = function(value)
             if type(value) == "table" or type(value) == "function" then return end
-            local numValue = tonumber(value)
-            if numValue and numValue >= 1 and numValue <= #options then
-                currentIndex = numValue
-                dropdown.Text = tostring(options[currentIndex]) .. " ▼"
-                self.settings[config.Name or "Dropdown"] = currentIndex
-                if config.Callback then
-                    config.Callback(options[currentIndex], currentIndex)
+            -- Handle both index numbers and option strings
+            if type(value) == "string" then
+                for i, option in ipairs(options) do
+                    if option == value then
+                        currentIndex = i
+                        dropdown.Text = tostring(options[currentIndex]) .. " ▼"
+                        self.settings[config.Name or "Dropdown"] = value
+                        if config.Callback then
+                            config.Callback(options[currentIndex], currentIndex)
+                        end
+                        return
+                    end
+                end
+            elseif type(value) == "number" then
+                local numValue = tonumber(value)
+                if numValue and numValue >= 1 and numValue <= #options then
+                    currentIndex = numValue
+                    dropdown.Text = tostring(options[currentIndex]) .. " ▼"
+                    self.settings[config.Name or "Dropdown"] = options[currentIndex]
+                    if config.Callback then
+                        config.Callback(options[currentIndex], currentIndex)
+                    end
                 end
             end
         end,
         GetValue = function()
             return currentIndex, options[currentIndex]
+        end,
+        SetOptions = function(newOptions)
+            options = newOptions
+            -- Remove old option buttons
+            for _, btn in ipairs(optionButtons) do
+                if btn.button then btn.button:Destroy() end
+            end
+            optionButtons = {}
+            -- Rebuild option buttons
+            for i, option in ipairs(options) do
+                local optionButton = Instance.new("TextButton")
+                optionButton.Size = UDim2.new(1, 0, 0, 25)
+                optionButton.Position = UDim2.new(0, 0, 0, (i-1) * 25)
+                optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                optionButton.BorderSizePixel = 0
+                optionButton.Text = option
+                optionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                optionButton.TextStrokeTransparency = 0
+                optionButton.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                optionButton.TextSize = 11
+                optionButton.Font = Enum.Font.Gotham
+                optionButton.ZIndex = 5
+                optionButton.Parent = optionsFrame
+                table.insert(optionButtons, {button = optionButton, text = option, index = i})
+                optionButton.MouseEnter:Connect(function()
+                    optionButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+                end)
+                optionButton.MouseLeave:Connect(function()
+                    optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                end)
+                optionButton.MouseButton1Click:Connect(function()
+                    dropdown.Text = option .. " ▼"
+                    currentIndex = i
+                    self.settings[config.Name or "Dropdown"] = option -- Save the option text, not index
+                    dropdownMenu.Visible = false
+                    isOpen = false
+                    if config.Callback then
+                        config.Callback(option, i)
+                    end
+                end)
+            end
+            optionsFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 25)
+            -- Reset selection to first option if needed
+            currentIndex = 1
+            dropdown.Text = tostring(options[currentIndex] or "") .. " ▼"
         end
     }
+    self._elementsByName = self._elementsByName or {}
+    if config.Name then
+        self._elementsByName[config.Name] = elementObject
+    end
+    return elementObject
 end
 
 function RadiantHub:_createMultiDropdown(section, config)
@@ -1252,7 +1326,7 @@ function RadiantHub:_createMultiDropdown(section, config)
     if config.Searchable == nil then config.Searchable = false end
     local container = Instance.new("Frame")
     container.Name = (config.Name or "MultiDropdown") .. "Container"
-    container.Size = UDim2.new(1, -20, 0, 28) -- Slightly smaller container
+    container.Size = UDim2.new(1, -20, 0, 28)
     container.BackgroundTransparency = 1
     local textLabel = Instance.new("TextLabel")
     textLabel.Size = UDim2.new(0.4, 0, 1, 0)
@@ -1276,11 +1350,15 @@ function RadiantHub:_createMultiDropdown(section, config)
             if selectedOptions[opt] then table.insert(selectedList, opt) end
         end
         if #selectedList > 0 then
-            defaultText = table.concat(selectedList, ", ")
+            if #selectedList == 1 then
+                defaultText = selectedList[1]
+            elseif #selectedList > 1 then
+                defaultText = selectedList[1] .. "," .. tostring(#selectedList-1) .. "+"
+            end
         end
     end
     local dropdown = Instance.new("TextButton")
-    dropdown.Size = UDim2.new(0.55, 0, 0, 20) -- Smaller button
+    dropdown.Size = UDim2.new(0.55, 0, 0, 20)
     dropdown.Position = UDim2.new(0.45, 0, 0.5, -10)
     dropdown.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     dropdown.BorderSizePixel = 1
@@ -1292,6 +1370,8 @@ function RadiantHub:_createMultiDropdown(section, config)
     dropdown.TextSize = 11
     dropdown.Font = Enum.Font.Gotham
     dropdown.ZIndex = 2
+    dropdown.TextXAlignment = Enum.TextXAlignment.Left
+    dropdown.TextTruncate = Enum.TextTruncate.AtEnd
     dropdown.Parent = container
     local dropdownCorner = Instance.new("UICorner")
     dropdownCorner.CornerRadius = UDim.new(0, 4)
@@ -1436,11 +1516,13 @@ function RadiantHub:_createMultiDropdown(section, config)
             for _, opt in ipairs(options) do
                 if selectedOptions[opt] then table.insert(selectedList, opt) end
             end
-            if #selectedList > 0 then
-                dropdown.Text = table.concat(selectedList, ", ") .. " ▼"
-            else
-                dropdown.Text = "Multiple ▼"
+            local displayText = "Multiple"
+            if #selectedList == 1 then
+                displayText = selectedList[1]
+            elseif #selectedList > 1 then
+                displayText = selectedList[1] .. "," .. tostring(#selectedList-1) .. "+"
             end
+            dropdown.Text = displayText .. " ▼"
             if config.Callback then
                 config.Callback(selectedOptions)
             end
@@ -1473,10 +1555,18 @@ function RadiantHub:_createMultiDropdown(section, config)
     end)
     table.insert(section.elements, container)
     print("[RadiantHub] Improved MultiDropdown created in section:", section.name)
-    return {
+    local elementObject = {
         SetValue = function(value)
             if type(value) ~= "table" then return end
-            selectedOptions = value
+            -- Clear all previous selections
+            for k in pairs(selectedOptions) do
+                selectedOptions[k] = nil
+            end
+            -- Apply new selections (shallow copy)
+            for k, v in pairs(value) do
+                selectedOptions[k] = v
+            end
+            -- Force updateCheckbox to use the updated selectedOptions
             for _, btn in ipairs(optionButtons) do
                 btn.updateCheckbox()
             end
@@ -1484,11 +1574,13 @@ function RadiantHub:_createMultiDropdown(section, config)
             for _, opt in ipairs(options) do
                 if selectedOptions[opt] then table.insert(selectedList, opt) end
             end
-            if #selectedList > 0 then
-                dropdown.Text = table.concat(selectedList, ", ") .. " ▼"
-            else
-                dropdown.Text = "Multiple ▼"
+            local displayText = "Multiple"
+            if #selectedList == 1 then
+                displayText = selectedList[1]
+            elseif #selectedList > 1 then
+                displayText = selectedList[1] .. "," .. tostring(#selectedList-1) .. "+"
             end
+            dropdown.Text = displayText .. " ▼"
             if config.Callback then
                 config.Callback(selectedOptions)
             end
@@ -1497,6 +1589,11 @@ function RadiantHub:_createMultiDropdown(section, config)
             return selectedOptions
         end
     }
+    self._elementsByName = self._elementsByName or {}
+    if config.Name then
+        self._elementsByName[config.Name] = elementObject
+    end
+    return elementObject
 end
 
 
@@ -1928,8 +2025,7 @@ function RadiantHub:_createColorPicker(section, config)
     
     table.insert(section.elements, container)
     print("[RadiantHub] Enhanced ColorPicker created in section:", section.name)
-    
-    return {
+    local elementObject = {
         SetValue = function(value)
             if typeof(value) == "Color3" then
                 colorButton.BackgroundColor3 = value
@@ -1958,6 +2054,11 @@ function RadiantHub:_createColorPicker(section, config)
             end
         end
     }
+    self._elementsByName = self._elementsByName or {}
+    if config.Name then
+        self._elementsByName[config.Name] = elementObject
+    end
+    return elementObject
 end
 
 
@@ -2055,8 +2156,7 @@ function RadiantHub:_createButton(section, config)
 
     table.insert(section.elements, container)
     print("[RadiantHub] Modern Button created in section:", section.name)
-    
-    return {
+    local elementObject = {
         SetText = function(text)
             button.Text = tostring(text or "Click")
         end,
@@ -2072,6 +2172,11 @@ function RadiantHub:_createButton(section, config)
             end
         end
     }
+    self._elementsByName = self._elementsByName or {}
+    if config.Name then
+        self._elementsByName[config.Name] = elementObject
+    end
+    return elementObject
 end
 
 -- Notification System
@@ -2319,7 +2424,6 @@ end
 function RadiantHub:GetSetting(name)
     return self.settings[name]
 end
-print("HUGE BALLS")
 function RadiantHub:SetSetting(name, value)
     self.settings[name] = value
 end
@@ -2454,8 +2558,7 @@ function RadiantHub:_createInput(section, config)
 
     table.insert(section.elements, container)
     print("[RadiantHub] Input created in section:", section.name)
-
-    return {
+    local elementObject = {
         SetText = function(text)
             inputBox.Text = tostring(text or "")
         end,
@@ -2466,35 +2569,234 @@ function RadiantHub:_createInput(section, config)
             inputBox.PlaceholderText = tostring(text or "")
         end
     }
+    self._elementsByName = self._elementsByName or {}
+    if config.Name then
+        self._elementsByName[config.Name] = elementObject
+    end
+    return elementObject
 end
 print("jorking it")
 
---
--- Example usage for regular dropdown (Searchable = true):
-local window = RadiantHub:CreateWindow({ Name = "Demo" })
-local tab = window:CreateTab({ Name = "Main", Icon = "home" })
-local section = tab:AddSection("Dropdowns")
 
-section:CreateDropdown({
-    Name = "Fruit",
-    Options = {"Apple", "Banana", "Cherry", "Date", "Elderberry", "Fig", "Grape", "Honeydew"},
-    Default = 1,
-    Searchable = true, -- Enable search box
-    Callback = function(selected, index)
-        print("Selected fruit:", selected, index)
+
+function RadiantHub:_createSettingsTab()
+    local tab = self:CreateTab({ Name = "Settings", Icon = "settings" })
+    local section = tab:AddSection("UI")
+
+    -- Config section
+    local configSection = tab:AddSection("Configs")
+    local configsFolder = "configs"
+    if not isfolder(configsFolder) then
+        makefolder(configsFolder)
     end
-})
 
--- Example usage for multi-dropdown (Searchable = false):
-section:CreateMultiDropdown({
-    Name = "Toppings",
-    Options = {"Pepperoni", "Mushrooms", "Onions", "Sausage", "Bacon", "Extra cheese", "Black olives", "Green peppers"},
-    Default = {},
-    Searchable = false, -- No search box
-    Callback = function(selectedTable)
-        print("Selected toppings:", selectedTable)
+    -- Helper to get config list
+    local function getConfigList()
+        local files = listfiles(configsFolder)
+        local configs = {}
+        for _, file in ipairs(files) do
+            if file:sub(-4) == ".cfg" then
+                table.insert(configs, file:match("([^/\\]+)%.cfg$") or file)
+            end
+        end
+        return configs
     end
-})
 
+    local configDropdown = configSection:CreateDropdown({
+        Name = "Config",
+        Options = getConfigList(),
+        Default = 1,
+        Callback = function(selected)
+            -- Store selected config name if needed
+        end
+    })
+
+    local inputBox = configSection:CreateInput({
+        Name = "Config Name",
+        Placeholder = "Enter config name..."
+    })
+
+    configSection:CreateButton({
+        Name = "Save Config",
+        ButtonText = "Save",
+        Callback = function()
+            local name = inputBox.GetText()
+            if name and #name > 0 then
+                local data = game:GetService("HttpService"):JSONEncode(self.settings)
+                writefile(configsFolder .. "/" .. name .. ".cfg", data)
+                configDropdown.SetValue(#getConfigList())
+                configDropdown.SetValue(1) -- force refresh
+            end
+        end
+    })
+
+    configSection:CreateButton({
+        Name = "Load Config",
+        ButtonText = "Load",
+        Callback = function()
+            local configs = getConfigList()
+            local idx = configDropdown.GetValue()
+            local name = configs[idx]
+            if name then
+                local data = readfile(configsFolder .. "/" .. name .. ".cfg")
+                local settings = game:GetService("HttpService"):JSONDecode(data)
+                for k, v in pairs(settings) do
+                    self:SetSetting(k, v)
+                    if self._elementsByName and self._elementsByName[k] then
+                        if self._elementsByName[k].SetValue then
+                            self._elementsByName[k].SetValue(v)
+                        elseif self._elementsByName[k].SetText then
+                            self._elementsByName[k].SetText(v)
+                        end
+                    end
+                end
+            end
+            -- After loading a config, update all multidropdowns
+            for k, element in pairs(self._elementsByName or {}) do
+                if element.SetValue and element.GetValue and type(element.GetValue()) == "table" then
+                    local v = settings[k]
+                    if type(v) == "table" then
+                        local copy = {}
+                        for k2, v2 in pairs(v) do copy[k2] = v2 end
+                        element.SetValue(copy)
+                    else
+                        element.SetValue({})
+                    end
+                end
+            end
+        end
+    })
+
+    -- Remove the toggle and add an Auto Load Config button with description
+    local function getAutoLoadConfigName()
+        if isfile(configsFolder .. "/autoload.txt") then
+            return readfile(configsFolder .. "/autoload.txt")
+        end
+        return nil
+    end
+
+    local autoLoadButtonDesc = "No config set for auto-load."
+    local autoLoadConfigName = getAutoLoadConfigName()
+    if autoLoadConfigName then
+        autoLoadButtonDesc = "Auto-load: " .. autoLoadConfigName
+    end
+
+    local autoLoadButton = configSection:CreateButton({
+        Name = "Auto Load Config",
+        ButtonText = "Set Auto Load",
+        Description = autoLoadButtonDesc,
+        Callback = function()
+            local configs = getConfigList()
+            local idx = configDropdown.GetValue()
+            local name = configs[idx]
+            if name then
+                writefile(configsFolder .. "/autoload.txt", name)
+                autoLoadButton.SetDescription("Auto-load: " .. name)
+                -- Immediately load the config as well
+                if isfile(configsFolder .. "/" .. name .. ".cfg") then
+                    local data = readfile(configsFolder .. "/" .. name .. ".cfg")
+                    local settings = game:GetService("HttpService"):JSONDecode(data)
+                    for k, v in pairs(settings) do
+                        self:SetSetting(k, v)
+                        if self._elementsByName and self._elementsByName[k] then
+                            if self._elementsByName[k].SetValue then
+                                self._elementsByName[k].SetValue(v)
+                            elseif self._elementsByName[k].SetText then
+                                self._elementsByName[k].SetText(v)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    })
+
+    -- On startup, if autoload config is set, load it and update button description
+    if autoLoadConfigName and isfile(configsFolder .. "/" .. autoLoadConfigName .. ".cfg") then
+        local data = readfile(configsFolder .. "/" .. autoLoadConfigName .. ".cfg")
+        local settings = game:GetService("HttpService"):JSONDecode(data)
+        for k, v in pairs(settings) do
+            self:SetSetting(k, v)
+            if self._elementsByName and self._elementsByName[k] then
+                if self._elementsByName[k].SetValue then
+                    self._elementsByName[k].SetValue(v)
+                elseif self._elementsByName[k].SetText then
+                    self._elementsByName[k].SetText(v)
+                end
+            end
+        end
+        if autoLoadButton and autoLoadButton.SetDescription then
+            autoLoadButton.SetDescription("Auto-load: " .. autoLoadConfigName)
+        end
+    end
+
+    configSection:CreateButton({
+        Name = "Refresh Configs",
+        ButtonText = "Refresh",
+        Callback = function()
+            local newOptions = getConfigList()
+            if configDropdown.SetOptions then
+                configDropdown.SetOptions(newOptions)
+            else
+                configDropdown.Options = newOptions
+                configDropdown.SetValue(1)
+            end
+        end
+    })
+
+    configSection:CreateButton({
+        Name = "Delete Config",
+        ButtonText = "Delete",
+        Callback = function()
+            local configs = getConfigList()
+            local idx = configDropdown.GetValue()
+            local name = configs[idx]
+            if name and isfile(configsFolder .. "/" .. name .. ".cfg") then
+                delfile(configsFolder .. "/" .. name .. ".cfg")
+                -- Refresh dropdown
+                local newOptions = getConfigList()
+                if configDropdown.SetOptions then
+                    configDropdown.SetOptions(newOptions)
+                else
+                    configDropdown.Options = newOptions
+                    configDropdown.SetValue(1)
+                end
+            end
+        end
+    })
+
+    -- Add Overwrite Config button
+    configSection:CreateButton({
+        Name = "Overwrite Config",
+        ButtonText = "Overwrite",
+        Callback = function()
+            local configs = getConfigList()
+            local idx = configDropdown.GetValue()
+            local name = configs[idx]
+            if name then
+                local data = game:GetService("HttpService"):JSONEncode(self.settings)
+                writefile(configsFolder .. "/" .. name .. ".cfg", data)
+                -- Refresh dropdown
+                local newOptions = getConfigList()
+                if configDropdown.SetOptions then
+                    configDropdown.SetOptions(newOptions)
+                else
+                    configDropdown.Options = newOptions
+                    configDropdown.SetValue(idx)
+                end
+            end
+        end
+    })
+end
+
+-- Patch CreateWindow to add Settings tab if requested
+local oldCreateWindow = RadiantHub.CreateWindow
+function RadiantHub:CreateWindow(config)
+    local self = oldCreateWindow(self, config)
+    if self.SettingsTab then
+        self:_createSettingsTab()
+    end
+    return self
+end
 
 return RadiantHub
