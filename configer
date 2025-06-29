@@ -612,7 +612,7 @@ function RadiantHub:_createSectionFrame(section, parent, yPos, noLabel)
     local sectionCorner = Instance.new("UICorner")
     sectionCorner.CornerRadius = UDim.new(0, 6)
     sectionCorner.Parent = sectionFrame
-    local elementY = 10
+    local elementY = 0
     for _, element in ipairs(section.elements) do
         if element then
             element.Position = UDim2.new(0, 5, 0, elementY)
@@ -2363,5 +2363,6 @@ function RadiantHub:_createParagraph(section, config)
         end
     }
 end
-print("fjdshfisdhfiuodshfoiudshfiodsf")
+warn("lil dikky")
 return RadiantHub
+
