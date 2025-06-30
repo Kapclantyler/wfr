@@ -1169,7 +1169,7 @@ function RadiantHub:_createDropdown(section, config)
     optionsFrame.BackgroundTransparency = 1
     optionsFrame.BorderSizePixel = 0
     optionsFrame.ScrollBarThickness = 6
-    optionsFrame.ZIndex = 4
+    optionsFrame.ZIndex = 11
     optionsFrame.Parent = dropdownMenu
     local isOpen = false
     local optionButtons = {}
@@ -1185,7 +1185,7 @@ function RadiantHub:_createDropdown(section, config)
         optionButton.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         optionButton.TextSize = 11
         optionButton.Font = Enum.Font.Gotham
-        optionButton.ZIndex = 1
+        optionButton.ZIndex = 12
         optionButton.Parent = optionsFrame
         table.insert(optionButtons, {button = optionButton, text = option, index = i})
         optionButton.MouseEnter:Connect(function()
@@ -1289,7 +1289,7 @@ function RadiantHub:_createDropdown(section, config)
                 optionButton.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
                 optionButton.TextSize = 11
                 optionButton.Font = Enum.Font.Gotham
-                optionButton.ZIndex = 5
+                optionButton.ZIndex = 12
                 optionButton.Parent = optionsFrame
                 table.insert(optionButtons, {button = optionButton, text = option, index = i})
                 optionButton.MouseEnter:Connect(function()
@@ -2966,7 +2966,7 @@ section:CreateMultiDropdown({
         print("MultiDropdown callback:", selectedTable)
     end
 })
-section:CreateMultiDropdown({
+section:CreateDropdown({
     Name = "Test MultiDropdown",
     Options = {"Apple", "Banana", "Cherry"},
     Default = {"Banana", "Cherry"},
@@ -2979,8 +2979,8 @@ section:CreateMultiDropdown({
 
 
 window:UpdateAllDefaults() -- This will force all UI elements to update to their default values and call their callbacks
-
 ]]
+
 
 
 return RadiantHub
