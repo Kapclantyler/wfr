@@ -1098,8 +1098,8 @@ function RadiantHub:_createDropdown(section, config)
     if not options[currentIndex] then currentIndex = 1 end
     
     local dropdown = Instance.new("TextButton")
-    dropdown.Size = UDim2.new(0.55, 0, 0, 25)
-    dropdown.Position = UDim2.new(0.45, 0, 0.5, -12.5)
+    dropdown.Size = UDim2.new(0.55, 0, 0, 20)
+    dropdown.Position = UDim2.new(0.49, 0, 0.5, -10)
     dropdown.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     dropdown.BorderSizePixel = 1
     dropdown.BorderColor3 = Color3.fromRGB(100, 100, 100)
@@ -1121,7 +1121,7 @@ function RadiantHub:_createDropdown(section, config)
     local maxVisible = 6
     local menuHeight = math.min(#options, maxVisible) * 25 + (config.Searchable and 30 or 0)
     dropdownMenu.Size = UDim2.new(0.55, 0, 0, menuHeight)
-    dropdownMenu.Position = UDim2.new(0.45, 0, 1, 0)
+    dropdownMenu.Position = UDim2.new(0.49, 0, 0, 20)
     dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     dropdownMenu.BorderSizePixel = 1
     dropdownMenu.BorderColor3 = Color3.fromRGB(100, 100, 100)
@@ -1409,7 +1409,7 @@ function RadiantHub:_createMultiDropdown(section, config)
     dropdownMenu.Name = "MultiDropdownMenu"
     local menuBaseHeight = math.min(#options, 50) * 30 + 10
     dropdownMenu.Size = UDim2.new(0.55, 0, 0, math.min(menuBaseHeight + (config.Searchable and 30 or 0), 200))
-    dropdownMenu.Position = UDim2.new(0.45, 0, 1, 5)
+    dropdownMenu.Position = UDim2.new(0.49, 0, 0, 20)
     dropdownMenu.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     dropdownMenu.BorderSizePixel = 2
     dropdownMenu.BorderColor3 = Color3.fromRGB(100, 100, 100)
@@ -2979,8 +2979,8 @@ section:CreateDropdown({
 
 
 window:UpdateAllDefaults() -- This will force all UI elements to update to their default values and call their callbacks
+
+
+--fix multidropdown not alligning with the button, fix configs not saving toggles and other elements
 ]]
-
-
-
 return RadiantHub
