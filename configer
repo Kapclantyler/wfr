@@ -1346,6 +1346,7 @@ function RadiantHub:_createMultiDropdown(section, config)
     textLabel.TextXAlignment = Enum.TextXAlignment.Left
     textLabel.TextYAlignment = Enum.TextYAlignment.Center
     textLabel.Parent = container
+    textLabel.ZIndex = 5
     local options = config.Options or {"Option 1", "Option 2"}
     local selectedOptions = {}
 
@@ -1387,7 +1388,7 @@ function RadiantHub:_createMultiDropdown(section, config)
     end
     local dropdown = Instance.new("TextButton")
     dropdown.Size = UDim2.new(0.55, 0, 0, 20)
-    dropdown.Position = UDim2.new(0.45, 0, 0.5, -10)
+    dropdown.Position = UDim2.new(0.49, 0, 0.5, -10)
     dropdown.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     dropdown.BorderSizePixel = 1
     dropdown.BorderColor3 = Color3.fromRGB(100, 100, 100)
@@ -1397,8 +1398,8 @@ function RadiantHub:_createMultiDropdown(section, config)
     dropdown.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     dropdown.TextSize = 11
     dropdown.Font = Enum.Font.Gotham
-    dropdown.ZIndex = 2
-    dropdown.TextXAlignment = Enum.TextXAlignment.Left
+    dropdown.ZIndex = 3
+    dropdown.TextXAlignment = Enum.TextXAlignment.Center
     dropdown.TextTruncate = Enum.TextTruncate.AtEnd
     dropdown.Parent = container
     local dropdownCorner = Instance.new("UICorner")
@@ -2937,7 +2938,7 @@ end
 
 --[[
 -- Example usage for MultiDropdown and UpdateAllDefaults
-local window = RadiantHub:CreateWindow({ Name = "Demo" })
+local window = RadiantHub:CreateWindow({ Name = "Demo", SettingsTab = true })
 local tab = window:CreateTab({ Name = "TestTab", Icon = "home" })
 local section = tab:AddSection("Test Section")
 
@@ -2951,8 +2952,8 @@ section:CreateMultiDropdown({
 })
 
 window:UpdateAllDefaults() -- This will force all UI elements to update to their default values and call their callbacks
-
 ]]
+
 
 
 return RadiantHub
