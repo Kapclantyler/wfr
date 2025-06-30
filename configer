@@ -602,6 +602,9 @@ function RadiantHub:_updateTabDisplay(tab)
         sectionFrame.Visible = true
         rightY = rightY + sectionFrame.Size.Y.Offset + 10
     end
+    -- Set CanvasSize for scrolling columns
+    self.leftContent.CanvasSize = UDim2.new(0, 0, 0, leftY)
+    self.rightContent.CanvasSize = UDim2.new(0, 0, 0, rightY)
 end
 
 function RadiantHub:_createSectionFrame(section, parent, yPos, noLabel)
@@ -671,22 +674,26 @@ function RadiantHub:_createContentSections()
     self.rightHeader.Font = Enum.Font.GothamBold
     self.rightHeader.TextXAlignment = Enum.TextXAlignment.Center
     self.rightHeader.Parent = self.rightSection
-    -- Content containers
-    self.leftContent = Instance.new("Frame")
+    -- Content containers as ScrollingFrames
+    self.leftContent = Instance.new("ScrollingFrame")
     self.leftContent.Name = "LeftContent"
     self.leftContent.Size = UDim2.new(1, -10, 1, -45)
     self.leftContent.Position = UDim2.new(0, 5, 0, 40)
     self.leftContent.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     self.leftContent.BorderSizePixel = 1
     self.leftContent.BorderColor3 = Color3.fromRGB(80, 80, 80)
+    self.leftContent.ScrollBarThickness = 8
+    self.leftContent.CanvasSize = UDim2.new(0, 0, 0, 0)
     self.leftContent.Parent = self.leftSection
-    self.rightContent = Instance.new("Frame")
+    self.rightContent = Instance.new("ScrollingFrame")
     self.rightContent.Name = "RightContent"
     self.rightContent.Size = UDim2.new(1, -10, 1, -45)
     self.rightContent.Position = UDim2.new(0, 5, 0, 40)
     self.rightContent.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     self.rightContent.BorderSizePixel = 1
     self.rightContent.BorderColor3 = Color3.fromRGB(80, 80, 80)
+    self.rightContent.ScrollBarThickness = 8
+    self.rightContent.CanvasSize = UDim2.new(0, 0, 0, 0)
     self.rightContent.Parent = self.rightSection
 end
 
@@ -862,6 +869,9 @@ function RadiantHub:_createToggle(section, config)
             checkmark.Visible = false
             textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         end
+        if config.Name then
+            self.settings[config.Name] = isEnabled
+        end
     end
     
     connections.activated = checkbox.Activated:Connect(function()
@@ -869,6 +879,9 @@ function RadiantHub:_createToggle(section, config)
         updateToggle()
         if config.Callback then
             config.Callback(isEnabled)
+        end
+        if config.Name then
+            self.settings[config.Name] = isEnabled
         end
     end)
     
@@ -893,6 +906,9 @@ function RadiantHub:_createToggle(section, config)
             updateToggle()
             if config.Callback then
                 config.Callback(isEnabled)
+            end
+            if config.Name then
+                self.settings[config.Name] = isEnabled
             end
         end,
         GetValue = function()
@@ -939,14 +955,25 @@ function RadiantHub:_createSlider(section, config)
 
     local minVal = tonumber(config.Min) or 0
     local maxVal = tonumber(config.Max) or 100
+    local increment = tonumber(config.Increment) or 1
+    local decimals = 0
+    if increment < 1 then
+        local s = tostring(increment)
+        local dot = s:find("%.")
+        if dot then decimals = #s:sub(dot+1) end
+    end
+    local function roundToIncrement(val)
+        return math.floor((val-minVal)/increment+0.5)*increment+minVal
+    end
     local currentValue = tonumber(config.Default) or minVal
+    currentValue = roundToIncrement(math.clamp(currentValue, minVal, maxVal))
     self.settings[config.Name or "Slider"] = currentValue
 
     local valueLabel = Instance.new("TextLabel")
     valueLabel.Size = UDim2.new(0.3, 0, 0, 20)
     valueLabel.Position = UDim2.new(0.7, 0, 0, 0)
     valueLabel.BackgroundTransparency = 1
-    valueLabel.Text = tostring(currentValue)
+    valueLabel.Text = string.format("%0."..decimals.."f", currentValue)
     valueLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
     valueLabel.TextSize = 12
     valueLabel.Font = Enum.Font.Gotham
@@ -999,13 +1026,14 @@ function RadiantHub:_createSlider(section, config)
     local isDragging = false
     local function updateSlider(inputPos)
         local pos = math.clamp((inputPos.X - sliderBG.AbsolutePosition.X) / sliderBG.AbsoluteSize.X, 0, 1)
-        local value = math.floor(minVal + (maxVal - minVal) * pos)
+        local value = minVal + (maxVal - minVal) * pos
+        value = roundToIncrement(value)
+        value = math.clamp(value, minVal, maxVal)
         currentValue = value
         self.settings[config.Name or "Slider"] = value
-        sliderFill.Size = UDim2.new(pos, 0, 1, 0)
-        -- Fixed positioning - handle stays aligned with track
-        sliderHandle.Position = UDim2.new(pos, -7, 0, 0)
-        valueLabel.Text = tostring(value)
+        sliderFill.Size = UDim2.new((value - minVal) / (maxVal - minVal), 0, 1, 0)
+        sliderHandle.Position = UDim2.new((value - minVal) / (maxVal - minVal), -7, 0, 0)
+        valueLabel.Text = string.format("%0."..decimals.."f", value)
         if config.Callback then
             config.Callback(value)
         end
@@ -1044,12 +1072,13 @@ function RadiantHub:_createSlider(section, config)
             if value == nil or type(value) == "table" or type(value) == "function" then return end
             local numValue = tonumber(value)
             if not numValue then return end
-            currentValue = math.clamp(numValue, minVal, maxVal)
+            numValue = roundToIncrement(math.clamp(numValue, minVal, maxVal))
+            currentValue = numValue
             self.settings[config.Name or "Slider"] = currentValue
             local pos = (currentValue - minVal) / (maxVal - minVal)
             sliderFill.Size = UDim2.new(pos, 0, 1, 0)
             sliderHandle.Position = UDim2.new(pos, -7, 0, 0)
-            valueLabel.Text = tostring(currentValue)
+            valueLabel.Text = string.format("%0."..decimals.."f", currentValue)
             if config.Callback then
                 config.Callback(currentValue)
             end
@@ -1939,6 +1968,10 @@ function RadiantHub:_createColorPicker(section, config)
         local hueR, hueG, hueB = getHueColor(currentHue)
         satBrightPicker.BackgroundColor3 = Color3.fromRGB(hueR, hueG, hueB)
         
+        -- Save to settings
+        if config.Name then
+            self.settings[config.Name] = newColor
+        end
         -- Call callback if provided
         if config.Callback then
             config.Callback(newColor)
@@ -2107,6 +2140,22 @@ function RadiantHub:_createColorPicker(section, config)
                 )
                 updateColor()
                 updateSelectorPositions()
+                if config.Name then
+                    self.settings[config.Name] = value
+                end
+            elseif type(value) == "table" and value.__color3 and value.r and value.g and value.b then
+                local c = Color3.new(value.r, value.g, value.b)
+                colorButton.BackgroundColor3 = c
+                currentHue, currentSat, currentBright = RGBtoHSV(
+                    c.R * 255, 
+                    c.G * 255, 
+                    c.B * 255
+                )
+                updateColor()
+                updateSelectorPositions()
+                if config.Name then
+                    self.settings[config.Name] = c
+                end
             end
         end,
         GetValue = function()
@@ -2691,7 +2740,16 @@ function RadiantHub:_createSettingsTab()
         Callback = function()
             local name = inputBox.GetText()
             if name and #name > 0 then
-                local data = game:GetService("HttpService"):JSONEncode(self.settings)
+                -- Serialize Color3 values as tables
+                local settingsToSave = {}
+                for k, v in pairs(self.settings) do
+                    if typeof(v) == "Color3" then
+                        settingsToSave[k] = {__color3=true, r=v.R, g=v.G, b=v.B}
+                    else
+                        settingsToSave[k] = v
+                    end
+                end
+                local data = game:GetService("HttpService"):JSONEncode(settingsToSave)
                 writefile(configsFolder .. "/" .. name .. ".cfg", data)
                 configDropdown.SetValue(#getConfigList())
                 configDropdown.SetValue(1) -- force refresh
@@ -2709,6 +2767,12 @@ function RadiantHub:_createSettingsTab()
             if name then
                 local data = readfile(configsFolder .. "/" .. name .. ".cfg")
                 local settings = game:GetService("HttpService"):JSONDecode(data)
+                -- Restore Color3 values
+                for k, v in pairs(settings) do
+                    if type(v) == "table" and v.__color3 and v.r and v.g and v.b then
+                        settings[k] = Color3.new(v.r, v.g, v.b)
+                    end
+                end
                 self._lastLoadedConfig = settings -- Store last loaded config
                 for k, v in pairs(settings) do
                     self:SetSetting(k, v)
@@ -2846,7 +2910,16 @@ function RadiantHub:_createSettingsTab()
             local idx = configDropdown.GetValue()
             local name = configs[idx]
             if name then
-                local data = game:GetService("HttpService"):JSONEncode(self.settings)
+                -- Serialize Color3 values as tables
+                local settingsToSave = {}
+                for k, v in pairs(self.settings) do
+                    if typeof(v) == "Color3" then
+                        settingsToSave[k] = {__color3=true, r=v.R, g=v.G, b=v.B}
+                    else
+                        settingsToSave[k] = v
+                    end
+                end
+                local data = game:GetService("HttpService"):JSONEncode(settingsToSave)
                 writefile(configsFolder .. "/" .. name .. ".cfg", data)
                 -- Refresh dropdown
                 local newOptions = getConfigList()
@@ -2983,4 +3056,5 @@ window:UpdateAllDefaults() -- This will force all UI elements to update to their
 
 --fix multidropdown not alligning with the button, fix configs not saving toggles and other elements
 ]]
+
 return RadiantHub
