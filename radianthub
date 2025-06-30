@@ -22,6 +22,8 @@ elseif game.PlaceId == 101949297449238 then
     loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/eb277a67dd706e4979c9b6ff52da1e99.lua"))()
 elseif game.PlaceId == 109983668079237 then
     loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/610968ad78f6169e9e4aff8f0524d309.lua"))()
+elseif game.PlaceId == 72212564918217 then
+    loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/bae26f7cc380d2bb2826b3ebc57fcb5e.lua"))()
 else 
     loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/b54d5b9f1ea3d373d4b92b33d1430de5.lua"))()
 end
