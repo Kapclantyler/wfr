@@ -1126,7 +1126,7 @@ function RadiantHub:_createDropdown(section, config)
     dropdownMenu.BorderSizePixel = 1
     dropdownMenu.BorderColor3 = Color3.fromRGB(100, 100, 100)
     dropdownMenu.Visible = false
-    dropdownMenu.ZIndex = 3
+    dropdownMenu.ZIndex = 11
     dropdownMenu.Parent = container
     
     local menuCorner = Instance.new("UICorner")
@@ -1185,7 +1185,7 @@ function RadiantHub:_createDropdown(section, config)
         optionButton.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         optionButton.TextSize = 11
         optionButton.Font = Enum.Font.Gotham
-        optionButton.ZIndex = 5
+        optionButton.ZIndex = 1
         optionButton.Parent = optionsFrame
         table.insert(optionButtons, {button = optionButton, text = option, index = i})
         optionButton.MouseEnter:Connect(function()
@@ -1414,7 +1414,7 @@ function RadiantHub:_createMultiDropdown(section, config)
     dropdownMenu.BorderSizePixel = 2
     dropdownMenu.BorderColor3 = Color3.fromRGB(100, 100, 100)
     dropdownMenu.Visible = false
-    dropdownMenu.ZIndex = 3
+    dropdownMenu.ZIndex = 50
     dropdownMenu.Parent = container
     local menuCorner = Instance.new("UICorner")
     menuCorner.CornerRadius = UDim.new(0, 4)
@@ -1426,7 +1426,7 @@ function RadiantHub:_createMultiDropdown(section, config)
     menuShadow.Position = UDim2.new(0, -4, 0, -4)
     menuShadow.BackgroundTransparency = 1
     menuShadow.ImageTransparency = 0.7
-    menuShadow.ZIndex = 2
+    menuShadow.ZIndex = 49
     menuShadow.Parent = dropdownMenu
     local searchBox
     local optionsFrame
@@ -1446,7 +1446,7 @@ function RadiantHub:_createMultiDropdown(section, config)
         searchBox.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         searchBox.TextSize = 10
         searchBox.Font = Enum.Font.Gotham
-        searchBox.ZIndex = 4
+        searchBox.ZIndex = 51
         searchBox.Parent = dropdownMenu
         local searchCorner = Instance.new("UICorner")
         searchCorner.CornerRadius = UDim.new(0, 3)
@@ -1464,7 +1464,7 @@ function RadiantHub:_createMultiDropdown(section, config)
     optionsFrame.BackgroundTransparency = 1
     optionsFrame.BorderSizePixel = 0
     optionsFrame.ScrollBarThickness = 6
-    optionsFrame.ZIndex = 4
+    optionsFrame.ZIndex = 51
     optionsFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 30)
     optionsFrame.Parent = dropdownMenu
     local optionButtons = {}
@@ -1476,7 +1476,7 @@ function RadiantHub:_createMultiDropdown(section, config)
         optionRow.Size = UDim2.new(1, 0, 0, 30)
         optionRow.Position = UDim2.new(0, 0, 0, (i-1) * 30)
         optionRow.BackgroundTransparency = 1
-        optionRow.ZIndex = 4
+        optionRow.ZIndex = 51
         optionRow.Parent = optionsFrame
 
         local optionLabel = Instance.new("TextButton")
@@ -1490,7 +1490,7 @@ function RadiantHub:_createMultiDropdown(section, config)
         optionLabel.TextSize = 13
         optionLabel.Font = Enum.Font.Gotham
         optionLabel.TextXAlignment = Enum.TextXAlignment.Left
-        optionLabel.ZIndex = 5
+        optionLabel.ZIndex = 52
         optionLabel.Parent = optionRow
 
         local checkbox = Instance.new("TextButton")
@@ -1501,7 +1501,7 @@ function RadiantHub:_createMultiDropdown(section, config)
         checkbox.BorderSizePixel = 2
         checkbox.BorderColor3 = Color3.fromRGB(150, 150, 150)
         checkbox.Text = ""
-        checkbox.ZIndex = 5
+        checkbox.ZIndex = 52
         checkbox.Parent = optionRow
 
         local checkboxCorner = Instance.new("UICorner")
@@ -1527,7 +1527,7 @@ function RadiantHub:_createMultiDropdown(section, config)
         checkmark.TextStrokeTransparency = 0
         checkmark.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         checkmark.Visible = false
-        checkmark.ZIndex = 6
+        checkmark.ZIndex = 53
         checkmark.Parent = checkbox
 
         -- Fixed updateCheckbox function with proper closure
@@ -2950,10 +2950,37 @@ section:CreateMultiDropdown({
         print("MultiDropdown callback:", selectedTable)
     end
 })
+section:CreateMultiDropdown({
+    Name = "Test MultiDropdown",
+    Options = {"Apple", "Banana", "Cherry"},
+    Default = {"Banana", "Cherry"},
+    Callback = function(selectedTable)
+        print("MultiDropdown callback:", selectedTable)
+    end
+})
+section:CreateMultiDropdown({
+    Name = "Test MultiDropdown",
+    Options = {"Apple", "Banana", "Cherry"},
+    Default = {"Banana", "Cherry"},
+    Callback = function(selectedTable)
+        print("MultiDropdown callback:", selectedTable)
+    end
+})
+section:CreateMultiDropdown({
+    Name = "Test MultiDropdown",
+    Options = {"Apple", "Banana", "Cherry"},
+    Default = {"Banana", "Cherry"},
+    Callback = function(selectedTable)
+        print("MultiDropdown callback:", selectedTable)
+    end
+})
+
+
+
 
 window:UpdateAllDefaults() -- This will force all UI elements to update to their default values and call their callbacks
-]]
 
+]]
 
 
 return RadiantHub
