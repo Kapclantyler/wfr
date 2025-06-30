@@ -27,3 +27,4 @@ elseif game.PlaceId == 72212564918217 then
 else 
     loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/b54d5b9f1ea3d373d4b92b33d1430de5.lua"))()
 end
+print("Loaded")
