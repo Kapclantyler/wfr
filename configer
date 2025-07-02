@@ -1,8 +1,7 @@
--- RadiantHub UI Library
--- Mobile-Compatible Roblox UI Library with Modern Design
-
 local RadiantHub = {}
 RadiantHub.__index = RadiantHub
+
+
 
 -- Services
 local Players = game:GetService("Players")
@@ -755,7 +754,7 @@ function RadiantHub:_createToggle(section, config)
     container.BackgroundTransparency = 1
     local textLabel = Instance.new("TextLabel")
     if config.Description and config.Description ~= "" then
-        textLabel.Size = UDim2.new(1, -60, 0, 18)
+        textLabel.Size = UDim2.new(1, -60, 0, 18) -- Leave more space for checkbox, fixed height for one line
         textLabel.Position = UDim2.new(0, 0, 0, 0)
         textLabel.BackgroundTransparency = 1
         textLabel.Text = config.Name or "Toggle"
@@ -767,11 +766,11 @@ function RadiantHub:_createToggle(section, config)
         textLabel.TextStrokeTransparency = 0
         textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         textLabel.TextWrapped = true
-        textLabel.TextScaled = true
+        textLabel.TextTruncate = Enum.TextTruncate.AtEnd
         textLabel.Parent = container
 
         local textLabel2 = Instance.new("TextLabel")
-        textLabel2.Size = UDim2.new(1, -60, 0, 16)
+        textLabel2.Size = UDim2.new(1, -60, 0, 16) -- Match width, fixed height for one line
         textLabel2.Position = UDim2.new(0, 0, 0, 18)
         textLabel2.BackgroundTransparency = 1
         textLabel2.Text = config.Description or "Toggle"
@@ -781,10 +780,12 @@ function RadiantHub:_createToggle(section, config)
         textLabel2.TextXAlignment = Enum.TextXAlignment.Left
         textLabel2.TextYAlignment = Enum.TextYAlignment.Center
         textLabel2.TextWrapped = true
-        textLabel2.TextScaled = true
+        textLabel2.TextTruncate = Enum.TextTruncate.AtEnd
+        textLabel2.TextStrokeTransparency = 0
+        textLabel2.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         textLabel2.Parent = container
     else
-        textLabel.Size = UDim2.new(1, -60, 1, 0)
+        textLabel.Size = UDim2.new(1, -60, 1, 0) -- Leave more space for checkbox
         textLabel.Position = UDim2.new(0, 0, 0, 0)
         textLabel.BackgroundTransparency = 1
         textLabel.Text = config.Name or "Toggle"
@@ -794,7 +795,9 @@ function RadiantHub:_createToggle(section, config)
         textLabel.TextXAlignment = Enum.TextXAlignment.Left
         textLabel.TextYAlignment = Enum.TextYAlignment.Center
         textLabel.TextWrapped = true
-        textLabel.TextScaled = true
+        textLabel.TextTruncate = Enum.TextTruncate.AtEnd
+        textLabel.TextStrokeTransparency = 0
+        textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         textLabel.Parent = container
     end
     
@@ -1012,7 +1015,7 @@ function RadiantHub:_createSlider(section, config)
     sliderGradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0)),
-       
+    
     })
     sliderGradient.Rotation = 0
     sliderGradient.Parent = sliderFill
@@ -2005,7 +2008,7 @@ function RadiantHub:_createColorPicker(section, config)
     -- Enhanced mobile input handling for 2D picker
     satBrightPicker.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-           input.UserInputType == Enum.UserInputType.Touch then
+        input.UserInputType == Enum.UserInputType.Touch then
             isPickerDragging = true
             updateSatBright(input.Position)
         end
@@ -2020,7 +2023,7 @@ function RadiantHub:_createColorPicker(section, config)
     
     satBrightPicker.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-           input.UserInputType == Enum.UserInputType.Touch then
+        input.UserInputType == Enum.UserInputType.Touch then
             isPickerDragging = false
         end
     end)
@@ -2039,7 +2042,7 @@ function RadiantHub:_createColorPicker(section, config)
     -- Enhanced mobile input handling for hue bar
     hueBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-           input.UserInputType == Enum.UserInputType.Touch then
+        input.UserInputType == Enum.UserInputType.Touch then
             isHueDragging = true
             updateHue(input.Position)
         end
@@ -2047,14 +2050,14 @@ function RadiantHub:_createColorPicker(section, config)
     
     hueBar.InputChanged:Connect(function(input)
         if isHueDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or 
-                             input.UserInputType == Enum.UserInputType.Touch) then
+                            input.UserInputType == Enum.UserInputType.Touch) then
             updateHue(input.Position)
         end
     end)
     
     hueBar.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-           input.UserInputType == Enum.UserInputType.Touch then
+        input.UserInputType == Enum.UserInputType.Touch then
             isHueDragging = false
         end
     end)
@@ -2113,7 +2116,7 @@ function RadiantHub:_createColorPicker(section, config)
             local pickerPos = colorPicker.AbsolutePosition
             local pickerSize = colorPicker.AbsoluteSize
             local insidePicker = mousePos.X >= pickerPos.X and mousePos.X <= pickerPos.X + pickerSize.X 
-                           and mousePos.Y >= pickerPos.Y and mousePos.Y <= pickerPos.Y + pickerSize.Y
+                        and mousePos.Y >= pickerPos.Y and mousePos.Y <= pickerPos.Y + pickerSize.Y
             
             local buttonPos = colorButton.AbsolutePosition
             local buttonSize = colorButton.AbsoluteSize
@@ -2441,7 +2444,7 @@ function RadiantHub:_setupControls()
 
     self.titleBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-           input.UserInputType == Enum.UserInputType.Touch then
+        input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = self.mainFrame.Position
@@ -2450,7 +2453,7 @@ function RadiantHub:_setupControls()
 
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or 
-                         input.UserInputType == Enum.UserInputType.Touch) then
+                        input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
             self.mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
@@ -2458,7 +2461,7 @@ function RadiantHub:_setupControls()
 
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-           input.UserInputType == Enum.UserInputType.Touch then
+        input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
     end)
@@ -3012,11 +3015,10 @@ function RadiantHub:UpdateAllDefaults()
     end
 end
 
--- Add the separator element creation function
 function RadiantHub:_createSeparator(section, name)
     local container = Instance.new("Frame")
     container.Name = (name or "") .. "SeparatorContainer"
-    container.Size = UDim2.new(1, -10, 0, 18) -- Match other elements
+    container.Size = UDim2.new(1, -10, 0, 18)
     container.BackgroundTransparency = 1
     container.ClipsDescendants = true
     local hasName = name and tostring(name):gsub("%s+","") ~= ""
@@ -3097,24 +3099,24 @@ section:CreateMultiDropdown({
         print("MultiDropdown callback:", selectedTable)
     end
 })
+section:CreateMultiDropdown({
+    Name = "Test MultiDropdown",
+    Options = {"Apple", "Banana", "Cherry"},
+    Default = {"Banana", "Cherry"},
+    Callback = function(selectedTable)
+        print("MultiDropdown callback:", selectedTable)
+    end
+})
+section:CreateMultiDropdown({
+    Name = "Test MultiDropdown",
+    Options = {"Apple", "Banana", "Cherry"},
+    Default = {"Banana", "Cherry"},
+    Callback = function(selectedTable)
+        print("MultiDropdown callback:", selectedTable)
+    end
+})
 section:AddSeparator("My Separator")
-
-section:CreateMultiDropdown({
-    Name = "Test MultiDropdown",
-    Options = {"Apple", "Banana", "Cherry"},
-    Default = {"Banana", "Cherry"},
-    Callback = function(selectedTable)
-        print("MultiDropdown callback:", selectedTable)
-    end
-})
-section:CreateMultiDropdown({
-    Name = "Test MultiDropdown",
-    Options = {"Apple", "Banana", "Cherry"},
-    Default = {"Banana", "Cherry"},
-    Callback = function(selectedTable)
-        print("MultiDropdown callback:", selectedTable)
-    end
-})
+section:AddSeparator() -- for a plain line
 section:CreateDropdown({
     Name = "Test MultiDropdown",
     Options = {"Apple", "Banana", "Cherry"},
@@ -3128,9 +3130,9 @@ section:CreateDropdown({
 
 
 window:UpdateAllDefaults() -- This will force all UI elements to update to their default values and call their callbacks
-
+]]
 
 --fix multidropdown not alligning with the button, fix configs not saving toggles and other elements
-]]
+
 
 return RadiantHub
