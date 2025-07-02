@@ -533,6 +533,10 @@ function RadiantHub:CreateTab(config)
         function section:CreateInput(config)
             return self._radiantHubInstance:_createInput(self, config)
         end
+        -- AddSeparator: adds a thin line separator with optional name
+        function section:AddSeparator(name)
+            return self._radiantHubInstance:_createSeparator(self, name)
+        end
         table.insert(tab.sections, section)
         table.insert(tab.sectionOrder, section)
         return section
@@ -747,11 +751,11 @@ function RadiantHub:_createToggle(section, config)
     
     local container = Instance.new("Frame")
     container.Name = (config.Name or "Toggle") .. "Container"
-    container.Size = UDim2.new(1, -20, 0, 30)
+    container.Size = UDim2.new(1, -20, 0, 40) -- Increased height for wrapping
     container.BackgroundTransparency = 1
     local textLabel = Instance.new("TextLabel")
     if config.Description and config.Description ~= "" then
-        textLabel.Size = UDim2.new(1, -35, 1, -30)
+        textLabel.Size = UDim2.new(1, -60, 0, 18)
         textLabel.Position = UDim2.new(0, 0, 0, 0)
         textLabel.BackgroundTransparency = 1
         textLabel.Text = config.Name or "Toggle"
@@ -762,13 +766,13 @@ function RadiantHub:_createToggle(section, config)
         textLabel.TextYAlignment = Enum.TextYAlignment.Center
         textLabel.TextStrokeTransparency = 0
         textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        textLabel.TextWrapped = true
+        textLabel.TextScaled = true
         textLabel.Parent = container
 
-
-
         local textLabel2 = Instance.new("TextLabel")
-        textLabel2.Size = UDim2.new(1, -35, 1, 5)
-        textLabel2.Position = UDim2.new(0, 0, 0, 0)
+        textLabel2.Size = UDim2.new(1, -60, 0, 16)
+        textLabel2.Position = UDim2.new(0, 0, 0, 18)
         textLabel2.BackgroundTransparency = 1
         textLabel2.Text = config.Description or "Toggle"
         textLabel2.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -776,11 +780,11 @@ function RadiantHub:_createToggle(section, config)
         textLabel2.Font = Enum.Font.Gotham
         textLabel2.TextXAlignment = Enum.TextXAlignment.Left
         textLabel2.TextYAlignment = Enum.TextYAlignment.Center
-        textLabel2.TextStrokeTransparency = 0
-        textLabel2.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        textLabel2.TextWrapped = true
+        textLabel2.TextScaled = true
         textLabel2.Parent = container
     else
-        textLabel.Size = UDim2.new(1, -35, 1, 0)
+        textLabel.Size = UDim2.new(1, -60, 1, 0)
         textLabel.Position = UDim2.new(0, 0, 0, 0)
         textLabel.BackgroundTransparency = 1
         textLabel.Text = config.Name or "Toggle"
@@ -789,8 +793,8 @@ function RadiantHub:_createToggle(section, config)
         textLabel.Font = Enum.Font.Gotham
         textLabel.TextXAlignment = Enum.TextXAlignment.Left
         textLabel.TextYAlignment = Enum.TextYAlignment.Center
-        textLabel.TextStrokeTransparency = 0
-        textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        textLabel.TextWrapped = true
+        textLabel.TextScaled = true
         textLabel.Parent = container
     end
     
@@ -3008,6 +3012,76 @@ function RadiantHub:UpdateAllDefaults()
     end
 end
 
+-- Add the separator element creation function
+function RadiantHub:_createSeparator(section, name)
+    local container = Instance.new("Frame")
+    container.Name = (name or "") .. "SeparatorContainer"
+    container.Size = UDim2.new(1, -10, 0, 18) -- Match other elements
+    container.BackgroundTransparency = 1
+    container.ClipsDescendants = true
+    local hasName = name and tostring(name):gsub("%s+","") ~= ""
+    if hasName then
+        -- Inner content frame for padding
+        local content = Instance.new("Frame")
+        content.Size = UDim2.new(1, -16, 1, 0)
+        content.Position = UDim2.new(0, 8, 0, 0)
+        content.BackgroundTransparency = 1
+        content.ClipsDescendants = true
+        content.Parent = container
+        -- Horizontal layout
+        local layout = Instance.new("UIListLayout")
+        layout.FillDirection = Enum.FillDirection.Horizontal
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        layout.VerticalAlignment = Enum.VerticalAlignment.Center
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Padding = UDim.new(0, 8)
+        layout.Parent = content
+        -- Left line
+        local leftLine = Instance.new("Frame")
+        leftLine.Size = UDim2.new(0.48, 0, 0, 2)
+        leftLine.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        leftLine.BorderSizePixel = 0
+        leftLine.LayoutOrder = 1
+        leftLine.Parent = content
+        -- Name label
+        local label = Instance.new("TextLabel")
+        label.AutomaticSize = Enum.AutomaticSize.X
+        label.Size = UDim2.new(0, 0, 0, 16)
+        label.BackgroundTransparency = 1
+        label.Text = tostring(name)
+        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        label.TextSize = 12
+        label.Font = Enum.Font.GothamSemibold
+        label.TextXAlignment = Enum.TextXAlignment.Center
+        label.TextYAlignment = Enum.TextYAlignment.Center
+        label.TextStrokeTransparency = 0
+        label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        label.LayoutOrder = 2
+        local constraint = Instance.new("UITextSizeConstraint")
+        constraint.MaxTextSize = 16
+        constraint.MinTextSize = 10
+        constraint.Parent = label
+        label.Parent = content
+        -- Right line
+        local rightLine = Instance.new("Frame")
+        rightLine.Size = UDim2.new(0.48, 0, 0, 2)
+        rightLine.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        rightLine.BorderSizePixel = 0
+        rightLine.LayoutOrder = 3
+        rightLine.Parent = content
+    else
+        -- Full line
+        local line = Instance.new("Frame")
+        line.Size = UDim2.new(1, -16, 0, 2)
+        line.Position = UDim2.new(0, 8, 0.5, -1)
+        line.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        line.BorderSizePixel = 0
+        line.Parent = container
+    end
+    table.insert(section.elements, container)
+    return container
+end
+
 
 --[[
 -- Example usage for MultiDropdown and UpdateAllDefaults
@@ -3023,6 +3097,8 @@ section:CreateMultiDropdown({
         print("MultiDropdown callback:", selectedTable)
     end
 })
+section:AddSeparator("My Separator")
+
 section:CreateMultiDropdown({
     Name = "Test MultiDropdown",
     Options = {"Apple", "Banana", "Cherry"},
