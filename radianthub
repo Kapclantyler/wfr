@@ -1,4 +1,4 @@
-if game.CreatorId == 3385385 then
+if game.PlaceId == 79419148732381 then
     loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/2c192184ad32b3ba1934f14d4345b331.lua"))()
 end
 print("Loaded")
