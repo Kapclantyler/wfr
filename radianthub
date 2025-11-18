@@ -7,8 +7,8 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local scaleFactor = isMobile and 0.7 or 1
-local frameWidth = 300 * scaleFactor
-local frameHeight = 400 * scaleFactor
+local frameWidth = 400 * scaleFactor
+local frameHeight = 500 * scaleFactor
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "LoginStyleGui"
@@ -115,7 +115,12 @@ keyBox.TextXAlignment = Enum.TextXAlignment.Left
 keyBox.Parent = keyFrame
 
 local actualText = ""
+local isProcessingChange = false
+
 keyBox:GetPropertyChangedSignal("Text"):Connect(function()
+    if isProcessingChange then return end
+    isProcessingChange = true
+    
     local currentText = keyBox.Text
     if #currentText < #actualText then
         actualText = string.sub(actualText, 1, #currentText)
@@ -124,11 +129,15 @@ keyBox:GetPropertyChangedSignal("Text"):Connect(function()
         actualText = actualText .. newChars
     end
     keyBox.Text = string.rep("*", #actualText)
+    
+    isProcessingChange = false
 end)
 
 if script_key then
     actualText = script_key
-    keyBox.Text = script_key
+    isProcessingChange = true
+    keyBox.Text = string.rep("*", #script_key)
+    isProcessingChange = false
 end
 
 local loginButton = Instance.new("TextButton")
@@ -512,6 +521,12 @@ keyBox.Focused:Connect(function()
         Transparency = 0.1
     })
     focusTween:Play()
+    
+    if actualText ~= "" then
+        isProcessingChange = true
+        keyBox.Text = string.rep("*", #actualText)
+        isProcessingChange = false
+    end
 end)
 
 keyBox.FocusLost:Connect(function()
