@@ -1,0 +1,657 @@
+script_key="tjbPxfCjEmVJORzMNBYnKmftnGBZKvms";
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local scaleFactor = isMobile and 0.75 or 1
+
+local gameDatabase = {
+    ["7755674723"] = {
+        bannerID = "93353788480517",
+        gameName = "Da Block",
+        supportDay = "17.09.2025",
+        features = {"Auto Farm", "Auto Buy Ammo", "Silent Aim", "ESP & More"},
+    },
+    ["7848646653"] = {
+        bannerID = "90820605637409",
+        gameName = "Break your Bones",
+        supportDay = "17.09.2025",
+        features = {"Auto Farm", "Auto Buy Bones", "Auto Buy Refine Ragdoll", "Auto Buy Next Ragdoll"}
+    },
+    ["6701277882"] = {
+        bannerID = "127411918948479",
+        gameName = "Fisch It",
+        supportDay = "17.09.2025",
+        features = {"Auto Fisching", "Auto Sell", "Buy Bait", "Buy Weather", "Buy Boat", "Buy Gear"}
+    },
+    ["4452297356"] = {
+        bannerID = "75240436829675",
+        gameName = "Neighbors",
+        supportDay = "17.09.2025",
+        features = {"Spinbot", "Unbann from VC", "Fly", "Spectate Player", "More"}
+    },
+    ["4924789901"] = {
+        bannerID = "75240436829675",
+        gameName = "Neighbors 17+",
+        supportDay = "17.09.2025",
+        features = {"Spinbot", "Unbann from VC", "Fly", "Spectate Player", "More"}
+    },
+    ["8214054500"] = {
+        bannerID = "77103855446588",
+        gameName = "Build a Car",
+        supportDay = "17.09.2025",
+        features = {"Give Money", "Auto Buy", "Delete Car", "Build a Car"}
+    }
+}
+
+local currentGameID = tostring(game.GameId)
+local gameData = gameDatabase[currentGameID]
+
+warn("[LAUNCHER DEBUG] Initialisierung gestartet")
+warn("[LAUNCHER DEBUG] Game ID:", currentGameID)
+warn("[LAUNCHER DEBUG] gameData gefunden:", gameData ~= nil)
+
+local luarmorScripts = {
+    ['79419148732381'] = 'https://api.luarmor.net/files/v3/loaders/2c192184ad32b3ba1934f14d4345b331.lua'
+}
+
+local isLuarmorScript = luarmorScripts[currentGameID] ~= nil
+local luarmorScriptUrl = luarmorScripts[currentGameID]
+
+warn("[LAUNCHER DEBUG] isLuarmorScript:", isLuarmorScript)
+warn("[LAUNCHER DEBUG] luarmorScriptUrl:", luarmorScriptUrl)
+
+if not gameData and currentGameID == "0" then
+    currentGameID = "123821081589134" 
+    gameData = gameDatabase[currentGameID]
+    warn("[LAUNCHER DEBUG] Fallback Game ID verwendet:", currentGameID)
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BreakYourBonesGui"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = playerGui
+
+local mainFrameWidth = 800 * scaleFactor
+local mainFrameHeight = 500 * scaleFactor
+local mainFrameStartWidth = 0
+local mainFrameStartHeight = 500 * scaleFactor
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, mainFrameStartWidth, 0, mainFrameStartHeight)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, -mainFrameStartHeight/2)
+mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
+
+local mainGradient = Instance.new("UIGradient")
+mainGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 50)),
+    ColorSequenceKeypoint.new(0.7, Color3.fromRGB(80, 40, 40)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 35, 36))
+})
+mainGradient.Rotation = 180
+mainGradient.Parent = mainFrame
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 12)
+mainCorner.Parent = mainFrame
+
+local leftFrameWidth = 240 * scaleFactor
+local leftFramePadding = 20 * scaleFactor
+
+local leftFrame = Instance.new("Frame")
+leftFrame.Name = "LeftFrame"
+leftFrame.Size = UDim2.new(0, leftFrameWidth, 1, -40 * scaleFactor)
+leftFrame.Position = UDim2.new(0, leftFramePadding, 0, 20 * scaleFactor)
+leftFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+leftFrame.BackgroundTransparency = 1
+leftFrame.BorderSizePixel = 0
+leftFrame.Parent = mainFrame
+
+local leftGradient = Instance.new("UIGradient")
+leftGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 50)),
+    ColorSequenceKeypoint.new(0.7, Color3.fromRGB(80, 40, 40)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 35, 36))
+})
+leftGradient.Rotation = 90
+leftGradient.Parent = leftFrame
+
+local leftCorner = Instance.new("UICorner")
+leftCorner.CornerRadius = UDim.new(0, 12)
+leftCorner.Parent = leftFrame
+
+local leftStroke = Instance.new("UIStroke")
+leftStroke.Thickness = 1
+leftStroke.Color = Color3.fromRGB(60, 60, 60)
+leftStroke.Transparency = 1
+leftStroke.Parent = leftFrame
+
+local leftContent = {}
+
+local bannerHeight = 100 * scaleFactor
+local titleTextSize = 24 * scaleFactor
+local supportTextSize = 12 * scaleFactor
+local titleYPos = 120 * scaleFactor
+local supportYPos = 170 * scaleFactor
+
+if gameData then
+    pcall(function()
+        local bannerImage = Instance.new("ImageLabel")
+        bannerImage.Name = "BannerImage"
+        bannerImage.Size = UDim2.new(1, -20 * scaleFactor, 0, bannerHeight)
+        bannerImage.Position = UDim2.new(0, 10 * scaleFactor, 0, 10 * scaleFactor)
+        bannerImage.BackgroundTransparency = 1
+        bannerImage.Image = "rbxassetid://" .. gameData.bannerID
+        bannerImage.ScaleType = Enum.ScaleType.Crop
+        bannerImage.ImageTransparency = 1
+        bannerImage.Parent = leftFrame
+        
+        local bannerCorner = Instance.new("UICorner")
+        bannerCorner.CornerRadius = UDim.new(0, 8)
+        bannerCorner.Parent = bannerImage
+
+        table.insert(leftContent, bannerImage)
+    end)
+
+    local gameTitle = Instance.new("TextLabel")
+    gameTitle.Name = "GameTitle"
+    gameTitle.Size = UDim2.new(1, -20 * scaleFactor, 0, 35 * scaleFactor)
+    gameTitle.Position = UDim2.new(0, 10 * scaleFactor, 0, titleYPos)
+    gameTitle.BackgroundTransparency = 1
+    gameTitle.Text = gameData.gameName
+    gameTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    gameTitle.TextSize = titleTextSize
+    gameTitle.Font = Enum.Font.GothamBold
+    gameTitle.TextStrokeTransparency = 1
+    gameTitle.TextTransparency = 1
+    gameTitle.TextXAlignment = Enum.TextXAlignment.Center
+    gameTitle.Parent = leftFrame
+    
+    table.insert(leftContent, gameTitle)
+
+    local supportText = Instance.new("TextLabel")
+    supportText.Name = "SupportText"
+    supportText.Size = UDim2.new(1, -20 * scaleFactor, 0, 40 * scaleFactor)
+    supportText.Position = UDim2.new(0, 10 * scaleFactor, 0, supportYPos)
+    supportText.BackgroundTransparency = 1
+    supportText.Text = "This game has been supported\nsince " .. gameData.supportDay
+    supportText.TextColor3 = Color3.fromRGB(139, 0, 0)
+    supportText.TextSize = supportTextSize
+    supportText.Font = Enum.Font.Gotham
+    supportText.TextStrokeTransparency = 1
+    supportText.TextTransparency = 1
+    supportText.TextXAlignment = Enum.TextXAlignment.Center
+    supportText.TextYAlignment = Enum.TextYAlignment.Top
+    supportText.TextWrapped = true
+    supportText.Parent = leftFrame
+    
+    table.insert(leftContent, supportText)
+else
+    local notSupported = Instance.new("TextLabel")
+    notSupported.Name = "NotSupported"
+    notSupported.Size = UDim2.new(1, -20 * scaleFactor, 1, -20 * scaleFactor)
+    notSupported.Position = UDim2.new(0, 10 * scaleFactor, 0, 10 * scaleFactor)
+    notSupported.BackgroundTransparency = 1
+    notSupported.Text = "This game is not supported"
+    notSupported.TextColor3 = Color3.fromRGB(255, 100, 100)
+    notSupported.TextSize = 16 * scaleFactor
+    notSupported.Font = Enum.Font.GothamBold
+    notSupported.TextStrokeTransparency = 1
+    notSupported.TextTransparency = 1
+    notSupported.TextXAlignment = Enum.TextXAlignment.Center
+    notSupported.TextYAlignment = Enum.TextYAlignment.Center
+    notSupported.Parent = leftFrame
+    
+    table.insert(leftContent, notSupported)
+end
+
+local featuresContent = {}
+local featuresFrame = nil
+local featuresCorner = nil
+local featuresStroke = nil
+
+local featuresFrameWidth = 200 * scaleFactor
+local featuresFrameHeight = 200 * scaleFactor
+local featuresXPos = 40 * scaleFactor
+local featuresYPos = 260 * scaleFactor
+local featuresTitleSize = 16 * scaleFactor
+local featureTextSize = 12 * scaleFactor
+local mainImageWidth = 500 * scaleFactor
+local mainImageXPos = 280 * scaleFactor
+
+if gameData then
+    featuresFrame = Instance.new("Frame")
+    featuresFrame.Name = "FeaturesFrame"
+    featuresFrame.Size = UDim2.new(0, featuresFrameWidth, 0, featuresFrameHeight)
+    featuresFrame.Position = UDim2.new(0, featuresXPos, 0, featuresYPos)
+    featuresFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    featuresFrame.BackgroundTransparency = 1
+    featuresFrame.BorderSizePixel = 0
+    featuresFrame.Parent = mainFrame
+
+    featuresCorner = Instance.new("UICorner")
+    featuresCorner.CornerRadius = UDim.new(0, 6)
+    featuresCorner.Parent = featuresFrame
+
+    featuresStroke = Instance.new("UIStroke")
+    featuresStroke.Thickness = 1
+    featuresStroke.Color = Color3.fromRGB(89, 0, 0)
+    featuresStroke.Transparency = 1
+    featuresStroke.Parent = featuresFrame
+
+    local featuresTitle = Instance.new("TextLabel")
+    featuresTitle.Name = "FeaturesTitle"
+    featuresTitle.Size = UDim2.new(1, -20 * scaleFactor, 0, 30 * scaleFactor)
+    featuresTitle.Position = UDim2.new(0, 10 * scaleFactor, 0, 10 * scaleFactor)
+    featuresTitle.BackgroundTransparency = 1
+    featuresTitle.Text = "Features:"
+    featuresTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    featuresTitle.TextSize = featuresTitleSize
+    featuresTitle.Font = Enum.Font.GothamBold
+    featuresTitle.TextStrokeTransparency = 1
+    featuresTitle.TextTransparency = 1
+    featuresTitle.TextXAlignment = Enum.TextXAlignment.Center
+    featuresTitle.Parent = featuresFrame
+    
+    table.insert(featuresContent, featuresTitle)
+
+    for i, feature in ipairs(gameData.features) do
+        local featureLabel = Instance.new("TextLabel")
+        featureLabel.Name = "Feature" .. i
+        featureLabel.Size = UDim2.new(1, -30 * scaleFactor, 0, 22 * scaleFactor)
+        featureLabel.Position = UDim2.new(0, 15 * scaleFactor, 0, (45 + (i-1) * 25) * scaleFactor)
+        featureLabel.BackgroundTransparency = 1
+        featureLabel.Text = "• " .. feature
+        featureLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        featureLabel.TextSize = featureTextSize
+        featureLabel.Font = Enum.Font.Gotham
+        featureLabel.TextStrokeTransparency = 1
+        featureLabel.TextTransparency = 1
+        featureLabel.TextXAlignment = Enum.TextXAlignment.Left
+        featureLabel.TextWrapped = true
+        featureLabel.Parent = featuresFrame
+        
+        table.insert(featuresContent, featureLabel)
+    end
+end
+
+local mainImage = Instance.new("ImageLabel")
+mainImage.Name = "MainImage"
+mainImage.Size = UDim2.new(0, mainImageWidth, 1, -120 * scaleFactor)
+mainImage.Position = UDim2.new(0, mainImageXPos, 0, 20 * scaleFactor)
+mainImage.BackgroundTransparency = 1
+mainImage.Image = "rbxassetid://123373460918286"
+mainImage.ScaleType = Enum.ScaleType.Crop
+mainImage.ImageTransparency = 1
+mainImage.Parent = mainFrame
+
+local imageCorner = Instance.new("UICorner")
+imageCorner.CornerRadius = UDim.new(0, 12)
+imageCorner.Parent = mainImage
+
+local imageStroke = Instance.new("UIStroke")
+imageStroke.Thickness = 1
+imageStroke.Color = Color3.fromRGB(60, 60, 60)
+imageStroke.Transparency = 1
+imageStroke.Parent = mainImage
+
+local buttonWidth = 500 * scaleFactor
+local buttonHeight = 60 * scaleFactor
+local buttonXPos = 280 * scaleFactor
+local buttonTextSize = 28 * scaleFactor
+local buttonIconSize = 45 * scaleFactor
+
+local launchButton = Instance.new("TextButton")
+launchButton.Name = "LaunchButton"
+launchButton.Size = UDim2.new(0, buttonWidth, 0, buttonHeight)
+launchButton.Position = UDim2.new(0, buttonXPos, 1, -80 * scaleFactor)
+launchButton.BackgroundTransparency = 1
+launchButton.BorderSizePixel = 0
+launchButton.Text = ""
+launchButton.Active = true
+launchButton.ZIndex = 10
+launchButton.Parent = mainFrame
+
+local buttonFrame = Instance.new("Frame")
+buttonFrame.Name = "ButtonFrame"
+buttonFrame.Size = UDim2.new(0, buttonWidth, 0, buttonHeight)
+buttonFrame.Position = UDim2.new(0, buttonXPos, 1, -80 * scaleFactor)
+buttonFrame.BackgroundColor3 = Color3.fromRGB(139, 0, 0)
+buttonFrame.BackgroundTransparency = 1
+buttonFrame.BorderSizePixel = 0
+buttonFrame.ZIndex = 9
+buttonFrame.Parent = mainFrame
+
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 8)
+buttonCorner.Parent = buttonFrame
+
+local buttonStroke = Instance.new("UIStroke")
+buttonStroke.Thickness = 1
+buttonStroke.Color = Color3.fromRGB(60, 60, 60)
+buttonStroke.Transparency = 1
+buttonStroke.Parent = buttonFrame
+
+local buttonContent = Instance.new("Frame")
+buttonContent.Name = "ButtonContent"
+buttonContent.Size = UDim2.new(0, 140 * scaleFactor, 0, 40 * scaleFactor)
+buttonContent.Position = UDim2.new(0.5, -70 * scaleFactor, 0.5, -20 * scaleFactor)
+buttonContent.BackgroundTransparency = 1
+buttonContent.Parent = buttonFrame
+
+local launchText = Instance.new("TextLabel")
+launchText.Name = "LaunchText"
+launchText.Size = UDim2.new(0, 85 * scaleFactor, 1, 0)
+launchText.Position = UDim2.new(0, 0, 0, 0)
+launchText.BackgroundTransparency = 1
+launchText.Text = "Launch"
+launchText.TextColor3 = Color3.fromRGB(255, 255, 255)
+launchText.TextSize = buttonTextSize
+launchText.Font = Enum.Font.GothamBold
+launchText.TextStrokeTransparency = 1
+launchText.TextTransparency = 1
+launchText.TextXAlignment = Enum.TextXAlignment.Center
+launchText.TextYAlignment = Enum.TextYAlignment.Center
+launchText.Parent = buttonContent
+
+local launchIcon = Instance.new("ImageLabel")
+launchIcon.Name = "LaunchIcon"
+launchIcon.Size = UDim2.new(0, buttonIconSize, 0, buttonIconSize)
+launchIcon.Position = UDim2.new(0, 85 * scaleFactor, 0, -1.5 * scaleFactor)
+launchIcon.BackgroundTransparency = 1
+launchIcon.Image = "rbxassetid://77269303679985"
+launchIcon.ScaleType = Enum.ScaleType.Fit
+launchIcon.ImageTransparency = 1
+launchIcon.Parent = buttonContent
+
+local closeButtonSize = 30 * scaleFactor
+local closeButtonTextSize = 18 * scaleFactor
+
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0, closeButtonSize, 0, closeButtonSize)
+closeButton.Position = UDim2.new(1, -(closeButtonSize + 5 * scaleFactor), 0, 5 * scaleFactor)
+closeButton.BackgroundColor3 = Color3.fromRGB(139, 0, 0)
+closeButton.BackgroundTransparency = 1
+closeButton.BorderSizePixel = 0
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = closeButtonTextSize
+closeButton.Font = Enum.Font.GothamBold
+closeButton.TextStrokeTransparency = 1
+closeButton.TextTransparency = 1
+closeButton.Active = true
+closeButton.ZIndex = 10
+closeButton.Parent = mainFrame
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 6)
+closeCorner.Parent = closeButton
+
+local expandTween = TweenService:Create(
+    mainFrame,
+    TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    {
+        Size = UDim2.new(0, mainFrameWidth, 0, mainFrameHeight),
+        Position = UDim2.new(0.5, -mainFrameWidth/2, 0.5, -mainFrameHeight/2)
+    }
+)
+
+local function fadeInContent()
+    wait(0.3)
+    
+    local leftFrameFade = TweenService:Create(leftFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundTransparency = 0})
+    local leftStrokeFade = TweenService:Create(leftStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Transparency = 0})
+    local buttonFrameFade = TweenService:Create(buttonFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundTransparency = 0})
+    local buttonStrokeFade = TweenService:Create(buttonStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Transparency = 0})
+    local textFade = TweenService:Create(launchText, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {TextTransparency = 0})
+    local iconFade = TweenService:Create(launchIcon, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {ImageTransparency = 0})
+    local closeFade = TweenService:Create(closeButton, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundTransparency = 0, TextTransparency = 0})
+    local imageFade = TweenService:Create(mainImage, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {ImageTransparency = 0})
+    local imageStrokeFade = TweenService:Create(imageStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Transparency = 0})
+
+    local featuresFrameFade, featuresStrokeFade
+    if featuresFrame then
+        featuresFrameFade = TweenService:Create(featuresFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundTransparency = 0})
+        featuresStrokeFade = TweenService:Create(featuresStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Transparency = 0})
+    end
+
+    for _, element in pairs(leftContent) do
+        local fadeType = "TextTransparency"
+        if element:IsA("ImageLabel") then
+            fadeType = "ImageTransparency"
+        end
+        
+        local contentFade = TweenService:Create(element, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {[fadeType] = 0})
+        contentFade:Play()
+    end
+
+    for _, element in pairs(featuresContent) do
+        local fadeType = "TextTransparency"
+        if element:IsA("ImageLabel") then
+            fadeType = "ImageTransparency"
+        end
+        
+        local contentFade = TweenService:Create(element, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {[fadeType] = 0})
+        contentFade:Play()
+    end
+    
+    leftFrameFade:Play()
+    leftStrokeFade:Play()
+    if featuresFrameFade then
+        featuresFrameFade:Play()
+        featuresStrokeFade:Play()
+    end
+    imageFade:Play()
+    imageStrokeFade:Play()
+    buttonFrameFade:Play()
+    buttonStrokeFade:Play()
+    textFade:Play()
+    iconFade:Play()
+    closeFade:Play()
+end
+
+local function fadeOutAndClose()
+    warn("[LAUNCHER DEBUG] fadeOutAndClose() aufgerufen")
+    local leftFrameFadeOut = TweenService:Create(leftFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 1})
+    local leftStrokeFadeOut = TweenService:Create(leftStroke, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Transparency = 1})
+    local buttonFrameFadeOut = TweenService:Create(buttonFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 1})
+    local buttonStrokeFadeOut = TweenService:Create(buttonStroke, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Transparency = 1})
+    local textFadeOut = TweenService:Create(launchText, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {TextTransparency = 1})
+    local iconFadeOut = TweenService:Create(launchIcon, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {ImageTransparency = 1})
+    local closeFadeOut = TweenService:Create(closeButton, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 1, TextTransparency = 1})
+    local imageFadeOut = TweenService:Create(mainImage, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {ImageTransparency = 1})
+    local imageStrokeFadeOut = TweenService:Create(imageStroke, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Transparency = 1})
+
+    local featuresFrameFadeOut, featuresStrokeFadeOut
+    if featuresFrame then
+        featuresFrameFadeOut = TweenService:Create(featuresFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 1})
+        featuresStrokeFadeOut = TweenService:Create(featuresStroke, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Transparency = 1})
+    end
+
+    for _, element in pairs(leftContent) do
+        local fadeType = "TextTransparency"
+        if element:IsA("ImageLabel") then
+            fadeType = "ImageTransparency"
+        end
+        
+        local contentFadeOut = TweenService:Create(element, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {[fadeType] = 1})
+        contentFadeOut:Play()
+    end
+
+    for _, element in pairs(featuresContent) do
+        local fadeType = "TextTransparency"
+        if element:IsA("ImageLabel") then
+            fadeType = "ImageTransparency"
+        end
+        
+        local contentFadeOut = TweenService:Create(element, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {[fadeType] = 1})
+        contentFadeOut:Play()
+    end
+
+    leftFrameFadeOut:Play()
+    leftStrokeFadeOut:Play()
+    if featuresFrameFadeOut then
+        featuresFrameFadeOut:Play()
+        featuresStrokeFadeOut:Play()
+    end
+    imageFadeOut:Play()
+    imageStrokeFadeOut:Play()
+    buttonFrameFadeOut:Play()
+    buttonStrokeFadeOut:Play()
+    textFadeOut:Play()
+    iconFadeOut:Play()
+    closeFadeOut:Play()
+
+    wait(0.5)
+    local shrinkTween = TweenService:Create(
+        mainFrame,
+        TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
+        {
+            Size = UDim2.new(0, 0, 0, 0),
+            Position = UDim2.new(0.5, 0, 0.5, 0)
+        }
+    )
+    shrinkTween:Play()
+
+    shrinkTween.Completed:Connect(function()
+        warn("[LAUNCHER DEBUG] Shrink-Tween abgeschlossen - zerstöre screenGui")
+        screenGui:Destroy()
+        warn("[LAUNCHER DEBUG] screenGui zerstört")
+    end)
+end
+
+if not isMobile then
+    launchButton.MouseEnter:Connect(function()
+        TweenService:Create(buttonFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(180, 0, 0)}):Play()
+    end)
+
+    launchButton.MouseLeave:Connect(function()
+        TweenService:Create(buttonFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(139, 0, 0)}):Play()
+    end)
+end
+
+local function handleLaunch()
+    warn("[LAUNCHER DEBUG] Launch-Button wurde geklickt")
+    warn("[LAUNCHER DEBUG] gameData vorhanden:", gameData ~= nil)
+    warn("[LAUNCHER DEBUG] isLuarmorScript:", isLuarmorScript)
+    
+    if gameData or isLuarmorScript then
+        warn("[LAUNCHER DEBUG] Bedingung erfüllt - starte Script-Laden")
+        launchButton.Active = false
+        
+        spawn(function()
+            warn("[LAUNCHER DEBUG] Spawn-Thread gestartet")
+            
+            spawn(function()
+                local success, errorMsg = pcall(function()
+                    if isLuarmorScript and luarmorScriptUrl then
+                        warn("[LAUNCHER DEBUG] Lade Luarmor-Script von:", luarmorScriptUrl)
+                        local scriptContent = game:HttpGet(luarmorScriptUrl)
+                        warn("[LAUNCHER DEBUG] Script-Content erhalten, Länge:", scriptContent and #scriptContent or 0)
+                        if scriptContent and scriptContent ~= "" then
+                            warn("[LAUNCHER DEBUG] Führe Luarmor-Script aus...")
+                            loadstring(scriptContent)()
+                            warn("[LAUNCHER DEBUG] Luarmor-Script ausgeführt")
+                        else
+                            warn("[LAUNCHER DEBUG] FEHLER: Script-Content ist leer!")
+                        end
+                    elseif gameData then
+                        warn("[LAUNCHER DEBUG] Lade normales Hub-Script")
+                        local scriptContent = game:HttpGet('https://raw.githubusercontent.com/Lirum86/GD/refs/heads/main/Hub.lua')
+                        warn("[LAUNCHER DEBUG] Script-Content erhalten, Länge:", scriptContent and #scriptContent or 0)
+                        if scriptContent and scriptContent ~= "" then
+                            warn("[LAUNCHER DEBUG] Führe Hub-Script aus...")
+                            loadstring(scriptContent)()
+                            warn("[LAUNCHER DEBUG] Hub-Script ausgeführt")
+                        else
+                            warn("[LAUNCHER DEBUG] FEHLER: Script-Content ist leer!")
+                        end
+                    else
+                        warn("[LAUNCHER DEBUG] WARNUNG: Keine Script-Bedingung erfüllt!")
+                    end
+                end)
+                
+                warn("[LAUNCHER DEBUG] Script-Laden abgeschlossen. Erfolg:", success)
+                if not success then
+                    warn("[LAUNCHER DEBUG] FEHLER beim Script-Laden:", errorMsg)
+                end
+            end)
+            
+            warn("[LAUNCHER DEBUG] Warte 0.3 Sekunden vor Fade-Out...")
+            wait(0.3)
+            
+            warn("[LAUNCHER DEBUG] Rufe fadeOutAndClose() auf...")
+            fadeOutAndClose()
+        end)
+    else
+        warn("[LAUNCHER DEBUG] Keine Script-Bedingung erfüllt - rufe fadeOutAndClose() direkt auf")
+        fadeOutAndClose()
+    end
+end
+
+launchButton.MouseButton1Click:Connect(handleLaunch)
+if isMobile then
+    launchButton.TouchTap:Connect(handleLaunch)
+end
+
+local function handleClose()
+    screenGui:Destroy()
+end
+
+closeButton.MouseButton1Click:Connect(handleClose)
+if isMobile then
+    closeButton.TouchTap:Connect(handleClose)
+end
+
+if not isMobile then
+    closeButton.MouseEnter:Connect(function()
+        TweenService:Create(closeButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(180, 0, 0)}):Play()
+    end)
+
+    closeButton.MouseLeave:Connect(function()
+        TweenService:Create(closeButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(139, 0, 0)}):Play()
+    end)
+end
+
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+expandTween:Play()
+expandTween.Completed:Connect(fadeInContent)
