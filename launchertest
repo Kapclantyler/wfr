@@ -7,7 +7,7 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-local scaleFactor = isMobile and 0.75 or 1
+local scaleFactor = isMobile and 0.5 or 1
 
 local gameDatabase = {
     ["7755674723"] = {
