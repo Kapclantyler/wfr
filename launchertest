@@ -3,7 +3,7 @@ script_key="WQPjuFOoddqrMIplKsGYvmOeXeQbkVOf";
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-print("yo")
+print("hey")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -72,7 +72,8 @@ warn("[LAUNCHER DEBUG] Game ID:", currentGameID)
 warn("[LAUNCHER DEBUG] gameData gefunden:", gameData ~= nil)
 
 local luarmorScripts = {
-    ['79419148732381'] = 'https://api.luarmor.net/files/v3/loaders/2c192184ad32b3ba1934f14d4345b331.lua'
+    ['79419148732381'] = 'https://api.luarmor.net/files/v3/loaders/2c192184ad32b3ba1934f14d4345b331.lua',
+    ['16732694052'] = 'https://api.luarmor.net/files/v3/loaders/da053313889734b36eb44512d63e8cf4.lua',
 }
 
 local isLuarmorScript = luarmorScripts[currentGameID] ~= nil
