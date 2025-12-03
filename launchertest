@@ -18,7 +18,7 @@ local gameDatabase = {
         features = {"Auto Farm", "Auto Buy Ammo", "Silent Aim", "ESP & More"},
     },
     ["5750914919"] = {
-        bannerID = "93353788480517",
+        bannerID = "131761902671963",
         gameName = "Fisch",
         supportDay = "17.09.2025",
         features = {"Auto Farm", "Instant Reel", "Auto Enchant", "ESP & More"},
