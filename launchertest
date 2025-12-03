@@ -1,9 +1,9 @@
-
+if _G.F then return end
 script_key="WQPjuFOoddqrMIplKsGYvmOeXeQbkVOf";
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-print("hey")
+print("new")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -563,18 +563,10 @@ local function handleLaunch()
     if gameData or isLuarmorScript then
         launchButton.Active = false
         if _G.F then return end
-        if isLuarmorScript and luarmorScriptUrl then
-            local scriptContent = game:HttpGet(luarmorScriptUrl)
-            if scriptContent and scriptContent ~= "" then
-                --loadstring(scriptContent)()
-                loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/da053313889734b36eb44512d63e8cf4.lua"))()
-                _G.F = true
-            end
-        elseif gameData then
+        if gameData then
             local scriptContent = game:HttpGet('https://raw.githubusercontent.com/Lirum86/GD/refs/heads/main/Hub.lua')
             if scriptContent and scriptContent ~= "" then
                 --loadstring(scriptContent)()
-               
                 loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/da053313889734b36eb44512d63e8cf4.lua"))()
                 _G.F = true
             end
