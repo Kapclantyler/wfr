@@ -1,5 +1,5 @@
 if _G.F then return end
-
+script_key="WQPjuFOoddqrMIplKsGYvmOeXeQbkVOf";
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -10,6 +10,15 @@ local playerGui = player:WaitForChild("PlayerGui")
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local scaleFactor = isMobile and 0.5 or 1
 
+
+local loaders = {
+    ["5750914919"]="https://api.luarmor.net/files/v3/loaders/da053313889734b36eb44512d63e8cf4.lua", -- fisch
+    ["5750914919"]="https://api.luarmor.net/files/v3/loaders/da053313889734b36eb44512d63e8cf4.lua",
+
+
+
+}
+
 local gameDatabase = {
     ["7755674723"] = {
         bannerID = "93353788480517",
@@ -18,7 +27,7 @@ local gameDatabase = {
         features = {"Auto Farm", "Auto Buy Ammo", "Silent Aim", "ESP & More"},
     },
     ["5750914919"] = {
-        bannerID = "131761902671963",
+        bannerID = "93353788480517",
         gameName = "Fisch",
         supportDay = "17.09.2025",
         features = {"Auto Farm", "Instant Reel", "Auto Enchant", "ESP & More"},
@@ -547,63 +556,26 @@ if not isMobile then
     end)
 end
 
+
+
 local function handleLaunch()
-    warn("[LAUNCHER DEBUG] Launch-Button wurde geklickt")
-    warn("[LAUNCHER DEBUG] gameData vorhanden:", gameData ~= nil)
-    warn("[LAUNCHER DEBUG] isLuarmorScript:", isLuarmorScript)
-    
     if gameData or isLuarmorScript then
-        warn("[LAUNCHER DEBUG] Bedingung erfüllt - starte Script-Laden")
         launchButton.Active = false
-        
-        spawn(function()
-            warn("[LAUNCHER DEBUG] Spawn-Thread gestartet")
-            if _G.F then return end
-            spawn(function()
-                local success, errorMsg = pcall(function()
-                    if isLuarmorScript and luarmorScriptUrl then
-                        warn("[LAUNCHER DEBUG] Lade Luarmor-Script von:", luarmorScriptUrl)
-                        local scriptContent = game:HttpGet(luarmorScriptUrl)
-                        warn("[LAUNCHER DEBUG] Script-Content erhalten, Länge:", scriptContent and #scriptContent or 0)
-                        if scriptContent and scriptContent ~= "" then
-                            warn("[LAUNCHER DEBUG] Führe Luarmor-Script aus...")
-                            loadstring(scriptContent)()
-                            _G.F = true
-                            warn("[LAUNCHER DEBUG] Luarmor-Script ausgeführt")
-                        else
-                            warn("[LAUNCHER DEBUG] FEHLER: Script-Content ist leer!")
-                        end
-                    elseif gameData then
-                        warn("[LAUNCHER DEBUG] Lade normales Hub-Script")
-                        local scriptContent = game:HttpGet('https://raw.githubusercontent.com/Lirum86/GD/refs/heads/main/Hub.lua')
-                        warn("[LAUNCHER DEBUG] Script-Content erhalten, Länge:", scriptContent and #scriptContent or 0)
-                        if scriptContent and scriptContent ~= "" then
-                            warn("[LAUNCHER DEBUG] Führe Hub-Script aus...")
-                            loadstring(scriptContent)()
-                            _G.F = true
-                            warn("[LAUNCHER DEBUG] Hub-Script ausgeführt")
-                        else
-                            warn("[LAUNCHER DEBUG] FEHLER: Script-Content ist leer!")
-                        end
-                    else
-                        warn("[LAUNCHER DEBUG] WARNUNG: Keine Script-Bedingung erfüllt!")
-                    end
-                end)
-                
-                warn("[LAUNCHER DEBUG] Script-Laden abgeschlossen. Erfolg:", success)
-                if not success then
-                    warn("[LAUNCHER DEBUG] FEHLER beim Script-Laden:", errorMsg)
-                end
-            end)
-            
-            warn("[LAUNCHER DEBUG] Warte 0.3 Sekunden vor Fade-Out...")
-            wait(0.3)
-            
-            warn("[LAUNCHER DEBUG] Rufe fadeOutAndClose() auf...")
-            fadeOutAndClose()
-        end)
-    else
-        warn("[LAUNCHER DEBUG] Keine Script-Bedingung erfüllt - rufe fadeOutAndClose() direkt auf")
+        if _G.F then return end
+        if isLuarmorScript and luarmorScriptUrl then
+            local scriptContent = game:HttpGet(luarmorScriptUrl)
+            if scriptContent and scriptContent ~= "" then
+                loadstring(scriptContent)()
+                _G.F = true
+            end
+        elseif gameData then
+            local scriptContent = game:HttpGet('https://raw.githubusercontent.com/Lirum86/GD/refs/heads/main/Hub.lua')
+            if scriptContent and scriptContent ~= "" then
+                loadstring(scriptContent)()
+                _G.F = true
+            end
+        end
+        wait(0.3)
         fadeOutAndClose()
     end
 end
