@@ -189,7 +189,7 @@ local Settings = {
 		Targetted_Player = nil,
 		Use_Targetted_Color = false,
 		Targetted_Color = Color3_fromRGB(255, 0, 0),
-		Visible_Check = true,
+		Visible_Check = false,
 		Visible_Color = Color3_fromRGB(0, 255, 0),
 		Skeleton = false,
 		Skeleton_Thickness = 2,
@@ -678,8 +678,8 @@ return {
 					espData.highlight = Instance.new("Highlight")
 					espData.highlight.Parent = Char
 					espData.highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-					espData.highlight.FillTransparency = 1  -- Changed from 0.5 to 1 to hide character
-					espData.highlight.OutlineTransparency = 0  -- Keep outline visible
+					espData.highlight.FillTransparency = 0  -- Changed from 0.5 to 1 to hide character
+					espData.highlight.OutlineTransparency = 0.2  -- Keep outline visible
 				end
 
 				espData.highlight.Enabled = true
