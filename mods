@@ -163,6 +163,7 @@ local function CreateLine()
 	line.Thickness = 2
 	line.Transparency = 1
 	line.Visible = false
+	line.Color = Color3.new(1, 1, 1) 
 	return line
 end
 
