@@ -673,14 +673,13 @@ return {
 			else
 				esp.Health.Visible = false
 			end
-		
 			if Settings.Player.Chams then
 				if not espData.highlight then
 					espData.highlight = Instance.new("Highlight")
 					espData.highlight.Parent = Char
 					espData.highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-					espData.highlight.FillTransparency = 0.5
-					espData.highlight.OutlineTransparency = 0
+					espData.highlight.FillTransparency = 1  -- Changed from 0.5 to 1 to hide character
+					espData.highlight.OutlineTransparency = 0  -- Keep outline visible
 				end
 
 				espData.highlight.Enabled = true
