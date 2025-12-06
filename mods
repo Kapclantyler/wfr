@@ -1,5 +1,4 @@
 function LPH_NO_VIRTUALIZE(f) return f end;
-print("hi")
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -42,12 +41,7 @@ local function VisibleCheck(character)
 	if result == nil then
 		return true
 	end
-
-	local hitPart = result.Instance
-	if hitPart and hitPart:IsDescendantOf(workspace:FindFirstChild("ServerVehicles")) then
-		return true
-	end
-
+	
 	return false
 end
 
