@@ -180,7 +180,7 @@ local Settings = {
 		Weapon = false,
 		Distance = false,
 		HealthBar = false,
-		Max_Distance = 1000,
+		Max_Distance = 3000,
 		Targetted_Player = nil,
 		Use_Targetted_Color = false,
 		Targetted_Color = Color3_fromRGB(255, 0, 0),
@@ -730,16 +730,21 @@ return {
 		end)
 	end,
 
-	function(Item, Name, Color)
+	function(Item, Name, Color, Setting)
 		if activeESPs[Item] then return end -- Already has ESP
+		if Setting and not Settings.Item[Setting] then return end -- Check if the specific setting exists and is enabled
 		if Item:IsA("Model") then
 			Item = Item.PrimaryPart
 		end
+		
+		if not Item or not Item:IsA("BasePart") then return end -- Make sure Item is a valid BasePart
+		
 		local espData = {
 			item = Item,
 			hue = math.random(0, 360),
 			esp = nil,
-			lastDistance = 0
+			lastDistance = 0,
+			setting = Setting -- Store the setting for runtime checks
 		}
 
 		activeESPs[Item] = espData
@@ -761,7 +766,11 @@ return {
 			local _, onScreen = CurrentCamera:WorldToViewportPoint(Item.Position)
 			local distance = math_floor((Item.Position - CurrentCamera.CFrame.Position).Magnitude)
 
-			if not (onScreen and Settings.Item.Enabled and distance <= Settings.Item.Max_Distance) then
+			-- Check if the specific setting is enabled (if Setting exists)
+			local settingEnabled = not Setting or Settings.Item[Setting]
+			
+			-- Check both global Item.Enabled and the specific setting
+			if not (onScreen and Settings.Item.Enabled and settingEnabled and distance <= Settings.Item.Max_Distance) then
 				if espData.esp then
 					espData.esp.Enabled = false
 				end
@@ -777,23 +786,33 @@ return {
 				espData.esp = itemESPTemplate:Clone()
 				espData.esp.Parent = CoreGui
 				espData.esp.Adornee = Item
-				espData.esp.Title.FontFace = font
-				espData.esp.Title.Visible = true
-				espData.esp.Enabled = true
+				espData.esp.AlwaysOnTop = true
+				espData.esp.MaxDistance = math.huge
+				
+				-- Make sure Title exists and is visible
+				if espData.esp:FindFirstChild("Title") then
+					espData.esp.Title.FontFace = font
+					espData.esp.Title.Visible = true
+					espData.esp.Title.TextStrokeTransparency = 0.5
+					espData.esp.Title.TextSize = 14
+				else
+					warn("Item ESP template missing Title TextLabel!")
+				end
 			end
 
 			local esp = espData.esp
 			esp.Enabled = true
+			
 			local color = Color == "Rainbow" and Color3_fromHSV(espData.hue/360, 1, 1) or Color or Color3.new(1, 1, 1)
 			local titleText = Settings.Item.Distance and Name .. " [" .. distance .. "]" or Name
 
-			if esp.Title.Text ~= titleText then
-				esp.Title.Text = titleText
-			end
-			if esp.Title.TextColor3 ~= color then
+			if esp:FindFirstChild("Title") then
+				if esp.Title.Text ~= titleText then
+					esp.Title.Text = titleText
+				end
 				esp.Title.TextColor3 = color
+				esp.Title.Visible = true
 			end
-			esp.Title.Visible = true
 		end)
 
 		local ancestryConnection
