@@ -532,7 +532,7 @@ return {
 			if not espData.esp then
 				if not playerESPTemplate then
 					playerESPTemplate = game:GetObjects("rbxassetid://105397909804981")[1] --  136710835837062 OLD USE IF IT ISNT WORKING
-					
+					print("diddy")
 				end
 				espData.esp = playerESPTemplate:Clone()
 				espData.esp.Parent = CoreGui
