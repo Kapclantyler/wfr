@@ -1,4 +1,5 @@
 function LPH_NO_VIRTUALIZE(f) return f end;
+print("hi")
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -613,7 +614,7 @@ return {
 			if Settings.Player.Weapon then
 				local weapon = "None"
 				if Char:FindFirstChild("Holding") and tostring(Char:FindFirstChild("Holding").Value) ~= "" then
-					weapon = Char:FindFirstChild("Holding").Value
+					weapon = tostring(Char:FindFirstChild("Holding").Value)
 				elseif game.PlaceId == 11729688377 then
 					local toolModel = Char.Tools:FindFirstChildOfClass("Model")
 					weapon = toolModel and toolModel.Name or "None"
