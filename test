@@ -531,7 +531,8 @@ return {
 			end
 			if not espData.esp then
 				if not playerESPTemplate then
-					playerESPTemplate = game:GetObjects("rbxassetid://136710835837062")[1]
+					playerESPTemplate = game:GetObjects("rbxassetid://105397909804981")[1] --  136710835837062 OLD USE IF IT ISNT WORKING
+					
 				end
 				espData.esp = playerESPTemplate:Clone()
 				espData.esp.Parent = CoreGui
@@ -777,42 +778,35 @@ return {
 			end
 
 			espData.hue = (espData.hue + 2) % 360
-
+			local color = Color == "Rainbow" and Color3_fromHSV(espData.hue/360, 1, 1) or Color or Color3.new(1, 1, 1)
+			local titleText = Settings.Item.Distance and Name .. " [" .. distance .. "]" or Name
 			if not espData.esp then
 				if not itemESPTemplate then
-					itemESPTemplate = game:GetObjects("rbxassetid://75571122265739")[1]
+					itemESPTemplate = game:GetObjects("rbxassetid://99290455980050")[1]  -- old 75571122265739
 				end
 				espData.esp = itemESPTemplate:Clone()
 				espData.esp.Parent = CoreGui
 				espData.esp.Adornee = Item
 				espData.esp.AlwaysOnTop = true
 				espData.esp.MaxDistance = math.huge
-				
+				espData.esp.Enabled = true
 				-- Make sure Title exists and is visible
 				if espData.esp:FindFirstChild("Title") then
 					espData.esp.Title.FontFace = font
 					espData.esp.Title.Visible = true
 					espData.esp.Title.TextStrokeTransparency = 0.5
 					espData.esp.Title.TextSize = 14
+					espData.esp.Title.Visible = true
+					print("here")
 				else
 					warn("Item ESP template missing Title TextLabel!")
 				end
 			end
 
-			local esp = espData.esp
-			esp.Enabled = true
 			
-			local color = Color == "Rainbow" and Color3_fromHSV(espData.hue/360, 1, 1) or Color or Color3.new(1, 1, 1)
-			local titleText = Settings.Item.Distance and Name .. " [" .. distance .. "]" or Name
+			
 
-			if esp:FindFirstChild("Title") then
-				if esp.Title.Text ~= titleText then
-					esp.Title.Text = titleText
-				end
-				esp.Title.TextColor3 = color
-				esp.Title.Visible = true
-			end
-			print(esp.Title.Visible)
+			
 		end)
 
 		local ancestryConnection
