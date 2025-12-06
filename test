@@ -766,6 +766,7 @@ return {
 			if esp.Title.TextColor3 ~= color then
 				esp.Title.TextColor3 = color
 			end
+			esp.Title.Visible = true
 		end)
 
 		local ancestryConnection
