@@ -542,7 +542,7 @@ return {
 			elseif isVisible then
 				color = Settings.Player.Visible_Color
 			else
-				if Settings.Player.Color == "Custom" then
+				if Settings.Player.Color == "Rainbow" then
 					color = Color3_fromHSV(espData.hue/360, 1, 1)
 				else
 					color = Settings.Player.Color or Color3.new(1, 1, 1)
