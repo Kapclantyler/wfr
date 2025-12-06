@@ -647,29 +647,26 @@ return {
 				esp.Distance.Visible = false
 			end
 
-			-- Health bar (only update if health changed)
 			if Settings.Player.HealthBar and humanoid then
+				esp.Health.Visible = true
 				local currentHealth = humanoid.Health
-				if currentHealth ~= espData.lastHealth then
-					local healthRatio = currentHealth / humanoid.MaxHealth
-					esp.Health.Visible = true
-					esp.Health.bar.Size = UDim2_fromScale(1, healthRatio)
+				local healthRatio = currentHealth / humanoid.MaxHealth
+				esp.Health.bar.Size = UDim2_fromScale(1, healthRatio)
 
-					-- Health color calculation
-					local healthColor
-					if healthRatio <= 0 then
-						healthColor = Color3_fromRGB(255, 0, 0)
-					elseif healthRatio <= 0.4 then
-						healthColor = Color3_fromRGB(255, 0, 0):Lerp(Color3_fromRGB(255, 165, 0), healthRatio/0.4)
-					elseif healthRatio <= 0.65 then
-						healthColor = Color3_fromRGB(255, 165, 0):Lerp(Color3_fromRGB(255, 255, 0), (healthRatio-0.4)/0.25)
-					else
-						healthColor = Color3_fromRGB(255, 255, 0):Lerp(Color3_fromRGB(0, 255, 0), (healthRatio-0.65)/0.35)
-					end
-
-					esp.Health.bar.BackgroundColor3 = healthColor
-					espData.lastHealth = currentHealth
+				-- Health color calculation
+				local healthColor
+				if healthRatio <= 0 then
+					healthColor = Color3_fromRGB(255, 0, 0)
+				elseif healthRatio <= 0.4 then
+					healthColor = Color3_fromRGB(255, 0, 0):Lerp(Color3_fromRGB(255, 165, 0), healthRatio/0.4)
+				elseif healthRatio <= 0.65 then
+					healthColor = Color3_fromRGB(255, 165, 0):Lerp(Color3_fromRGB(255, 255, 0), (healthRatio-0.4)/0.25)
+				else
+					healthColor = Color3_fromRGB(255, 255, 0):Lerp(Color3_fromRGB(0, 255, 0), (healthRatio-0.65)/0.35)
 				end
+
+				esp.Health.bar.BackgroundColor3 = healthColor
+				espData.lastHealth = currentHealth
 			else
 				esp.Health.Visible = false
 			end
@@ -678,15 +675,12 @@ return {
 					espData.highlight = Instance.new("Highlight")
 					espData.highlight.Parent = Char
 					espData.highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-					espData.highlight.FillTransparency = 0  -- Changed from 0.5 to 1 to hide character
-					espData.highlight.OutlineTransparency = 0.2  -- Keep outline visible
+					espData.highlight.FillTransparency = 0  
+					espData.highlight.OutlineTransparency = 0.2 
 				end
-
 				espData.highlight.Enabled = true
-				
 				espData.highlight.FillColor = color
 				espData.highlight.OutlineColor = color
-				
 			else
 				if espData.highlight then
 					espData.highlight.Enabled = false
