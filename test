@@ -13,7 +13,7 @@ local UDim2_fromScale = UDim2.fromScale
 local Color3_fromHSV = Color3.fromHSV
 local Color3_fromRGB = Color3.fromRGB
 local math_min, math_max, math_floor, math_huge = math.min, math.max, math.floor, math.huge
-print("hi2")
+
 local function VisibleCheck(character)
 	if not character then return false end
 
@@ -225,7 +225,7 @@ return {
 		end
 		
 		if isAI and not Settings.Player.ShowAI then
-			return -- Don't create ESP for AI if ShowAI is disabled
+			return 
 		end
 		
 		local rootPart = Char.HumanoidRootPart
@@ -812,7 +812,7 @@ return {
 				esp.Title.TextColor3 = color
 				esp.Title.Visible = true
 			end
-			print(esp.Title.Visible,esp.Title)
+			print(esp.Title.Visible)
 		end)
 
 		local ancestryConnection
