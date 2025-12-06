@@ -1,0 +1,826 @@
+function LPH_NO_VIRTUALIZE(f) return f end;
+
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local CurrentCamera = game:GetService("Workspace").CurrentCamera
+local CoreGui = game:GetService("CoreGui")
+
+local font = Font.new("rbxasset://fonts/families/GothamSSm.json")
+local Vector3_new = Vector3.new
+local Vector2_new = Vector2.new
+local UDim2_new = UDim2.new
+local UDim2_fromScale = UDim2.fromScale
+local Color3_fromHSV = Color3.fromHSV
+local Color3_fromRGB = Color3.fromRGB
+local math_min, math_max, math_floor, math_huge = math.min, math.max, math.floor, math.huge
+
+local function VisibleCheck(character)
+	if not character then return false end
+
+	local localPlayer = Players.LocalPlayer
+	local localCharacter = localPlayer.Character
+	if not localCharacter then return false end
+
+	local localRoot = localCharacter:FindFirstChild("Head")
+	local targetRoot = character:FindFirstChild("Head")
+
+	if not localRoot or not targetRoot then return false end
+
+	local origin = localRoot.Position
+	local direction = (targetRoot.Position - origin).Unit
+	local distance = (targetRoot.Position - origin).Magnitude
+
+	local raycastParams = RaycastParams.new()
+	raycastParams.FilterDescendantsInstances = {localCharacter, character}
+	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+	raycastParams.IgnoreWater = true
+
+	local result = workspace:Raycast(origin, direction * distance, raycastParams)
+
+	-- If no result, target is visible
+	if result == nil then
+		return true
+	end
+
+	return false
+end
+
+local GetBoundingBox = LPH_NO_VIRTUALIZE(function(model, camera)
+	local minBound, maxBound
+	local parts = {}
+
+	-- Pre-filter visible parts to reduce iterations
+	for _, part in pairs(model:GetDescendants()) do 
+		if part:IsA("BasePart") and part.Transparency == 0 then
+			table.insert(parts, part)
+		end
+	end
+
+	if #parts == 0 then return nil, nil end
+
+	for _, part in pairs(parts) do
+		local cf = part.CFrame
+		local size = part.Size
+		local sx, sy, sz = size.X * 0.5, size.Y * 0.5, size.Z * 0.5
+
+		for x = -1, 1, 2 do 
+			for y = -1, 1, 2 do 
+				for z = -1, 1, 2 do
+					local world = cf:PointToWorldSpace(Vector3_new(x * sx, y * sy, z * sz))
+					if not minBound then
+						minBound = world
+						maxBound = world
+					else
+						minBound = Vector3_new(
+							math_min(minBound.X, world.X),
+							math_min(minBound.Y, world.Y),
+							math_min(minBound.Z, world.Z)
+						)
+						maxBound = Vector3_new(
+							math_max(maxBound.X, world.X),
+							math_max(maxBound.Y, world.Y),
+							math_max(maxBound.Z, world.Z)
+						)
+					end
+				end
+			end
+		end
+	end
+
+	if not minBound then return nil, nil end
+
+	camera = camera or CurrentCamera
+	local centerWorld = (minBound + maxBound) * 0.5
+	local sizeWorld = maxBound - minBound
+	local camCF = camera.CFrame
+	local camPos = camCF.Position
+	local camLookVector = camCF.LookVector
+	local camRightVector = camCF.RightVector
+	local camUpVector = camCF.UpVector
+
+	local minX, maxX = math_huge, -math_huge
+	local minY, maxY = math_huge, -math_huge
+	local minZ, maxZ = math_huge, -math_huge
+
+	local halfSizeX, halfSizeY, halfSizeZ = sizeWorld.X * 0.5, sizeWorld.Y * 0.5, sizeWorld.Z * 0.5
+
+	for x = -1, 1, 2 do 
+		for y = -1, 1, 2 do 
+			for z = -1, 1, 2 do
+				local cornerWorld = Vector3_new(
+					centerWorld.X + x * halfSizeX,
+					centerWorld.Y + y * halfSizeY,
+					centerWorld.Z + z * halfSizeZ
+				)
+				local relativePos = cornerWorld - camPos
+				local projRight = relativePos:Dot(camRightVector)
+				local projUp = relativePos:Dot(camUpVector)
+				local projLook = relativePos:Dot(camLookVector)
+
+				minX = math_min(minX, projRight)
+				maxX = math_max(maxX, projRight)
+				minY = math_min(minY, projUp)
+				maxY = math_max(maxY, projUp)
+				minZ = math_min(minZ, projLook)
+				maxZ = math_max(maxZ, projLook)
+			end
+		end
+	end
+
+	local width = maxX - minX
+	local height = maxY - minY
+	local depth = maxZ - minZ
+	local centerOffset = camRightVector * ((minX + maxX) * 0.5) + 
+		camUpVector * ((minY + maxY) * 0.5) + 
+		camLookVector * ((minZ + maxZ) * 0.5)
+	local centerCam = camPos + centerOffset
+	local lookAt = CFrame.lookAt(centerCam, camPos)
+
+	return lookAt, Vector3_new(
+		math_min(width, 5),
+		math_min(height, 6.7),
+		math_min(depth, 5)
+	)
+end)
+
+-- Helper function to get rig type
+local function GetRigType(character)
+	if character:FindFirstChild("UpperTorso") then
+		return "R15"
+	elseif character:FindFirstChild("Torso") then
+		return "R6"
+	end
+	return nil
+end
+
+local function CreateLine()
+	local line = Drawing.new("Line")
+	line.Thickness = 2
+	line.Transparency = 1
+	line.Visible = false
+	line.Color = Color3.new(1, 1, 1) 
+	return line
+end
+
+-- Helper function to convert 3D position to 2D screen position
+local function WorldToScreen(position)
+	local screenPos, onScreen = CurrentCamera:WorldToViewportPoint(position)
+	return Vector2_new(screenPos.X, screenPos.Y), onScreen
+end
+
+local Settings = {
+	Player = {
+		Enabled = false,
+		Box_Type = "Fill",
+		Box = false,
+		Filled = false,
+		Fill_Transparency = 0.75,
+		Color = "Rainbow",
+		Name = false,
+		Weapon = false,
+		Distance = false,
+		HealthBar = false,
+		Max_Distance = 3000,
+		Targetted_Player = nil,
+		Use_Targetted_Color = false,
+		Targetted_Color = Color3_fromRGB(255, 0, 0),
+		Visible_Check = false,
+		Visible_Color = Color3_fromRGB(0, 255, 0),
+		Skeleton = false,
+		Skeleton_Thickness = 2,
+		Skeleton_Transparency = 1,
+		Chams = false,
+		ShowAI = false,
+	},
+	Item = {
+		Enabled = false,
+		Distance = false,
+		Max_Distance = 3000
+	},
+}
+
+-- Active ESP tracking
+local activeESPs = {}
+
+-- Pre-clone ESP templates to avoid repeated GetObjects calls
+local playerESPTemplate = nil
+local itemESPTemplate = nil
+
+-- Single update loop for all ESPs
+local lastUpdate = 0
+local UPDATE_INTERVAL = 1/30 -- 30 FPS
+
+-- Cache for box frames to avoid GetChildren every frame
+local boxFrameCache = {}
+
+return {
+	function(Char)
+		if not Char:FindFirstChild("HumanoidRootPart") then return end
+		if activeESPs[Char] then return end -- Already has ESP
+		
+		-- AI check - if it's AI and ShowAI is disabled, don't create ESP
+		local isAI = false
+		if workspace:FindFirstChild("AiZones") then
+			isAI = Char:IsDescendantOf(workspace.AiZones)
+		end
+		
+		if isAI and not Settings.Player.ShowAI then
+			return 
+		end
+		
+		local rootPart = Char.HumanoidRootPart
+		local humanoid = Char:FindFirstChild("Humanoid")
+		local espData = {
+			char = Char,
+			rootPart = rootPart,
+			humanoid = humanoid,
+			hue = math.random(0, 360),
+			esp = nil,
+			lastDistance = 0,
+			lastHealth = humanoid and humanoid.Health or 0,
+			lastVisibility = false,
+			lastColor = nil,
+			lastSkeletonColor = nil,
+			skeleton = {},
+			highlight = nil
+		}
+
+		-- Create skeleton lines based on rig type
+		local rigType = GetRigType(Char)
+		if rigType == "R6" then
+			espData.skeleton = {
+				Head_Torso = CreateLine(),
+				Torso_LeftArm = CreateLine(),
+				Torso_RightArm = CreateLine(),
+				Torso_LeftLeg = CreateLine(),
+				Torso_RightLeg = CreateLine()
+			}
+		elseif rigType == "R15" then
+			espData.skeleton = {
+				Head_UpperTorso = CreateLine(),
+				UpperTorso_LowerTorso = CreateLine(),
+				UpperTorso_LeftUpperArm = CreateLine(),
+				LeftUpperArm_LeftLowerArm = CreateLine(),
+				LeftLowerArm_LeftHand = CreateLine(),
+				UpperTorso_RightUpperArm = CreateLine(),
+				RightUpperArm_RightLowerArm = CreateLine(),
+				RightLowerArm_RightHand = CreateLine(),
+				LowerTorso_LeftUpperLeg = CreateLine(),
+				LeftUpperLeg_LeftLowerLeg = CreateLine(),
+				LeftLowerLeg_LeftFoot = CreateLine(),
+				LowerTorso_RightUpperLeg = CreateLine(),
+				RightUpperLeg_RightLowerLeg = CreateLine(),
+				RightLowerLeg_RightFoot = CreateLine()
+			}
+		end
+
+		activeESPs[Char] = espData
+
+		-- Separate RenderStepped connection for skeleton (updates every frame)
+		local skeletonConnection
+		skeletonConnection = RunService.RenderStepped:Connect(function()
+			if not Char.Parent or not rootPart.Parent then
+				skeletonConnection:Disconnect()
+				-- Clean up skeleton lines
+				for _, line in pairs(espData.skeleton) do
+					line:Remove()
+				end
+				return
+			end
+
+			local charPos = rootPart.CFrame.Position
+			local camPos = CurrentCamera.CFrame.Position
+			local _, onScreen = CurrentCamera:WorldToViewportPoint(charPos)
+			local distance = math_floor((charPos - camPos).Magnitude)
+
+			-- Check if ESP should be visible
+			local espShouldShow = onScreen and Settings.Player.Enabled and distance <= Settings.Player.Max_Distance
+			local isAlive = not humanoid or humanoid.Health > 0
+
+			-- AI check
+			local isAI = false
+			if workspace:FindFirstChild("AiZones") then
+				isAI = Char:IsDescendantOf(workspace.AiZones)
+			end
+
+			-- Early exit if conditions not met
+			if not espShouldShow or not isAlive or (isAI and not Settings.Player.ShowAI) then
+				-- Hide skeleton
+				for _, line in pairs(espData.skeleton) do
+					line.Visible = false
+				end
+				return
+			end
+			
+				
+
+			espData.hue = (espData.hue + 2) % 360
+
+			-- Determine color with proper priority
+			local color
+			local isTargetted = Settings.Player.Use_Targetted_Color and Settings.Player.Targetted_Player and Char.Name == Settings.Player.Targetted_Player
+			local isVisible = Settings.Player.Visible_Check and VisibleCheck(Char)
+
+			-- Priority: 1. Targetted, 2. Visible, 3. Rainbow/Custom
+			if isTargetted then
+				color = Settings.Player.Targetted_Color
+			elseif isVisible then
+				color = Settings.Player.Visible_Color
+			else
+				if Settings.Player.Color == "Rainbow" then
+					color = Color3_fromHSV(espData.hue/360, 1, 1)
+				else
+					color = Settings.Player.Color or Color3.new(1, 1, 1)
+				end
+			end
+
+			local shouldUpdateSkeletonColor = true
+			
+			if Settings.Player.Skeleton then
+				local rigType = GetRigType(Char)
+
+				-- Update thickness and transparency for all lines if settings changed
+				for _, line in pairs(espData.skeleton) do
+					line.Thickness = Settings.Player.Skeleton_Thickness
+					line.Transparency = Settings.Player.Skeleton_Transparency
+				end
+
+				if rigType == "R6" then
+					local head = Char:FindFirstChild("Head")
+					local torso = Char:FindFirstChild("Torso")
+					local leftArm = Char:FindFirstChild("Left Arm")
+					local rightArm = Char:FindFirstChild("Right Arm")
+					local leftLeg = Char:FindFirstChild("Left Leg")
+					local rightLeg = Char:FindFirstChild("Right Leg")
+
+					-- Head to Torso
+					if head and torso and espData.skeleton.Head_Torso then
+						local headPos, headOnScreen = WorldToScreen(head.Position)
+						local torsoPos, torsoOnScreen = WorldToScreen(torso.Position)
+						if headOnScreen and torsoOnScreen then
+							espData.skeleton.Head_Torso.From = headPos
+							espData.skeleton.Head_Torso.To = torsoPos
+							if shouldUpdateSkeletonColor then
+								espData.skeleton.Head_Torso.Color = color
+							end
+							espData.skeleton.Head_Torso.Visible = true
+						else
+							espData.skeleton.Head_Torso.Visible = false
+						end
+					end
+
+					-- Torso to Left Arm
+					if torso and leftArm and espData.skeleton.Torso_LeftArm then
+						local torsoPos, torsoOnScreen = WorldToScreen(torso.Position + Vector3_new(-torso.Size.X/2, torso.Size.Y/4, 0))
+						local armPos, armOnScreen = WorldToScreen(leftArm.Position + Vector3_new(0, leftArm.Size.Y/2, 0))
+						if torsoOnScreen and armOnScreen then
+							espData.skeleton.Torso_LeftArm.From = torsoPos
+							espData.skeleton.Torso_LeftArm.To = armPos
+							if shouldUpdateSkeletonColor then
+								espData.skeleton.Torso_LeftArm.Color = color
+							end
+							espData.skeleton.Torso_LeftArm.Visible = true
+						else
+							espData.skeleton.Torso_LeftArm.Visible = false
+						end
+					end
+
+					-- Torso to Right Arm
+					if torso and rightArm and espData.skeleton.Torso_RightArm then
+						local torsoPos, torsoOnScreen = WorldToScreen(torso.Position + Vector3_new(torso.Size.X/2, torso.Size.Y/4, 0))
+						local armPos, armOnScreen = WorldToScreen(rightArm.Position + Vector3_new(0, rightArm.Size.Y/2, 0))
+						if torsoOnScreen and armOnScreen then
+							espData.skeleton.Torso_RightArm.From = torsoPos
+							espData.skeleton.Torso_RightArm.To = armPos
+							if shouldUpdateSkeletonColor then
+								espData.skeleton.Torso_RightArm.Color = color
+							end
+							espData.skeleton.Torso_RightArm.Visible = true
+						else
+							espData.skeleton.Torso_RightArm.Visible = false
+						end
+					end
+
+					-- Torso to Left Leg
+					if torso and leftLeg and espData.skeleton.Torso_LeftLeg then
+						local torsoPos, torsoOnScreen = WorldToScreen(torso.Position - Vector3_new(torso.Size.X/4, torso.Size.Y/2, 0))
+						local legPos, legOnScreen = WorldToScreen(leftLeg.Position + Vector3_new(0, leftLeg.Size.Y/2, 0))
+						if torsoOnScreen and legOnScreen then
+							espData.skeleton.Torso_LeftLeg.From = torsoPos
+							espData.skeleton.Torso_LeftLeg.To = legPos
+							if shouldUpdateSkeletonColor then
+								espData.skeleton.Torso_LeftLeg.Color = color
+							end
+							espData.skeleton.Torso_LeftLeg.Visible = true
+						else
+							espData.skeleton.Torso_LeftLeg.Visible = false
+						end
+					end
+
+					-- Torso to Right Leg
+					if torso and rightLeg and espData.skeleton.Torso_RightLeg then
+						local torsoPos, torsoOnScreen = WorldToScreen(torso.Position - Vector3_new(-torso.Size.X/4, torso.Size.Y/2, 0))
+						local legPos, legOnScreen = WorldToScreen(rightLeg.Position + Vector3_new(0, rightLeg.Size.Y/2, 0))
+						if torsoOnScreen and legOnScreen then
+							espData.skeleton.Torso_RightLeg.From = torsoPos
+							espData.skeleton.Torso_RightLeg.To = legPos
+							if shouldUpdateSkeletonColor then
+								espData.skeleton.Torso_RightLeg.Color = color
+							end
+							espData.skeleton.Torso_RightLeg.Visible = true
+						else
+							espData.skeleton.Torso_RightLeg.Visible = false
+						end
+					end
+
+				elseif rigType == "R15" then
+					-- R15 Skeleton connections
+					local connections = {
+						{"Head", "UpperTorso", "Head_UpperTorso"},
+						{"UpperTorso", "LowerTorso", "UpperTorso_LowerTorso"},
+						{"UpperTorso", "LeftUpperArm", "UpperTorso_LeftUpperArm"},
+						{"LeftUpperArm", "LeftLowerArm", "LeftUpperArm_LeftLowerArm"},
+						{"LeftLowerArm", "LeftHand", "LeftLowerArm_LeftHand"},
+						{"UpperTorso", "RightUpperArm", "UpperTorso_RightUpperArm"},
+						{"RightUpperArm", "RightLowerArm", "RightUpperArm_RightLowerArm"},
+						{"RightLowerArm", "RightHand", "RightLowerArm_RightHand"},
+						{"LowerTorso", "LeftUpperLeg", "LowerTorso_LeftUpperLeg"},
+						{"LeftUpperLeg", "LeftLowerLeg", "LeftUpperLeg_LeftLowerLeg"},
+						{"LeftLowerLeg", "LeftFoot", "LeftLowerLeg_LeftFoot"},
+						{"LowerTorso", "RightUpperLeg", "LowerTorso_RightUpperLeg"},
+						{"RightUpperLeg", "RightLowerLeg", "RightUpperLeg_RightLowerLeg"},
+						{"RightLowerLeg", "RightFoot", "RightLowerLeg_RightFoot"}
+					}
+
+					for _, connection in pairs(connections) do
+						local part1 = Char:FindFirstChild(connection[1])
+						local part2 = Char:FindFirstChild(connection[2])
+						local lineName = connection[3]
+						local line = espData.skeleton[lineName]
+
+						if part1 and part2 and line then
+							local pos1, onScreen1 = WorldToScreen(part1.Position)
+							local pos2, onScreen2 = WorldToScreen(part2.Position)
+							if onScreen1 and onScreen2 then
+								line.From = pos1
+								line.To = pos2
+								if shouldUpdateSkeletonColor then
+									line.Color = color
+								end
+								line.Visible = true
+							else
+								line.Visible = false
+							end
+						end
+					end
+				end
+
+				-- Update last skeleton color after all updates
+				if shouldUpdateSkeletonColor then
+					espData.lastSkeletonColor = color
+				end
+			else
+				-- Hide skeleton if disabled
+				for _, line in pairs(espData.skeleton) do
+					line.Visible = false
+				end
+			end
+		end)
+
+		-- Separate Heartbeat connection for BillboardGui (30 FPS)
+		local connection
+		connection = RunService.Heartbeat:Connect(function()
+			local currentTime = tick()
+			if currentTime - lastUpdate < UPDATE_INTERVAL then return end
+
+			if not Char.Parent or not rootPart.Parent then
+				connection:Disconnect()
+				skeletonConnection:Disconnect()
+				if espData.esp then
+					espData.esp:Destroy()
+				end
+				if espData.highlight then
+					espData.highlight:Destroy()
+				end
+				activeESPs[Char] = nil
+				boxFrameCache[Char] = nil
+				return
+			end
+
+			local charPos = rootPart.CFrame.Position
+			local camPos = CurrentCamera.CFrame.Position
+			local _, onScreen = CurrentCamera:WorldToViewportPoint(charPos)
+			local distance = math_floor((charPos - camPos).Magnitude)
+
+			-- Check if ESP should be visible
+			local espShouldShow = onScreen and Settings.Player.Enabled and distance <= Settings.Player.Max_Distance
+			local isAlive = not humanoid or humanoid.Health > 0
+
+			-- AI check
+			local isAI = false
+			if workspace:FindFirstChild("AiZones") then
+				isAI = Char:IsDescendantOf(workspace.AiZones)
+			end
+
+			-- Early exit if conditions not met
+			if not espShouldShow or not isAlive or (isAI and not Settings.Player.ShowAI) then
+				if espData.esp then
+					espData.esp.Enabled = false
+				end
+				return
+			end
+			if not espData.esp then
+				if not playerESPTemplate then
+					playerESPTemplate = game:GetObjects("rbxassetid://105397909804981")[1] --  136710835837062 OLD USE IF IT ISNT WORKING
+					print("diddy")
+				end
+				espData.esp = playerESPTemplate:Clone()
+				espData.esp.Parent = CoreGui
+				espData.esp.Adornee = rootPart
+				espData.esp.Name_.Position = UDim2_new(0.5, 0, 0.49899, -2)
+				espData.esp.Name_.FontFace = font
+				espData.esp.Distance.FontFace = font
+				espData.esp.Weapon.FontFace = font
+				espData.esp.StudsOffset = Vector3_new(0, -(rootPart.Size.Y / 3.5), 0)
+			end
+			local esp = espData.esp
+			esp.Enabled = true
+			if math.abs(distance - espData.lastDistance) > 10 then
+				local _, size = GetBoundingBox(Char)
+				if size then
+					esp.Size = UDim2_fromScale((size.X + 1) * 500, (size.Y + 1) * 500)
+				end
+				espData.lastDistance = distance
+			end
+
+			espData.hue = (espData.hue + 2) % 360
+			local color
+			local isTargetted = Settings.Player.Use_Targetted_Color and Settings.Player.Targetted_Player and Char.Name == Settings.Player.Targetted_Player
+			local isVisible = Settings.Player.Visible_Check and VisibleCheck(Char)
+
+			if isTargetted then
+				color = Settings.Player.Targetted_Color
+			elseif isVisible then
+				color = Settings.Player.Visible_Color
+			else
+				if Settings.Player.Color == "Rainbow" then
+					color = Color3_fromHSV(espData.hue/360, 1, 1)
+				else
+					color = Settings.Player.Color or Color3.new(1, 1, 1)
+				end
+			end
+
+			-- Determine if color should update (always for rainbow when not overridden)
+			local shouldUpdateColor = true
+
+			-- Box rendering (optimized with cached frames)
+			if Settings.Player.Box then
+				local boxFrame = Settings.Player.Box_Type == "Fill" and esp.Fill or esp.Corner
+				local otherFrame = Settings.Player.Box_Type == "Fill" and esp.Corner or esp.Fill
+
+				boxFrame.Visible = true
+				otherFrame.Visible = false
+
+				-- Cache box child frames on first access for BOTH Fill and Corner
+				if not boxFrameCache[Char] then
+					boxFrameCache[Char] = {}
+				end
+
+				local cacheKey = Settings.Player.Box_Type
+				if not boxFrameCache[Char][cacheKey] then
+					local frames = {}
+					for _, frame in pairs(boxFrame:GetChildren()) do
+						if frame:IsA("Frame") then
+							table.insert(frames, frame)
+						end
+					end
+					boxFrameCache[Char][cacheKey] = frames
+				end
+
+				-- Update colors
+				if shouldUpdateColor then
+					boxFrame.BackgroundColor3 = color
+					for _, frame in pairs(boxFrameCache[Char][cacheKey]) do
+						frame.BackgroundColor3 = color
+					end
+				end
+
+				boxFrame.BackgroundTransparency = Settings.Player.Filled and Settings.Player.Fill_Transparency or 1
+				boxFrame.Size = UDim2_fromScale(1/500, 1/500)
+			else
+				esp.Fill.Visible = false
+				esp.Corner.Visible = false
+			end
+
+			-- Update lastColor after all color updates
+			if shouldUpdateColor then
+				espData.lastColor = color
+			end
+
+			-- Name
+			if Settings.Player.Name then
+				esp.Name_.Visible = true
+				if esp.Name_.Text ~= Char.Name then
+					esp.Name_.Text = Char.Name
+				end
+				if shouldUpdateColor then
+					esp.Name_.TextColor3 = color
+				end
+			else
+				esp.Name_.Visible = false
+			end
+
+			-- Weapon (cache weapon name)
+			if Settings.Player.Weapon then
+				local weapon = "None"
+				if Char:FindFirstChild("Holding") and tostring(Char:FindFirstChild("Holding").Value) ~= "" then
+					weapon = tostring(Char:FindFirstChild("Holding").Value)
+				elseif game.PlaceId == 11729688377 then
+					local toolModel = Char.Tools:FindFirstChildOfClass("Model")
+					weapon = toolModel and toolModel.Name or "None"
+				else
+					local tool = Char:FindFirstChildOfClass("Tool")
+					weapon = tool and tool.Name or "None"
+				end
+
+				esp.Weapon.Visible = true
+				if esp.Weapon.Text ~= weapon then
+					esp.Weapon.Text = weapon
+				end
+				if shouldUpdateColor then
+					esp.Weapon.TextColor3 = color
+				end
+			else
+				esp.Weapon.Visible = false
+			end
+			if Settings.Player.Distance then
+				esp.Distance.Visible = true
+				local distanceText = "[" .. distance .. "]"
+				if esp.Distance.Text ~= distanceText then
+					esp.Distance.Text = distanceText
+				end
+				if shouldUpdateColor then
+					esp.Distance.TextColor3 = color
+				end
+				esp.Distance.Position = UDim2_new(0.5, 0, 0.500999987, 
+					Settings.Player.Weapon and esp.Weapon.TextBounds.Y + 2 or 1)
+			else
+				esp.Distance.Visible = false
+			end
+
+			if Settings.Player.HealthBar and humanoid then
+				esp.Health.Visible = true
+				local currentHealth = humanoid.Health
+				local healthRatio = currentHealth / humanoid.MaxHealth
+				esp.Health.bar.Size = UDim2_fromScale(1, healthRatio)
+
+				-- Health color calculation
+				local healthColor
+				if healthRatio <= 0 then
+					healthColor = Color3_fromRGB(255, 0, 0)
+				elseif healthRatio <= 0.4 then
+					healthColor = Color3_fromRGB(255, 0, 0):Lerp(Color3_fromRGB(255, 165, 0), healthRatio/0.4)
+				elseif healthRatio <= 0.65 then
+					healthColor = Color3_fromRGB(255, 165, 0):Lerp(Color3_fromRGB(255, 255, 0), (healthRatio-0.4)/0.25)
+				else
+					healthColor = Color3_fromRGB(255, 255, 0):Lerp(Color3_fromRGB(0, 255, 0), (healthRatio-0.65)/0.35)
+				end
+
+				esp.Health.bar.BackgroundColor3 = healthColor
+				espData.lastHealth = currentHealth
+			else
+				esp.Health.Visible = false
+			end
+			if Settings.Player.Chams then
+				if not espData.highlight or not Char:FindFirstChild("Highlight") then
+					espData.highlight = Instance.new("Highlight")
+					espData.highlight.Parent = Char
+					espData.highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+					espData.highlight.FillTransparency = 0  
+					espData.highlight.OutlineTransparency = 0.2 
+				end
+				espData.highlight.Enabled = true
+				espData.highlight.FillColor = color
+				espData.highlight.OutlineColor = color
+			else
+				if espData.highlight then
+					espData.highlight.Enabled = false
+				end
+			end
+		end)
+		local ancestryConnection
+		ancestryConnection = Char.AncestryChanged:Connect(function(_, parent)
+			if parent == nil then
+				connection:Disconnect()
+				skeletonConnection:Disconnect()
+				ancestryConnection:Disconnect()
+				if espData.esp then
+					espData.esp:Destroy()
+				end
+				-- Clean up skeleton lines
+				for _, line in pairs(espData.skeleton) do
+					line:Remove()
+				end
+				-- Clean up highlight
+				if espData.highlight then
+					espData.highlight:Destroy()
+				end
+				activeESPs[Char] = nil
+				boxFrameCache[Char] = nil
+			end
+		end)
+	end,
+
+	function(Item, Name, Color, Setting)
+		if activeESPs[Item] then return end -- Already has ESP
+		if Setting and not Settings.Item[Setting] then return end -- Check if the specific setting exists and is enabled
+		if Item:IsA("Model") then
+			Item = Item.PrimaryPart
+		end
+		
+		if not Item or not Item:IsA("BasePart") then return end -- Make sure Item is a valid BasePart
+		
+		local espData = {
+			item = Item,
+			hue = math.random(0, 360),
+			esp = nil,
+			lastDistance = 0,
+			setting = Setting -- Store the setting for runtime checks
+		}
+
+		activeESPs[Item] = espData
+
+		local connection
+		connection = RunService.Heartbeat:Connect(function()
+			local currentTime = tick()
+			if currentTime - lastUpdate < UPDATE_INTERVAL then return end
+
+			if not Item.Parent then
+				connection:Disconnect()
+				if espData.esp then
+					espData.esp:Destroy()
+				end
+				activeESPs[Item] = nil
+				return
+			end
+
+			local _, onScreen = CurrentCamera:WorldToViewportPoint(Item.Position)
+			local distance = math_floor((Item.Position - CurrentCamera.CFrame.Position).Magnitude)
+
+			-- Check if the specific setting is enabled (if Setting exists)
+			local settingEnabled = not Setting or Settings.Item[Setting]
+			
+			-- Check both global Item.Enabled and the specific setting
+			if not (onScreen and Settings.Item.Enabled and settingEnabled and distance <= Settings.Item.Max_Distance) then
+				if espData.esp then
+					espData.esp.Enabled = false
+				end
+			end
+
+			espData.hue = (espData.hue + 2) % 360
+			local color = Color == "Rainbow" and Color3_fromHSV(espData.hue/360, 1, 1) or Color or Color3.new(1, 1, 1)
+			local titleText = Settings.Item.Distance and Name .. " [" .. distance .. "]" or Name
+			if not espData.esp then
+				if not itemESPTemplate then
+					itemESPTemplate = game:GetObjects("rbxassetid://99290455980050")[1]  -- old 75571122265739
+				end
+				espData.esp = itemESPTemplate:Clone()
+				espData.esp.Parent = CoreGui
+				espData.esp.Adornee = Item
+				espData.esp.AlwaysOnTop = true
+				espData.esp.MaxDistance = math.huge
+				espData.esp.Enabled = true
+				-- Make sure Title exists and is visible
+				if espData.esp:FindFirstChild("Title") then
+					espData.esp.Title.FontFace = font
+					espData.esp.Title.Visible = true
+					espData.esp.Title.TextStrokeTransparency = 0.5
+					espData.esp.Title.TextSize = 14
+					espData.esp.Title.Visible = true
+					print("here")
+				else
+					warn("Item ESP template missing Title TextLabel!")
+				end
+			end
+
+			
+			
+
+			
+		end)
+
+		local ancestryConnection
+		ancestryConnection = Item.AncestryChanged:Connect(function(_, parent)
+			if parent == nil then
+				connection:Disconnect()
+				ancestryConnection:Disconnect()
+				if espData.esp then
+					espData.esp:Destroy()
+				end
+				activeESPs[Item] = nil
+			end
+		end)
+	end,
+
+	Settings
+}
