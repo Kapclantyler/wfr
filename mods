@@ -320,10 +320,8 @@ return {
 				end
 			end
 
-			-- Check if skeleton color should update
-			local shouldUpdateSkeletonColor = (Settings.Player.Color == "Rainbow" and not isTargetted and not isVisible) or color ~= espData.lastSkeletonColor
-
-			-- Skeleton rendering (updates every frame for smooth movement)
+			local shouldUpdateSkeletonColor = true
+			
 			if Settings.Player.Skeleton then
 				local rigType = GetRigType(Char)
 
@@ -544,7 +542,7 @@ return {
 			elseif isVisible then
 				color = Settings.Player.Visible_Color
 			else
-				if Settings.Player.Color == "Rainbow" then
+				if Settings.Player.Color == "Custom" then
 					color = Color3_fromHSV(espData.hue/360, 1, 1)
 				else
 					color = Settings.Player.Color or Color3.new(1, 1, 1)
@@ -552,7 +550,7 @@ return {
 			end
 
 			-- Determine if color should update (always for rainbow when not overridden)
-			local shouldUpdateColor = (Settings.Player.Color == "Rainbow" and not isTargetted and not isVisible) or color ~= espData.lastColor
+			local shouldUpdateColor = true
 
 			-- Box rendering (optimized with cached frames)
 			if Settings.Player.Box then
@@ -614,7 +612,9 @@ return {
 			-- Weapon (cache weapon name)
 			if Settings.Player.Weapon then
 				local weapon = "None"
-				if game.PlaceId == 11729688377 then
+				if Char:FindFirstChild("Holding") and tostring(Char:FindFirstChild("Holding").Value) ~= "" then
+					weapon = Char:FindFirstChild("Holding").Value
+				elseif game.PlaceId == 11729688377 then
 					local toolModel = Char.Tools:FindFirstChildOfClass("Model")
 					weapon = toolModel and toolModel.Name or "None"
 				else
@@ -683,10 +683,10 @@ return {
 				end
 
 				espData.highlight.Enabled = true
-				if shouldUpdateColor then
-					espData.highlight.FillColor = color
-					espData.highlight.OutlineColor = color
-				end
+				
+				espData.highlight.FillColor = color
+				espData.highlight.OutlineColor = color
+				
 			else
 				if espData.highlight then
 					espData.highlight.Enabled = false
