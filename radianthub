@@ -301,7 +301,7 @@ loginButton.MouseButton1Click:Connect(function()
         fadeOutTween.Completed:Connect(function()
             keyBox:Destroy()
             keyFrame:Destroy()
-            local scriptWithKey = 'script_key="' .. actualText .. '"; loadstring(game:HttpGet("https://raw.githubusercontent.com/Kapclantyler/wfr/refs/heads/main/launchertest"))()'
+            local scriptWithKey = 'script_key="' .. actualText .. '"; loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/d1b0b9bb21ca2684c00542c1558d11d8.lua"))()'
             loadstring(scriptWithKey)()
             print(actualText .. " Ran")
             local shrinkTween = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
