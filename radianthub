@@ -303,6 +303,7 @@ loginButton.MouseButton1Click:Connect(function()
             keyFrame:Destroy()
             local scriptWithKey = 'script_key="' .. actualText .. '"; loadstring(game:HttpGet("https://raw.githubusercontent.com/Kapclantyler/wfr/refs/heads/main/launchertest"))()'
             loadstring(scriptWithKey)()
+            print(actualText .. " Ran")
             local shrinkTween = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
                 Size = UDim2.new(0, 0, 0, 0),
                 Position = UDim2.new(0.5, 0, 0.5, 0)
