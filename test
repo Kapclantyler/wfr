@@ -1,5 +1,5 @@
 function LPH_NO_VIRTUALIZE(f) return f end;
-
+print("murda")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local CurrentCamera = game:GetService("Workspace").CurrentCamera
@@ -194,7 +194,7 @@ local Settings = {
 	Item = {
 		Enabled = false,
 		Distance = false,
-		Max_Distance = 1000
+		Max_Distance = 3000
 	},
 }
 
@@ -753,6 +753,8 @@ return {
 				espData.esp.Parent = CoreGui
 				espData.esp.Adornee = Item
 				espData.esp.Title.FontFace = font
+				espData.esp.Title.Visible = true
+				espData.esp.Enabled = true
 			end
 
 			local esp = espData.esp
