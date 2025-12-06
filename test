@@ -1,5 +1,5 @@
 function LPH_NO_VIRTUALIZE(f) return f end;
-print("murda")
+
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local CurrentCamera = game:GetService("Workspace").CurrentCamera
@@ -190,6 +190,7 @@ local Settings = {
 		Skeleton_Thickness = 2,
 		Skeleton_Transparency = 1,
 		Chams = false,
+		ShowAI = false,
 	},
 	Item = {
 		Enabled = false,
@@ -216,7 +217,17 @@ return {
 	function(Char)
 		if not Char:FindFirstChild("HumanoidRootPart") then return end
 		if activeESPs[Char] then return end -- Already has ESP
-
+		
+		-- AI check - if it's AI and ShowAI is disabled, don't create ESP
+		local isAI = false
+		if workspace:FindFirstChild("AiZones") then
+			isAI = Char:IsDescendantOf(workspace.AiZones)
+		end
+		
+		if isAI and not Settings.Player.ShowAI then
+			return -- Don't create ESP for AI if ShowAI is disabled
+		end
+		
 		local rootPart = Char.HumanoidRootPart
 		local humanoid = Char:FindFirstChild("Humanoid")
 		local espData = {
@@ -286,14 +297,22 @@ return {
 			local espShouldShow = onScreen and Settings.Player.Enabled and distance <= Settings.Player.Max_Distance
 			local isAlive = not humanoid or humanoid.Health > 0
 
+			-- AI check
+			local isAI = false
+			if workspace:FindFirstChild("AiZones") then
+				isAI = Char:IsDescendantOf(workspace.AiZones)
+			end
+
 			-- Early exit if conditions not met
-			if not espShouldShow or not isAlive then
+			if not espShouldShow or not isAlive or (isAI and not Settings.Player.ShowAI) then
 				-- Hide skeleton
 				for _, line in pairs(espData.skeleton) do
 					line.Visible = false
 				end
 				return
 			end
+			
+				
 
 			espData.hue = (espData.hue + 2) % 360
 
@@ -497,8 +516,14 @@ return {
 			local espShouldShow = onScreen and Settings.Player.Enabled and distance <= Settings.Player.Max_Distance
 			local isAlive = not humanoid or humanoid.Health > 0
 
+			-- AI check
+			local isAI = false
+			if workspace:FindFirstChild("AiZones") then
+				isAI = Char:IsDescendantOf(workspace.AiZones)
+			end
+
 			-- Early exit if conditions not met
-			if not espShouldShow or not isAlive then
+			if not espShouldShow or not isAlive or (isAI and not Settings.Player.ShowAI) then
 				if espData.esp then
 					espData.esp.Enabled = false
 				end
