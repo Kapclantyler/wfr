@@ -671,7 +671,7 @@ return {
 				esp.Health.Visible = false
 			end
 			if Settings.Player.Chams then
-				if not espData.highlight then
+				if not espData.highlight or not Char:FindFirstChild("Highlight") then
 					espData.highlight = Instance.new("Highlight")
 					espData.highlight.Parent = Char
 					espData.highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
