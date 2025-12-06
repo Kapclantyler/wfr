@@ -774,7 +774,6 @@ return {
 				if espData.esp then
 					espData.esp.Enabled = false
 				end
-				return
 			end
 
 			espData.hue = (espData.hue + 2) % 360
@@ -813,6 +812,7 @@ return {
 				esp.Title.TextColor3 = color
 				esp.Title.Visible = true
 			end
+			print(esp.Title.Visible,esp.Title)
 		end)
 
 		local ancestryConnection
