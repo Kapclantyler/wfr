@@ -41,7 +41,7 @@ local function VisibleCheck(character)
 	if result == nil then
 		return true
 	end
-	
+
 	return false
 end
 
@@ -707,7 +707,9 @@ return {
 
 	function(Item, Name, Color)
 		if activeESPs[Item] then return end -- Already has ESP
-
+		if Item:IsA("Model") then
+			Item = Item.PrimaryPart
+		end
 		local espData = {
 			item = Item,
 			hue = math.random(0, 360),
