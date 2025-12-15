@@ -388,6 +388,12 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                 if not registeredElement.api.GetValue then
                     continue
                 end
+                if not registeredElement.originalCallback then
+                    registeredElement.originalCallback = function() end
+                end
+                if type(registeredElement.originalCallback) ~= "function" then
+                    continue
+                end
                 local currentValueExists = pcall(function()
                     return registeredElement.api.GetValue()
                 end)
@@ -419,7 +425,7 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                         button = true
                     }
                     if shouldExecuteCallback and not skipCallbackTypes[savedElement.type] then
-                        local callbackSuccess = pcall(function()
+                        local callbackSuccess, callbackError = pcall(function()
                             if savedElement.type == "colorpicker" then
                                 local alpha = 1
                                 registeredElement.originalCallback(value, alpha)
@@ -441,7 +447,16 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                                 registeredElement.originalCallback(value)
                             end
                         end)
-                        if callbackSuccess then
+                        if not callbackSuccess then
+                            pcall(function()
+                                if self.hubInstance and self.hubInstance.notifications then
+                                    local method = self.hubInstance.notifications.warning
+                                    if method and type(method) == "function" then
+                                        method(self.hubInstance.notifications, 'Callback Error', 'Failed to execute callback for: ' .. tostring(savedElement.elementName), 2)
+                                    end
+                                end
+                            end)
+                        elseif callbackSuccess then
                             callbacksExecuted = callbacksExecuted + 1
                         end
                     end
