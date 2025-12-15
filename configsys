@@ -1,0 +1,866 @@
+local ConfigManager = {}
+ConfigManager.__index = ConfigManager
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local SYSTEM_VERSION = "2.1"
+local CONFIG_FOLDER = "LynixHub_Configs"
+local DEFAULT_CONFIG = "Default"
+local function getFileSystemType()
+    local fs = {
+        hasListFiles = typeof(listfiles) == "function",
+        hasIsFolder = typeof(isfolder) == "function",
+        hasMakeFolder = typeof(makefolder) == "function",
+        hasIsFile = typeof(isfile) == "function",
+        hasWriteFile = typeof(writefile) == "function",
+        hasReadFile = typeof(readfile) == "function",
+        hasDelFile = typeof(delfile) == "function"
+    }
+    fs.hasBasicFS = fs.hasIsFile and fs.hasWriteFile and fs.hasReadFile
+    fs.hasFullFS = fs.hasBasicFS and fs.hasMakeFolder and fs.hasIsFolder
+    return fs
+end
+local fileSystem = getFileSystemType()
+local function safeCreateDirectory(path)
+    if not fileSystem.hasFullFS then return false end
+    local success = pcall(function()
+        if not isfolder(path) then
+            makefolder(path)
+        end
+    end)
+    return success and isfolder(path)
+end
+local function safeWriteFile(path, content)
+    if not fileSystem.hasWriteFile then return false end
+    local success = pcall(function()
+        writefile(path, content)
+    end)
+    return success
+end
+local function safeReadFile(path)
+    if not fileSystem.hasReadFile or not fileSystem.hasIsFile then return nil end
+    local success, content = pcall(function()
+        if isfile(path) then
+            return readfile(path)
+        end
+        return nil
+    end)
+    return success and content or nil
+end
+local function safeDeleteFile(path)
+    if not fileSystem.hasIsFile then return false end
+    local success = pcall(function()
+        if isfile(path) then
+            if fileSystem.hasDelFile then
+                delfile(path)
+            else
+                writefile(path, "")
+            end
+        end
+    end)
+    return success
+end
+local function safeListFiles(directory)
+    if not fileSystem.hasListFiles or not fileSystem.hasIsFolder then return {} end
+    local success, files = pcall(function()
+        if isfolder(directory) then
+            return listfiles(directory) or {}
+        end
+        return {}
+    end)
+    return success and files or {}
+end
+function ConfigManager.new(hubInstance)
+    local self = setmetatable({}, ConfigManager)
+    self.hubInstance = hubInstance
+    self.configFolder = CONFIG_FOLDER
+    self.currentConfig = DEFAULT_CONFIG
+    self.httpService = HttpService
+    self.isInitialized = false
+    self.hasFileSystem = fileSystem.hasBasicFS
+    self.memoryStore = {configs = {}}
+    self:delayedInitialize()
+    return self
+end
+function ConfigManager:delayedInitialize()
+    task.spawn(function()
+        local attempts = 0
+        local maxAttempts = 15
+        while attempts < maxAttempts do
+            attempts = attempts + 1
+            if self.hubInstance and self.hubInstance.tabs and #self.hubInstance.tabs > 0 then
+                task.wait(0.2)
+                local success = self:initializeConfigSystem()
+                if success then
+                    self.isInitialized = true
+                    self:cleanupDuplicateConfigs()
+                    task.wait(0.1)
+                    if not self:configExists(DEFAULT_CONFIG) then
+                        self:createDefaultConfig()
+                    end
+                    self:safeNotify('success', 'Config System', 'Ready! (FS: ' .. (self.hasFileSystem and 'Yes' or 'Memory') .. ')', 3)
+                    break
+                end
+            end
+            task.wait(0.1)
+        end
+        if not self.isInitialized then
+            self:safeNotify('error', 'Config System', 'Failed to initialize after ' .. maxAttempts .. ' attempts')
+            self.hasFileSystem = false
+            self.isInitialized = true
+            self:ensureDefaultConfig()
+        end
+    end)
+end
+function ConfigManager:initializeConfigSystem()
+    local success = pcall(function()
+        if self.hasFileSystem then
+            self:setupFileSystem()
+            local testSuccess = self:testFileSystemPersistence()
+            if not testSuccess then
+                self:repairFileSystem()
+            end
+        else
+            self:safeNotify('warning', 'File System', 'Using memory storage only - configs lost on restart', 4)
+            task.spawn(function()
+                task.wait(2)
+                self:repairFileSystem()
+            end)
+        end
+        self:ensureDefaultConfig()
+        return true
+    end)
+    return success
+end
+function ConfigManager:setupFileSystem()
+    if not fileSystem.hasFullFS then return end
+    local paths = {
+        "workspace/" .. self.configFolder,
+        "autoexec/" .. self.configFolder,
+        "syn/" .. self.configFolder,
+        "krnl/" .. self.configFolder,
+        "scriptware/" .. self.configFolder,
+        "fluxus/" .. self.configFolder,
+        self.configFolder
+    }
+    for _, path in ipairs(paths) do
+        if safeCreateDirectory(path) then
+            local testFile = path .. "/persistence_test.txt"
+            local testContent = "test_" .. os.time()
+            if safeWriteFile(testFile, testContent) then
+                local readBack = safeReadFile(testFile)
+                if readBack == testContent then
+                    self.configFolder = path
+                    safeDeleteFile(testFile)
+                    task.spawn(function()
+                        task.wait(0.5)
+                        if isfolder(path) then
+                        end
+                    end)
+                    return
+                end
+            end
+        end
+    end
+    self.hasFileSystem = false
+end
+function ConfigManager:ensureDefaultConfig()
+    for attempt = 1, 3 do
+        if self:configExists(DEFAULT_CONFIG) then
+            return true
+        end
+        local defaultData = self:createDefaultConfigData()
+        local success = self:saveConfigData(DEFAULT_CONFIG, defaultData)
+        if success then
+            task.wait(0.1)
+            if self:configExists(DEFAULT_CONFIG) then
+                return true
+            end
+        end
+        if attempt < 3 then
+            task.wait(0.2)
+        end
+    end
+    if not self:configExists(DEFAULT_CONFIG) then
+        local defaultData = self:createDefaultConfigData()
+        self.memoryStore.configs[DEFAULT_CONFIG] = defaultData
+        return true
+    end
+    return false
+end
+function ConfigManager:createDefaultConfig()
+    local defaultData = self:createDefaultConfigData()
+    return self:saveConfigData(DEFAULT_CONFIG, defaultData)
+end
+function ConfigManager:createDefaultConfigData()
+    return {
+        name = DEFAULT_CONFIG,
+        settings = {
+            metadata = {
+                version = SYSTEM_VERSION,
+                timestamp = os.time(),
+                playerName = Players.LocalPlayer.Name
+            },
+            globalSettings = {
+                menuToggleKey = "RightShift",
+                watermarkVisible = true,
+                themeColor = {r = 110, g = 117, b = 243}
+            },
+            tabs = {}
+        },
+        metadata = {
+            version = SYSTEM_VERSION,
+            created = os.time(),
+            lastModified = os.time(),
+            creator = Players.LocalPlayer.Name,
+            description = "Default LynixHub configuration",
+            creatorId = game.CreatorId
+        }
+    }
+end
+function ConfigManager:gatherAllSettings()
+    if not self.hubInstance then
+        return self:createDefaultConfigData().settings
+    end
+    local settings = {
+        metadata = {
+            version = SYSTEM_VERSION,
+            timestamp = os.time(),
+            playerName = Players.LocalPlayer.Name
+        },
+        globalSettings = {
+            menuToggleKey = "RightShift",
+            watermarkVisible = true,
+            themeColor = {r = 110, g = 117, b = 243}
+        },
+        elements = {},
+        tabs = {}
+    }
+    pcall(function()
+        if self.hubInstance._toggleKeyCode then
+            settings.globalSettings.menuToggleKey = self.hubInstance._toggleKeyCode.Name
+        end
+        if self.hubInstance._watermarkVisible ~= nil then
+            settings.globalSettings.watermarkVisible = self.hubInstance._watermarkVisible
+        end
+        if self.hubInstance.options and self.hubInstance.options.theme and self.hubInstance.options.theme.primary then
+            settings.globalSettings.themeColor = self:colorToRGB(self.hubInstance.options.theme.primary)
+        end
+    end)
+    pcall(function()
+        if self.hubInstance.tabs then
+            for i, tab in ipairs(self.hubInstance.tabs) do
+                if tab and tab.frame then
+                    local tabName = tab.frame.Name:gsub("Content", "")
+                    if tabName ~= "Settings" then
+                        settings.tabs[tabName] = {
+                            index = i,
+                            hasContent = true
+                        }
+                    end
+                end
+            end
+        end
+    end)
+    self:gatherRegisteredElements(settings)
+    return settings
+end
+function ConfigManager:gatherRegisteredElements(settings)
+    local excludeElements = {"Auto Load Config"}
+    local excludeTypes = {"button"}
+    if self.hubInstance._getAllRegisteredElements then
+        local elements = self.hubInstance:_getAllRegisteredElements()
+        for elementId, element in pairs(elements or {}) do
+            local skip = false
+            for _, excludeName in ipairs(excludeElements) do
+                if element.elementName == excludeName then
+                    skip = true
+                    break
+                end
+            end
+            if not skip then
+                for _, excludeType in ipairs(excludeTypes) do
+                    if element.type == excludeType then
+                        skip = true
+                        break
+                    end
+                end
+            end
+            if not skip then
+                local success, value = pcall(function()
+                    if element.api and element.api.GetValue then
+                        local rawValue = element.api.GetValue()
+                        if element.type == "colorpicker" and typeof(rawValue) == "Color3" then
+                            return self:colorToRGB(rawValue)
+                        elseif element.type == "keybind" then
+                            return tostring(rawValue)
+                        elseif element.type == "multidropdown" and type(rawValue) == "table" then
+                            local selected = {}
+                            for key, isSelected in pairs(rawValue) do
+                                if isSelected then
+                                    table.insert(selected, key)
+                                end
+                            end
+                            return selected
+                        elseif element.type == "button" then
+                            return tostring(rawValue)
+                        else
+                            return rawValue
+                        end
+                    end
+                    return nil
+                end)
+                if success and value ~= nil then
+                    settings.elements[elementId] = {
+                        type = element.type,
+                        tabName = element.tabName,
+                        windowName = element.windowName,
+                        elementName = element.elementName,
+                        path = element.path,
+                        value = value
+                    }
+                end
+            end
+        end
+    end
+end
+function ConfigManager:applySettings(settings, executeCallbacks)
+    if not settings or not self.hubInstance then
+        self:safeNotify('error', 'Apply Settings', 'Invalid settings data or no UI instance')
+        return false
+    end
+    if executeCallbacks == nil then executeCallbacks = true end
+    local success = pcall(function()
+        if settings.globalSettings then
+            if settings.globalSettings.menuToggleKey then
+                self.hubInstance:SetToggleKey(settings.globalSettings.menuToggleKey)
+            end
+            if settings.globalSettings.watermarkVisible ~= nil then
+                self.hubInstance:SetWatermarkVisible(settings.globalSettings.watermarkVisible)
+            end
+            if settings.globalSettings.themeColor then
+                local color = self:rgbToColor(settings.globalSettings.themeColor)
+                self.hubInstance:SetTheme({primary = color})
+            end
+        end
+        if settings.elements then
+            self:applyElementSettings(settings.elements, executeCallbacks)
+        end
+        return true
+    end)
+    if not success then
+        self:safeNotify('error', 'Apply Settings', 'Failed to apply configuration')
+    end
+    return success
+end
+function ConfigManager:applyElementSettings(elements, executeCallbacks)
+    local excludeElements = {"Auto Load Config"}
+    local excludeTypes = {"button"}
+    if not self.hubInstance._getAllRegisteredElements then
+        return
+    end
+    if executeCallbacks == nil then executeCallbacks = true end
+    local registeredElements = self.hubInstance:_getAllRegisteredElements()
+    local appliedCount = 0
+    local callbacksExecuted = 0
+    for elementId, savedElement in pairs(elements) do
+        local skip = false
+        for _, excludeName in ipairs(excludeElements) do
+            if savedElement.elementName == excludeName then
+                skip = true
+                break
+            end
+        end
+        if not skip then
+            for _, excludeType in ipairs(excludeTypes) do
+                if savedElement.type == excludeType then
+                    skip = true
+                    break
+                end
+            end
+        end
+        if not skip then
+            local registeredElement = registeredElements[elementId]
+            if registeredElement and registeredElement.api then
+                if not registeredElement.api.SetValue then
+                    continue
+                end
+                if not registeredElement.api.GetValue then
+                    continue
+                end
+                local currentValueExists = pcall(function()
+                    return registeredElement.api.GetValue()
+                end)
+                if not currentValueExists then
+                    continue
+                end
+                if savedElement.value == nil then
+                    continue
+                end
+                local success = pcall(function()
+                    local value = savedElement.value
+                    if savedElement.type == "colorpicker" and type(value) == "table" then
+                        value = self:rgbToColor(value)
+                    elseif savedElement.type == "keybind" and type(value) == "string" then
+                    elseif savedElement.type == "multidropdown" and type(value) == "table" then
+                        local selectedMap = {}
+                        for _, key in ipairs(value) do
+                            selectedMap[key] = true
+                        end
+                        value = selectedMap
+                    elseif savedElement.type == "button" and type(value) == "string" then
+                        value = tostring(value)
+                    end
+                    registeredElement.api.SetValue(value)
+                    appliedCount = appliedCount + 1
+                    local shouldExecuteCallback = executeCallbacks and registeredElement.originalCallback and type(registeredElement.originalCallback) == "function"
+                    local skipCallbackTypes = {
+                        keybind = true,
+                        button = true
+                    }
+                    if shouldExecuteCallback and not skipCallbackTypes[savedElement.type] then
+                        local callbackSuccess = pcall(function()
+                            if savedElement.type == "colorpicker" then
+                                local alpha = 1
+                                registeredElement.originalCallback(value, alpha)
+                            elseif savedElement.type == "multidropdown" then
+                                local selectedMap = {}
+                                if type(value) == "table" then
+                                    for _, key in ipairs(value) do
+                                        selectedMap[key] = true
+                                    end
+                                end
+                                registeredElement.originalCallback(selectedMap)
+                            elseif savedElement.type == "slider" then
+                                registeredElement.originalCallback(value)
+                            elseif savedElement.type == "toggle" then
+                                registeredElement.originalCallback(value)
+                            elseif savedElement.type == "dropdown" then
+                                registeredElement.originalCallback(value)
+                            else
+                                registeredElement.originalCallback(value)
+                            end
+                        end)
+                        if callbackSuccess then
+                            callbacksExecuted = callbacksExecuted + 1
+                        end
+                    end
+                end)
+            end
+        end
+    end
+end
+function ConfigManager:saveConfig(configName)
+    if not configName or configName == "" then
+        self:safeNotify('error', 'Save Failed', 'Config name cannot be empty!')
+        return false
+    end
+    local settings = self:gatherAllSettings()
+    local configData = {
+        name = configName,
+        settings = settings,
+        metadata = {
+            version = SYSTEM_VERSION,
+            created = os.time(),
+            lastModified = os.time(),
+            creator = Players.LocalPlayer.Name,
+            description = "LynixHub configuration: " .. configName,
+            creatorId = game.CreatorId
+        }
+    }
+    local success = self:saveConfigData(configName, configData)
+    if success then
+        self.currentConfig = configName
+        self:safeNotify('success', 'Config Saved', 'Configuration "' .. configName .. '" saved successfully!', 3)
+        return true
+    else
+        self:safeNotify('error', 'Save Failed', 'Could not save configuration!')
+        return false
+    end
+end
+function ConfigManager:loadConfig(configName, executeCallbacks)
+    if not configName or configName == "" then
+        self:safeNotify('error', 'Load Failed', 'Config name cannot be empty!')
+        return false
+    end
+    if executeCallbacks == nil then executeCallbacks = true end
+    local configData = self:loadConfigData(configName)
+    if not configData then
+        self:safeNotify('error', 'Load Failed', 'Configuration "' .. configName .. '" not found!')
+        return false
+    end
+    if configData.metadata and configData.metadata.creatorId then
+        if configData.metadata.creatorId ~= game.CreatorId then
+            self:safeNotify('error', 'Load Failed', 'Config is for a different game!', 4)
+            return false
+        end
+    end
+    local success = self:applySettings(configData.settings, executeCallbacks)
+    if success then
+        self.currentConfig = configName
+        local callbackMsg = executeCallbacks and " (with callbacks)" or " (values only)"
+        self:safeNotify('success', 'Config Loaded', 'Configuration "' .. configName .. '" loaded successfully!' .. callbackMsg, 3)
+        return true
+    else
+        self:safeNotify('error', 'Load Failed', 'Could not apply configuration!')
+        return false
+    end
+end
+function ConfigManager:loadConfigWithoutCallbacks(configName)
+    return self:loadConfig(configName, false)
+end
+function ConfigManager:createConfig(configName)
+    if not configName or configName == "" then
+        self:safeNotify('error', 'Create Failed', 'Config name cannot be empty!')
+        return false
+    end
+    local waitAttempts = 0
+    while not self.isInitialized and waitAttempts < 10 do
+        waitAttempts = waitAttempts + 1
+        task.wait(0.1)
+    end
+    if not self.isInitialized then
+        self:ensureDefaultConfig()
+        self.isInitialized = true
+    end
+    if self:configExists(configName) then
+        self:safeNotify('warning', 'Config Exists', 'Configuration "' .. configName .. '" already exists!')
+        return false
+    end
+    local success = self:saveConfig(configName)
+    if success then
+        self:safeNotify('success', 'Config Created', 'Configuration "' .. configName .. '" created successfully!', 3)
+        task.spawn(function()
+            task.wait(0.2)
+            if not self:configExists(configName) then
+                self:saveConfig(configName)
+            end
+        end)
+    end
+    return success
+end
+function ConfigManager:deleteConfig(configName)
+    if not configName or configName == "" or string.lower(configName) == string.lower(DEFAULT_CONFIG) then
+        self:safeNotify('error', 'Delete Failed', 'Cannot delete default configuration!')
+        return false
+    end
+    local success = false
+    if self.hasFileSystem then
+        local filePath = self.configFolder .. "/" .. configName .. ".json"
+        success = safeDeleteFile(filePath)
+    else
+        if self.memoryStore.configs[configName] then
+            self.memoryStore.configs[configName] = nil
+            success = true
+        end
+    end
+    if success then
+        self:safeNotify('success', 'Config Deleted', 'Configuration "' .. configName .. '" deleted successfully!', 3)
+        return true
+    else
+        self:safeNotify('error', 'Delete Failed', 'Could not delete configuration!')
+        return false
+    end
+end
+function ConfigManager:saveConfigData(configName, configData)
+    if self.hasFileSystem then
+        local filePath = self.configFolder .. "/" .. configName .. ".json"
+        local success, jsonString = pcall(function()
+            return self.httpService:JSONEncode(configData)
+        end)
+        if success and jsonString then
+            local writeSuccess = safeWriteFile(filePath, jsonString)
+            if writeSuccess then
+                task.spawn(function()
+                    task.wait(0.1)
+                    local verifyContent = safeReadFile(filePath)
+                    if not verifyContent or verifyContent ~= jsonString then
+                        self.memoryStore.configs[configName] = configData
+                    end
+                end)
+                return true
+            else
+                self.memoryStore.configs[configName] = configData
+                return true
+            end
+        else
+            return false
+        end
+    else
+        self.memoryStore.configs[configName] = configData
+        return true
+    end
+end
+function ConfigManager:loadConfigData(configName)
+    if not configName or configName == "" then return nil end
+    if self.hasFileSystem then
+        local filePath = self.configFolder .. "/" .. configName .. ".json"
+        local fileContent = safeReadFile(filePath)
+        if fileContent then
+            local success, result = pcall(function()
+                return self.httpService:JSONDecode(fileContent)
+            end)
+            if success and result then
+                return result
+            end
+        end
+    end
+    local memoryConfig = self.memoryStore.configs[configName]
+    if memoryConfig then
+        return memoryConfig
+    end
+    for memConfigName, configData in pairs(self.memoryStore.configs) do
+        if string.lower(memConfigName) == string.lower(configName) then
+            return configData
+        end
+    end
+    return nil
+end
+function ConfigManager:configExists(configName)
+    if not configName or configName == "" then return false end
+    if self.hasFileSystem then
+        local filePath = self.configFolder .. "/" .. configName .. ".json"
+        if fileSystem.hasIsFile and isfile(filePath) then
+            return true
+        end
+    end
+    if self.memoryStore.configs[configName] then
+        return true
+    end
+    for memConfigName, _ in pairs(self.memoryStore.configs) do
+        if string.lower(memConfigName) == string.lower(configName) then
+            return true
+        end
+    end
+    return false
+end
+function ConfigManager:getConfigList()
+    local configs = {}
+    local configSet = {}
+    if not self:configExists(DEFAULT_CONFIG) then
+        self:ensureDefaultConfig()
+    end
+    if self.hasFileSystem then
+        local files = safeListFiles(self.configFolder)
+        for _, filePath in ipairs(files) do
+            local fileName = filePath:match("[/\\]([^/\\]+)%.json$")
+            if fileName and not configSet[string.lower(fileName)] then
+                if self:configExists(fileName) then
+                    table.insert(configs, fileName)
+                    configSet[string.lower(fileName)] = true
+                end
+            end
+        end
+        if #configs == 0 then
+            local knownConfigs = {DEFAULT_CONFIG}
+            for _, name in ipairs(knownConfigs) do
+                if self:configExists(name) and not configSet[string.lower(name)] then
+                    table.insert(configs, name)
+                    configSet[string.lower(name)] = true
+                end
+            end
+        end
+    end
+    for configName, _ in pairs(self.memoryStore.configs) do
+        if not configSet[string.lower(configName)] then
+            table.insert(configs, configName)
+            configSet[string.lower(configName)] = true
+        end
+    end
+    if not configSet[string.lower(DEFAULT_CONFIG)] then
+        table.insert(configs, 1, DEFAULT_CONFIG)
+        configSet[string.lower(DEFAULT_CONFIG)] = true
+    end
+    local validConfigs = {}
+    local currentCreatorId = game.CreatorId
+    for _, configName in ipairs(configs) do
+        if configName and configName ~= "" and self:configExists(configName) then
+            local configData = self:loadConfigData(configName)
+            if configData then
+                if configData.metadata and configData.metadata.creatorId then
+                    if configData.metadata.creatorId == currentCreatorId then
+                        table.insert(validConfigs, configName)
+                    end
+                else
+                    table.insert(validConfigs, configName)
+                end
+            end
+        end
+    end
+    table.sort(validConfigs)
+    return validConfigs
+end
+function ConfigManager:syncMemoryToFileSystem()
+    if not self.hasFileSystem then
+        return false
+    end
+    local syncCount = 0
+    for configName, configData in pairs(self.memoryStore.configs) do
+        local filePath = self.configFolder .. "/" .. configName .. ".json"
+        if not (fileSystem.hasIsFile and isfile(filePath)) then
+            local success, jsonString = pcall(function()
+                return self.httpService:JSONEncode(configData)
+            end)
+            if success and jsonString and safeWriteFile(filePath, jsonString) then
+                syncCount = syncCount + 1
+            end
+        end
+    end
+    return syncCount > 0
+end
+function ConfigManager:repairFileSystem()
+    fileSystem = getFileSystemType()
+    self.hasFileSystem = fileSystem.hasBasicFS
+    if self.hasFileSystem then
+        self:setupFileSystem()
+        if table.getn(self.memoryStore.configs) > 0 then
+            self:syncMemoryToFileSystem()
+        end
+        return true
+    else
+        return false
+    end
+end
+function ConfigManager:testFileSystemPersistence()
+    if not self.hasFileSystem then return false end
+    local testFile = self.configFolder .. "/persistence_check.txt"
+    local testContent = "persistence_test_" .. os.time()
+    if safeWriteFile(testFile, testContent) then
+        local readContent = safeReadFile(testFile)
+        safeDeleteFile(testFile)
+        if readContent == testContent then
+            return true
+        else
+            return false
+        end
+    else
+        return false
+    end
+end
+function ConfigManager:colorToRGB(color)
+    if typeof(color) ~= "Color3" then
+        return {r = 110, g = 117, b = 243}
+    end
+    return {
+        r = math.floor(color.R * 255 + 0.5),
+        g = math.floor(color.G * 255 + 0.5),
+        b = math.floor(color.B * 255 + 0.5)
+    }
+end
+function ConfigManager:rgbToColor(rgb)
+    if type(rgb) ~= "table" then
+        return Color3.fromRGB(110, 117, 243)
+    end
+    return Color3.fromRGB(
+        tonumber(rgb.r) or 110,
+        tonumber(rgb.g) or 117,
+        tonumber(rgb.b) or 243
+    )
+end
+function ConfigManager:safeNotify(notifType, title, message, duration)
+    duration = duration or 3
+    local success = pcall(function()
+        if self.hubInstance and self.hubInstance.notifications then
+            local method = self.hubInstance.notifications[notifType]
+            if method and type(method) == "function" then
+                method(self.hubInstance.notifications, title, message, duration)
+                return true
+            end
+        end
+        return false
+    end)
+    if not success then
+    end
+end
+function ConfigManager:getDebugInfo()
+    local elementCount = 0
+    local elementTypes = {}
+    local elementsByTab = {}
+    local callbackCount = 0
+    if self.hubInstance and self.hubInstance._getAllRegisteredElements then
+        local elements = self.hubInstance:_getAllRegisteredElements()
+        for _, element in pairs(elements or {}) do
+            elementCount = elementCount + 1
+            elementTypes[element.type] = (elementTypes[element.type] or 0) + 1
+            if element.originalCallback and type(element.originalCallback) == "function" then
+                callbackCount = callbackCount + 1
+            end
+            if not elementsByTab[element.tabName] then
+                elementsByTab[element.tabName] = {}
+            end
+            if not elementsByTab[element.tabName][element.windowName] then
+                elementsByTab[element.tabName][element.windowName] = 0
+            end
+            elementsByTab[element.tabName][element.windowName] = elementsByTab[element.tabName][element.windowName] + 1
+        end
+    end
+    return {
+        initialized = self.isInitialized,
+        hasFileSystem = self.hasFileSystem,
+        configFolder = self.configFolder,
+        currentConfig = self.currentConfig,
+        memoryConfigs = self.hasFileSystem and 0 or table.getn(self.memoryStore.configs or {}),
+        fileSystemDetails = fileSystem,
+        registeredElements = {
+            total = elementCount,
+            byType = elementTypes,
+            byTab = elementsByTab,
+            withCallbacks = callbackCount
+        }
+    }
+end
+function ConfigManager:cleanupDuplicateConfigs()
+    local seenConfigs = {}
+    local configsToRemove = {}
+    for configName, _ in pairs(self.memoryStore.configs) do
+        local lowerName = string.lower(configName)
+        if seenConfigs[lowerName] then
+            if configName == DEFAULT_CONFIG then
+                table.insert(configsToRemove, seenConfigs[lowerName])
+            else
+                table.insert(configsToRemove, configName)
+            end
+        else
+            seenConfigs[lowerName] = configName
+        end
+    end
+    for _, configName in ipairs(configsToRemove) do
+        self.memoryStore.configs[configName] = nil
+    end
+    if self.hasFileSystem then
+        local files = safeListFiles(self.configFolder)
+        local fileSeenConfigs = {}
+        local filesToRemove = {}
+        for _, filePath in ipairs(files) do
+            local fileName = filePath:match("[/\\]([^/\\]+)%.json$")
+            if fileName then
+                local lowerName = string.lower(fileName)
+                if fileSeenConfigs[lowerName] then
+                    if fileName == DEFAULT_CONFIG then
+                        table.insert(filesToRemove, self.configFolder .. "/" .. fileSeenConfigs[lowerName] .. ".json")
+                    else
+                        table.insert(filesToRemove, filePath)
+                    end
+                else
+                    fileSeenConfigs[lowerName] = fileName
+                end
+            end
+        end
+        for _, filePath in ipairs(filesToRemove) do
+            safeDeleteFile(filePath)
+        end
+    end
+end
+function ConfigManager:emergencyReset()
+    self.memoryStore.configs = {}
+    fileSystem = getFileSystemType()
+    self.hasFileSystem = fileSystem.hasBasicFS
+    if self.hasFileSystem then
+        self:setupFileSystem()
+    end
+    self:cleanupDuplicateConfigs()
+    self:ensureDefaultConfig()
+    self.isInitialized = true
+    return true
+end
+return ConfigManager
