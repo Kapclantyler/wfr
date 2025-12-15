@@ -1,4 +1,4 @@
-warn("version2")
+warn("version3")
 local ConfigManager = {}
 ConfigManager.__index = ConfigManager
 local HttpService = game:GetService("HttpService")
@@ -389,13 +389,14 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                 if not registeredElement.api.GetValue then
                     continue
                 end
-                if not registeredElement.originalCallback then
-                    registeredElement.originalCallback = function() end
-                end
-                if type(registeredElement.originalCallback) ~= "function" then
+                if savedElement.value == nil then
                     continue
                 end
-                if savedElement.value == nil then
+                local currentValue = nil
+                local getCurrentSuccess = pcall(function()
+                    currentValue = registeredElement.api.GetValue()
+                end)
+                if not getCurrentSuccess then
                     continue
                 end
                 local success = pcall(function()
@@ -411,6 +412,9 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                                 return
                             end
                         elseif typeof(value) ~= "Color3" then
+                            return
+                        end
+                        if typeof(value) ~= "Color3" then
                             return
                         end
                     elseif savedElement.type == "checkbox" or savedElement.type == "toggle" then
@@ -436,52 +440,67 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                             return
                         end
                     end
+                    if savedElement.type == "checkbox" or savedElement.type == "toggle" then
+                        if currentValue == value then
+                            return
+                        end
+                    end
+                    local tempCallback = registeredElement.originalCallback
+                    if registeredElement.originalCallback and type(registeredElement.originalCallback) == "function" then
+                        registeredElement.originalCallback = function() end
+                    end
                     registeredElement.api.SetValue(value)
                     appliedCount = appliedCount + 1
-                    local shouldExecuteCallback = executeCallbacks and registeredElement.originalCallback and type(registeredElement.originalCallback) == "function"
-                    if shouldExecuteCallback then
+                    if tempCallback and type(tempCallback) == "function" then
+                        registeredElement.originalCallback = tempCallback
+                    end
+                    if executeCallbacks and tempCallback and type(tempCallback) == "function" then
                         if savedElement.type == "checkbox" or savedElement.type == "toggle" then
-                            if type(value) == "boolean" and value == false then
-                                return
+                            if type(value) == "boolean" and value == true then
+                                local callbackSuccess = pcall(function()
+                                    tempCallback(value)
+                                end)
+                                if callbackSuccess then
+                                    callbacksExecuted = callbacksExecuted + 1
+                                end
                             end
-                        end
-                        local callbackSuccess, callbackError = pcall(function()
-                            if savedElement.type == "colorpicker" then
-                                if typeof(value) == "Color3" then
+                        elseif savedElement.type == "colorpicker" then
+                            if typeof(value) == "Color3" then
+                                local callbackSuccess = pcall(function()
                                     local alpha = 1
-                                    registeredElement.originalCallback(value, alpha)
+                                    tempCallback(value, alpha)
+                                end)
+                                if callbackSuccess then
+                                    callbacksExecuted = callbacksExecuted + 1
                                 end
-                            elseif savedElement.type == "multidropdown" then
-                                if type(value) == "table" then
-                                    registeredElement.originalCallback(value)
-                                end
-                            elseif savedElement.type == "slider" then
-                                if type(value) == "number" then
-                                    registeredElement.originalCallback(value)
-                                end
-                            elseif savedElement.type == "toggle" or savedElement.type == "checkbox" then
-                                if type(value) == "boolean" then
-                                    registeredElement.originalCallback(value)
-                                end
-                            elseif savedElement.type == "dropdown" then
-                                if type(value) == "string" then
-                                    registeredElement.originalCallback(value)
-                                end
-                            else
-                                registeredElement.originalCallback(value)
                             end
-                        end)
-                        if not callbackSuccess then
-                            pcall(function()
-                                if self.hubInstance and self.hubInstance.notifications then
-                                    local method = self.hubInstance.notifications.warning
-                                    if method and type(method) == "function" then
-                                        method(self.hubInstance.notifications, 'Callback Error', 'Failed to execute callback for: ' .. tostring(savedElement.elementName), 2)
-                                    end
+                        elseif savedElement.type == "slider" then
+                            if type(value) == "number" then
+                                local callbackSuccess = pcall(function()
+                                    tempCallback(value)
+                                end)
+                                if callbackSuccess then
+                                    callbacksExecuted = callbacksExecuted + 1
                                 end
-                            end)
-                        elseif callbackSuccess then
-                            callbacksExecuted = callbacksExecuted + 1
+                            end
+                        elseif savedElement.type == "dropdown" then
+                            if type(value) == "string" then
+                                local callbackSuccess = pcall(function()
+                                    tempCallback(value)
+                                end)
+                                if callbackSuccess then
+                                    callbacksExecuted = callbacksExecuted + 1
+                                end
+                            end
+                        elseif savedElement.type == "multidropdown" then
+                            if type(value) == "table" then
+                                local callbackSuccess = pcall(function()
+                                    tempCallback(value)
+                                end)
+                                if callbackSuccess then
+                                    callbacksExecuted = callbacksExecuted + 1
+                                end
+                            end
                         end
                     end
                 end)
