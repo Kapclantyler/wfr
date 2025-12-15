@@ -415,25 +415,34 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                     if value == nil then
                         return
                     end
-                    if savedElement.type == "colorpicker" and type(value) == "table" then
-                        if value.r and value.g and value.b then
+                    if savedElement.type == "colorpicker" then
+                        if type(value) == "table" and value.r and value.g and value.b then
                             value = self:rgbToColor(value)
+                        elseif typeof(value) ~= "Color3" then
+                            return
+                        end
+                    elseif savedElement.type == "checkbox" or savedElement.type == "toggle" then
+                        if type(value) ~= "boolean" then
+                            return
+                        end
+                    elseif savedElement.type == "slider" then
+                        if type(value) ~= "number" then
+                            return
+                        end
+                    elseif savedElement.type == "multidropdown" then
+                        if type(value) == "table" then
+                            local selectedMap = {}
+                            for _, key in ipairs(value) do
+                                selectedMap[key] = true
+                            end
+                            value = selectedMap
                         else
                             return
                         end
-                    elseif savedElement.type == "keybind" and type(value) == "string" then
-                    elseif savedElement.type == "multidropdown" and type(value) == "table" then
-                        local selectedMap = {}
-                        for _, key in ipairs(value) do
-                            selectedMap[key] = true
+                    elseif savedElement.type == "dropdown" then
+                        if type(value) ~= "string" then
+                            return
                         end
-                        value = selectedMap
-                    elseif savedElement.type == "button" and type(value) == "string" then
-                        value = tostring(value)
-                    elseif savedElement.type == "checkbox" and type(value) ~= "boolean" then
-                        return
-                    elseif savedElement.type == "slider" and type(value) ~= "number" then
-                        return
                     end
                     registeredElement.api.SetValue(value)
                     appliedCount = appliedCount + 1
@@ -443,6 +452,11 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                         button = true
                     }
                     if shouldExecuteCallback and not skipCallbackTypes[savedElement.type] then
+                        if savedElement.type == "checkbox" or savedElement.type == "toggle" then
+                            if type(value) == "boolean" and value == false then
+                                return
+                            end
+                        end
                         local callbackSuccess, callbackError = pcall(function()
                             if savedElement.type == "colorpicker" then
                                 if typeof(value) == "Color3" then
@@ -451,11 +465,7 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                                 end
                             elseif savedElement.type == "multidropdown" then
                                 if type(value) == "table" then
-                                    local selectedMap = {}
-                                    for _, key in ipairs(value) do
-                                        selectedMap[key] = true
-                                    end
-                                    registeredElement.originalCallback(selectedMap)
+                                    registeredElement.originalCallback(value)
                                 end
                             elseif savedElement.type == "slider" then
                                 if type(value) == "number" then
@@ -909,4 +919,5 @@ function ConfigManager:emergencyReset()
     self.isInitialized = true
     return true
 end
+print("ho")
 return ConfigManager
