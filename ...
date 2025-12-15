@@ -1,0 +1,623 @@
+-- Decompiler will be improved VERY SOON!
+-- Decompiled with Konstant V2.1, a fast Luau decompiler made in Luau by plusgiant5 (https://discord.gg/brNTY8nX8t)
+-- Decompiled on 2025-12-15 15:04:22
+-- Luau version 6, Types version 3
+-- Time taken: 0.372998 seconds
+
+return {
+	I = function(...) -- Line 3, Named "I"
+		...[...] = nil
+	end;
+	Wg = function(arg1, arg2, arg3, arg4) -- Line 3, Named "Wg"
+		arg2[arg3 + 1] = arg4
+	end;
+	Ag = function(arg1, arg2, arg3, arg4) -- Line 3, Named "Ag"
+		local tbl_5 = {}
+		tbl_5[0] = arg2
+		arg4[2][20][arg3] = tbl_5
+	end;
+	K = function(arg1, arg2, arg3, arg4) -- Line 3, Named "K"
+		local var3
+		if var3 > 21 then
+			var3 = arg1:t(arg2, var3, arg3)
+			return 54954, var3
+		end
+		arg1:g(arg3)
+		do
+			return 45239, var3
+		end
+		return nil, var3
+	end;
+	k = table.create;
+	Zg = function(arg1, arg2, arg3) -- Line 3, Named "Zg"
+		arg2[arg3 + 3] = 10
+	end;
+	lg = function(arg1, arg2, arg3, arg4) -- Line 3, Named "lg"
+		if arg2 == 130 then
+			local module_3 = {}
+			module_3[1] = arg3
+			return module_3
+		end
+		if arg2 ~= 10 then
+		else
+			arg4[2][5] = nil
+			return 8762
+		end
+		return nil
+	end;
+	Cg = function(arg1, arg2, arg3) -- Line 3, Named "Cg"
+		return #arg3
+	end;
+	F = function(arg1, arg2, arg3) -- Line 3, Named "F"
+		local var5 = -3736928205 + arg1.YJ(arg1.EJ(arg1.y[9] - arg2[1693] - arg1.y[1], 11), arg1.y[5])
+		arg2[29399] = var5
+		return var5
+	end;
+	Bg = function(arg1, arg2, arg3, arg4) -- Line 3, Named "Bg"
+		local var6 = arg4 / 4
+		return var6, {arg4 % 4, -- : First try: K:0: attempt to index nil with 't'
+
+	end;
+	Kg = function(arg1, arg2, arg3, arg4) -- Line 3, Named "Kg"
+		return 117, arg4 % 8
+	end;
+	Rg = function(arg1, arg2, arg3, arg4) -- Line 3, Named "Rg"
+		arg4[arg2] = arg2 + arg3
+	end;
+	yJ = function(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) -- Line 3, Named "yJ"
+		if arg8 == 98 then
+		elseif arg1:Hg(arg2, arg5, arg8) == 89 then
+			arg5[17][6] = arg1.r
+			local var9
+			if arg2[7004] then
+				var9 = arg2
+			else
+				var9 = arg1.IJ(arg1.LJ(arg1.y[3] - arg2[8704]) + arg2[16808], arg2[21790])
+				arg2[32523] = -1862270937 + var9
+				local function INLINED() -- Internal function, doesn't exist in bytecode
+					var9 = arg2[21790]
+					return var9
+				end
+				if arg1.iJ(arg2[13324]) == arg2[5428] or not INLINED() then
+					var9 = arg2[15793]
+				end
+				var9 = arg2[21790]
+				arg2[7004] = (3348558923) + (var9 - arg1.y[9] + var9)
+			end
+		else
+			-- KONSTANTERROR: Expression was reused, decompilation is incorrect
+			if (3348558923) + (var9 - arg1.y[9] + var9) ~= 100 then
+			else
+				var9 = arg3
+				-- KONSTANTERROR: Expression was reused, decompilation is incorrect
+				return 52507, arg5[39](arg6, arg5[1])(arg9, arg1.I, var9, arg7, arg5[33], arg5[29], arg4, arg1.y, arg5[26], arg5[39]), (3348558923) + (var9 - arg1.y[9] + var9)
+			end
+		end
+		-- KONSTANTERROR: Expression was reused, decompilation is incorrect (x2)
+		return nil, arg5[39](arg6, arg5[1])(arg9, arg1.I, var9, arg7, arg5[33], arg5[29], arg4, arg1.y, arg5[26], arg5[39]), (3348558923) + (var9 - arg1.y[9] + var9)
+	end;
+	AJ = bit32.lshift;
+	d = function(arg1, arg2, arg3) -- Line 3, Named "d"
+		local var10 = -3955665702 + arg1.sJ(arg1.YJ(arg1.y[7]) - arg1.y[9] - arg2[24571])
+		arg2[14821] = var10
+		return var10
+	end;
+	e = bit32.bor;
+	Gg = function(arg1, arg2, arg3, arg4) -- Line 3, Named "Gg"
+		for i = 1, arg4 do
+			arg3[i] = arg2[2][40]()
+		end
+	end;
+	Lg = function(arg1) -- Line 3, Named "Lg"
+	end;
+	Z = function(arg1, arg2, arg3) -- Line 3, Named "Z"
+		local var12 = (4028091267) + (arg1.DJ(arg1.y[9]) + arg1.y[2] - arg1.y[9] - arg1.y[4])
+		arg2[1693] = var12
+		return var12
+	end;
+	rg = function(arg1, arg2, arg3) -- Line 3, Named "rg"
+		return 111, 19
+	end;
+	j = function(arg1, arg2, arg3) -- Line 3, Named "j"
+		arg3[1] = {}
+		arg3[2] = arg1.s.byte
+		arg3[3] = arg1.Y
+		return {}
+	end;
+	tg = function(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) -- Line 3, Named "tg"
+		return (arg5 - arg7) / 8, (arg8 - arg2) / 8, 111
+	end;
+	p = function(arg1, arg2, arg3, arg4, arg5) -- Line 3, Named "p"
+		if arg5 ~= 15 then
+			local const_number = 15
+			local any_7_result1_2, any_7_result2_3 = arg4[1][7]("<i8", arg4[1][25], arg4[1][24])
+			local var16 = any_7_result1_2
+			local var17 = any_7_result2_3
+			arg4[1][24] = var17
+			return var16, var17, 62644, const_number
+		end
+		do
+			return var16, var17, {var16}, const_number
+		end
+		return var16, var17, nil, const_number
+	end;
+	ig = function(arg1, arg2, arg3, arg4) -- Line 3, Named "ig"
+		arg4[2][8][arg2][arg4[2][8][arg2 + 1]] = arg3[arg4[2][8][arg2 + 2]]
+	end;
+	E = string.sub;
+	y = {44769, 1462415810, 877788297, 3088356549, 1581002608, 2210890982, 3009257449, 2836824068, 3348558871};
+	Xg = function(arg1, arg2, arg3, arg4) -- Line 3, Named "Xg"
+		arg4[arg2] = arg3
+	end;
+	zg = function(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) -- Line 3, Named "zg"
+		-- KONSTANTWARNING: Variable analysis failed. Output will have some incorrect variable assignments
+		local var24
+		for i_2 = 9, 105, 32 do
+			if i_2 > 41 then
+				if i_2 ~= 105 then
+				else
+				end
+			elseif i_2 <= 9 then
+				var24 = {arg1.D, arg1.D, nil, arg1.D, arg1.D, nil, nil, nil, nil, nil, arg1.D}
+			else
+				arg1:ug(arg4, var24)
+			end
+		end
+		-- KONSTANTERROR: Expression was reused, decompilation is incorrect
+		return var24, arg4[2](arg4[1]() - 62997), arg4[1]() - 62997, nil, nil, nil, nil
+	end;
+	QJ = bit32.bxor;
+	ng = function(arg1, arg2, arg3, arg4, arg5, arg6, arg7) -- Line 3, Named "ng"
+		if 208 >= arg3 then
+			arg6[3][5][arg2] = arg5
+			return 47321
+		end
+		arg1:Mg(arg4, arg7, arg5)
+		do
+			return 59106
+		end
+		return nil
+	end;
+	dg = function(arg1, arg2, arg3, arg4, arg5) -- Line 3, Named "dg"
+		arg4[arg5] = arg3[3][20][arg2]
+	end;
+	b = function(arg1, arg2, arg3, arg4, arg5) -- Line 3, Named "b"
+		arg5[29] = function() -- Line 3
+			--[[ Upvalues[2]:
+				[1]: arg5 (readonly)
+				[2]: arg1 (readonly)
+			]]
+			local tbl_8 = {arg5[2]}
+			tbl_8[2] = arg5
+			while true do
+				local any_n_result1, any_n_result2, _ = arg1:n(nil, tbl_8, 119)
+				local var32 = any_n_result1
+				if var32 == 38564 then
+				elseif var32 == nil then
+				else
+					return arg1.J(var32)
+				end
+			end
+		end
+		arg5[30] = getfenv
+		arg5[31] = 9007199254740992
+		arg5[32] = nil
+		arg5[33] = nil
+		return function(...) -- Line 3
+			return ...[...]
+		end, 48, function() -- Line 3
+			--[[ Upvalues[2]:
+				[1]: arg5 (readonly)
+				[2]: arg1 (readonly)
+			]]
+			local tbl_9 = {}
+			tbl_9[1] = arg5
+			local any_7_result1, any_7_result2 = tbl_9[1][7]("<I4", tbl_9[1][25], tbl_9[1][24])
+			while true do
+				if 11 >= 92 then
+					tbl_9[1][24] = any_7_result2
+				else
+					if 92 < 110 then
+						return any_7_result1
+					end
+					if tbl_9[1][17] == tbl_9[1][26] then
+						local any_c_result1 = arg1:c(tbl_9)
+						if any_c_result1 == nil then
+						else
+							return arg1.J(any_c_result1)
+						end
+					end
+				end
+			end
+		end
+	end;
+	ag = function(arg1, arg2, arg3) -- Line 3, Named "ag"
+		return arg3[16808]
+	end;
+	hg = function(arg1, ...) -- Line 3, Named "hg"
+		return {...()}
+	end;
+	Pg = function(arg1, arg2, arg3, arg4, arg5) -- Line 3, Named "Pg"
+		arg5[arg3] = arg4[3][5][arg2]
+	end;
+	jg = function(arg1, arg2, arg3) -- Line 3, Named "jg"
+		arg3[1] = arg2
+	end;
+	D = nil;
+	m = function(arg1, arg2, arg3) -- Line 3, Named "m"
+		local var40 = 77 + arg1.iJ(arg1.y[7] - arg2[21790] - arg3 - arg2[13324])
+		arg2[11615] = var40
+		return var40
+	end;
+	pg = function(arg1, arg2, arg3) -- Line 3, Named "pg"
+		return arg2[14567]
+	end;
+	Mg = function(arg1, arg2, arg3, arg4) -- Line 3, Named "Mg"
+		arg3[arg2] = arg4
+	end;
+	sg = function(arg1, arg2, arg3, arg4) -- Line 3, Named "sg"
+		local var41
+		if 32 < arg4 and arg4 < 116 then
+			var41 = arg2[1]() - 19765
+			return 2773, var41
+		end
+		if 74 < arg4 then
+			arg1:Ig(var41, arg2)
+			return 24112, var41
+		end
+		if arg4 < 74 then
+			arg2[2][5] = {}
+			return 2773, var41
+		end
+		return nil, var41
+	end;
+	v = function(arg1) -- Line 3, Named "v"
+		return {}
+	end;
+	_ = function(arg1, arg2, arg3, arg4) -- Line 3, Named "_"
+		arg4[6] = arg1.L
+		local var42
+		if arg3[29399] then
+			var42 = arg3[29399]
+			return var42
+		end
+		var42 = arg1:F(arg3, var42)
+		return var42
+	end;
+	Ig = function(arg1, arg2, arg3) -- Line 3, Named "Ig"
+		arg3[2][20] = arg3[3](arg2)
+	end;
+	bg = function(arg1, arg2, arg3, arg4, arg5, arg6) -- Line 3, Named "bg"
+		-- KONSTANTWARNING: Variable analysis failed. Output will have some incorrect variable assignments
+		local var43
+		if var43 > 18 then
+			if var43 ~= 69 then
+				arg4[40] = function() -- Line 3
+					--[[ Upvalues[2]:
+						[1]: arg4 (readonly)
+						[2]: arg1 (readonly)
+					]]
+					local tbl_4 = {arg4[35], arg4[27]}
+					tbl_4[3] = arg4
+					local any_zg_result1, any_zg_result2, any_zg_result3, any_zg_result4, any_zg_result5, any_zg_result6, any_zg_result7 = arg1:zg(nil, nil, tbl_4, nil, nil, nil, nil, nil)
+					local _, _, any_cg_result3, _, _ = arg1:cg(any_zg_result4, any_zg_result6, tbl_4, any_zg_result1, any_zg_result5, any_zg_result2, any_zg_result7, any_zg_result3)
+					return any_cg_result3
+				end
+				local var58
+				if arg2[22662] then
+				else
+					local function INLINED_2() -- Internal function, doesn't exist in bytecode
+						var58 = arg1.y[7]
+						return var58
+					end
+					if arg2[16617] + arg2[16131] >= arg2[8704] or not INLINED_2() then
+						var58 = arg2[22662]
+					end
+					local function INLINED_3() -- Internal function, doesn't exist in bytecode
+						var58 = arg1.y
+						return var58[1]
+					end
+					if var58 >= arg1.y[5] or not INLINED_3() then
+						var58 = 14821
+					end
+					var58 = arg2[16131]
+					arg2[22662] = (-44688) + (arg2[var58] - var58)
+				end
+				-- KONSTANTERROR: Expression was reused, decompilation is incorrect
+				return 36933, (-44688) + (arg2[var58] - var58), arg3, arg5
+			end
+			arg4[38] = function(...) -- Line 3
+				--[[ Upvalues[1]:
+					[1]: arg4 (readonly)
+				]]
+				local module = {}
+				module[1] = arg4
+				local any_13_result1 = module[1][13]('#', ...)
+				if any_13_result1 ~= 0 then
+				else
+					return any_13_result1, module[1][11]
+				end
+				return any_13_result1, {...}
+			end
+			local var63
+			if arg2[16617] then
+			else
+				var63 = -4099887277
+				arg2[5428] = (var63) + (arg1.AJ(arg1.AJ(arg2[29258], arg2[15649]) - arg2[13324], arg2[15649]) - arg1.y[1])
+				local function INLINED_4() -- Internal function, doesn't exist in bytecode
+					var63 = arg2[13324]
+					return var63
+				end
+				if arg1.kJ(arg1.y[9], arg2[15649]) - arg1.y[9] ~= arg2[15649] or not INLINED_4() then
+					var63 = arg2[6962]
+				end
+				arg2[16617] = 1 + arg1.YJ(var63, arg2[11615], arg2[14821])
+			end
+		elseif arg2[22061] then
+		else
+			var63 = arg1.LJ(arg1.DJ(arg2[16617])) + arg2[16131]
+			arg2[22061] = -132120503 + arg1.AJ(var63, arg2[15649])
+		end
+		-- KONSTANTERROR: Expression was reused, decompilation is incorrect
+		return nil, -132120503 + arg1.AJ(var63, arg2[15649]), function() -- Line 3
+			--[[ Upvalues[2]:
+				[1]: arg4 (readonly)
+				[2]: arg1 (readonly)
+			]]
+			-- KONSTANTERROR: [0] 1. Error Block 1 start (CF ANALYSIS FAILED)
+			local tbl_3 = {arg4[35]}
+			tbl_3[2] = arg4
+			tbl_3[3] = arg4[27]
+			tbl_3[4] = arg4[29]
+			local _, _, _, _ = arg1:Yg(nil, nil, nil, tbl_3, nil)
+			local _ = 117
+			-- KONSTANTERROR: [0] 1. Error Block 1 end (CF ANALYSIS FAILED)
+			-- KONSTANTERROR: [63] 56. Error Block 8 start (CF ANALYSIS FAILED)
+			-- KONSTANTERROR: [63] 56. Error Block 8 end (CF ANALYSIS FAILED)
+			-- KONSTANTERROR: [34] 32. Error Block 54 start (CF ANALYSIS FAILED)
+			if nil == 64509 then
+				-- KONSTANTWARNING: GOTO [63] #56
+			end
+			-- KONSTANTERROR: [34] 32. Error Block 54 end (CF ANALYSIS FAILED)
+		end, function(...) -- Line 3
+			--[[ Upvalues[1]:
+				[1]: arg1 (readonly)
+			]]
+			return arg1.J(arg1:hg(...))
+		end
+	end;
+	G = coroutine.wrap;
+	s = string;
+	l = bit32.bnot;
+	xg = function(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15) -- Line 3, Named "xg"
+		-- KONSTANTERROR: [0] 1. Error Block 1 start (CF ANALYSIS FAILED)
+		-- KONSTANTERROR: [0] 1. Error Block 1 end (CF ANALYSIS FAILED)
+		-- KONSTANTERROR: [72] 61. Error Block 23 start (CF ANALYSIS FAILED)
+		-- KONSTANTERROR: [72] 61. Error Block 23 end (CF ANALYSIS FAILED)
+		-- KONSTANTERROR: [4] 5. Error Block 2 start (CF ANALYSIS FAILED)
+		-- KONSTANTWARNING: Failed to evaluate expression, replaced with nil [72.15]
+		-- KONSTANTWARNING: Failed to evaluate expression, replaced with nil [72.659282]
+		-- KONSTANTERROR: [4] 5. Error Block 2 end (CF ANALYSIS FAILED)
+	end;
+	i = setfenv;
+	n = function(arg1, arg2, arg3, arg4) -- Line 3, Named "n"
+		-- KONSTANTWARNING: Variable analysis failed. Output will have some incorrect variable assignments
+		local var72
+		if 106 < var72 then
+			local any_1_result1 = arg3[1](arg3[2][25], arg3[2][24], arg3[2][24])
+			var72 = 106
+			if arg3[2][10] ~= arg3[2][22] then
+				arg3[2][24] = arg3[2][24] + 1
+			end
+			return 38564, any_1_result1, var72
+		end
+		if var72 < 119 then
+			return {any_1_result1}, any_1_result1, var72
+		end
+		return nil, any_1_result1, var72
+	end;
+	yg = function(arg1, arg2, arg3, arg4) -- Line 3, Named "yg"
+		if arg4 ~= 126 then
+			arg3[39] = function(arg1_2, arg2_2, arg3_2) -- Line 3
+				--[[ Upvalues[2]:
+					[1]: arg3 (readonly)
+					[2]: arg1 (readonly)
+				]]
+				local tbl_7_upvr = {arg3[27], arg3[30], arg3[23]}
+				tbl_7_upvr[4] = arg3
+				tbl_7_upvr[5] = arg3[14]
+				tbl_7_upvr[6] = arg3[19]
+				tbl_7_upvr[7] = arg3[34]
+				local _7_upvr = arg1_2[7]
+				local _8_upvr = arg1_2[8]
+				local _10_upvr = arg1_2[10]
+				local _2_upvr = arg1_2[2]
+				local _11_upvr = arg1_2[11]
+				local _6_upvr = arg1_2[6]
+				local _3_upvr = arg1_2[3]
+				local _1_upvr = arg1_2[1]
+				return function(...) -- Line 3
+					--[[ Upvalues[12]:
+						[1]: tbl_7_upvr (readonly)
+						[2]: _7_upvr (readonly)
+						[3]: _8_upvr (readonly)
+						[4]: _10_upvr (readonly)
+						[5]: _2_upvr (readonly)
+						[6]: _11_upvr (readonly)
+						[7]: _6_upvr (readonly)
+						[8]: _3_upvr (readonly)
+						[9]: _1_upvr (readonly)
+						[10]: arg2_2 (readonly)
+						[11]: arg1_2 (readonly)
+						[12]: arg1 (copied, readonly)
+					]]
+					-- KONSTANTERROR: [0] 1. Error Block 1 start (CF ANALYSIS FAILED)
+					-- KONSTANTERROR: [0] 1. Error Block 1 end (CF ANALYSIS FAILED)
+					-- KONSTANTERROR: [3967] 3624. Error Block 1269 start (CF ANALYSIS FAILED)
+					-- KONSTANTERROR: [3967] 3624. Error Block 1269 end (CF ANALYSIS FAILED)
+					-- KONSTANTERROR: [21] 22. Error Block 2 start (CF ANALYSIS FAILED)
+					-- KONSTANTWARNING: Failed to evaluate expression, replaced with nil [3968.65666]
+					-- KONSTANTERROR: [21] 22. Error Block 2 end (CF ANALYSIS FAILED)
+				end
+			end
+			if not arg2[16131] then
+				local var86 = (3348558812) + (arg1.YJ(arg1.LJ(arg1.EJ(arg2[29258], arg2[29258])), arg2[5428]) - arg1.y[9])
+				arg2[16131] = var86
+			else
+			end
+			return 51628, arg1:Ug(var86, arg2)
+		end
+		arg3[36] = function() -- Line 3
+			--[[ Upvalues[1]:
+				[1]: arg3 (readonly)
+			]]
+			local module_5 = {arg3[35], arg3[31]}
+			module_5[3] = arg3
+			local any_1_result1_2 = module_5[1]()
+			if module_5[1] == module_5[2] then
+				return any_1_result1_2
+			end
+			if module_5[3][10] > any_1_result1_2 then
+				return any_1_result1_2
+			end
+			do
+				return any_1_result1_2 - module_5[2]
+			end
+			return any_1_result1_2
+		end
+		arg3[37] = function() -- Line 3
+			--[[ Upvalues[1]:
+				[1]: arg3 (readonly)
+			]]
+			local module_6 = {arg3[35]}
+			module_6[2] = arg3
+			for i_3 = 41, 164, 50 do
+				if i_3 == 41 then
+					module_6[2][24] = module_6[2][24] + module_6[1]()
+				elseif i_3 == 91 then
+					-- KONSTANTERROR: Expression was reused, decompilation is incorrect
+					return module_6[2][4](module_6[2][25], module_6[2][24] - module_6[1](), module_6[2][24] - 1)
+				end
+			end
+		end
+		local var93
+		if arg2[6962] then
+			local _ = arg2[6962]
+		else
+			local function INLINED_5() -- Internal function, doesn't exist in bytecode
+				var93 = arg1.y[6]
+				return var93
+			end
+			if arg1.AJ(arg2[29258], arg2[15649]) - arg2[14821] ~= arg2[21790] or not INLINED_5() then
+				var93 = arg1.y[5]
+			end
+			arg2[6962] = (-3043418349) + (var93 + arg1.y[2])
+		end
+		-- KONSTANTERROR: Expression was reused, decompilation is incorrect
+		return nil, (-3043418349) + (var93 + arg1.y[2])
+	end;
+	w = function(arg1, arg2) -- Line 3, Named "w"
+		-- KONSTANTERROR: [0] 1. Error Block 1 start (CF ANALYSIS FAILED)
+		-- KONSTANTERROR: [0] 1. Error Block 1 end (CF ANALYSIS FAILED)
+		-- KONSTANTERROR: [67] 58. Error Block 27 start (CF ANALYSIS FAILED)
+		-- KONSTANTERROR: [67] 58. Error Block 27 end (CF ANALYSIS FAILED)
+		-- KONSTANTERROR: [6] 7. Error Block 2 start (CF ANALYSIS FAILED)
+		-- KONSTANTWARNING: Failed to evaluate expression, replaced with nil [67.1222]
+		-- KONSTANTERROR: [6] 7. Error Block 2 end (CF ANALYSIS FAILED)
+	end;
+	Hg = function(arg1, arg2, arg3, arg4) -- Line 3, Named "Hg"
+		arg3[17][8] = arg1.e
+		local var96
+		if not arg2[24858] then
+			local function INLINED_6() -- Internal function, doesn't exist in bytecode
+				var96 = arg1.y[2]
+				return var96
+			end
+			if arg1.YJ(arg1.LJ(arg1.y[2]) - arg1.y[5]) == arg2[14567] or not INLINED_6() then
+				var96 = arg2[13324]
+			end
+			arg2[15793] = -1462415774 + var96
+			var96 = arg1.sJ(arg2[11615] - arg2[5428], arg1.y[2])
+			var96 = arg2[22662]
+			local var97 = 73 + arg1.kJ(var96 + arg1.y[8], var96)
+			arg2[24858] = var97
+			return var97
+		end
+		return arg2[24858]
+	end;
+	wg = function(arg1, arg2, arg3, arg4, arg5, arg6, arg7) -- Line 3, Named "wg"
+		-- KONSTANTERROR: [0] 1. Error Block 1 start (CF ANALYSIS FAILED)
+		local _ = 126
+		-- KONSTANTERROR: [0] 1. Error Block 1 end (CF ANALYSIS FAILED)
+		-- KONSTANTERROR: [39] 34. Error Block 12 start (CF ANALYSIS FAILED)
+		-- KONSTANTERROR: [39] 34. Error Block 12 end (CF ANALYSIS FAILED)
+		-- KONSTANTERROR: [2] 3. Error Block 33 start (CF ANALYSIS FAILED)
+		-- KONSTANTWARNING: Failed to evaluate expression, replaced with nil [39.8]
+		-- KONSTANTWARNING: Failed to evaluate expression, replaced with nil [39.268765203]
+		if nil < _ then
+			-- KONSTANTERROR: Expression was reused, decompilation is incorrect (x2)
+			if nil >= _ then
+				arg6[17][7] = arg1.l
+				arg6[17][11] = arg1.h.rshift
+				arg6[17][10] = arg1.LJ
+				arg6[17][15] = arg1.u
+				arg6[17][12] = arg1.h.lshift
+				-- KONSTANTWARNING: GOTO [65] #53
+			end
+			-- KONSTANTWARNING: GOTO [12] #11
+		end
+		-- KONSTANTERROR: [2] 3. Error Block 33 end (CF ANALYSIS FAILED)
+	end;
+	u = bit32.rrotate;
+	sJ = bit32.band;
+	O = function(arg1, arg2, arg3, arg4) -- Line 3, Named "O"
+		if arg2 == 48 then
+			arg3[32] = function() -- Line 3
+				--[[ Upvalues[2]:
+					[1]: arg3 (readonly)
+					[2]: arg1 (readonly)
+				]]
+				local tbl = {}
+				tbl[1] = arg3
+				while true do
+					local _, _, any_p_result3, _ = arg1:p(nil, nil, tbl, 112)
+					local var105 = any_p_result3
+					if var105 == 62644 then
+					elseif var105 == nil then
+					else
+						return arg1.J(var105)
+					end
+				end
+			end
+			if not arg4[11615] then
+				local _ = arg1:m(arg4, arg2)
+			else
+			end
+		elseif arg4[11615] == 79 then
+			arg1:a(arg3)
+			-- KONSTANTERROR: Expression was reused, decompilation is incorrect
+			return 17151, arg4[11615]
+		end
+		-- KONSTANTERROR: Expression was reused, decompilation is incorrect
+		return nil, arg4[11615]
+	end;
+	t = function(arg1, arg2, arg3, arg4) -- Line 3, Named "t"
+		-- KONSTANTWARNING: Variable analysis failed. Output will have some incorrect variable assignments
+		arg4[7] = arg1.Q
+		local var107
+		if not arg2[29258] then
+			local function INLINED_7() -- Internal function, doesn't exist in bytecode
+				var107 = arg1.y[9]
+				return var107
+			end
+			if arg1.IJ(arg1.IJ(arg1.y[8], 16), 28) > arg1.y[7] or not INLINED_7() then
+				var107 = arg1.y[1]
+			end
+			local function INLINED_8() -- Internal function, doesn't exist in bytecode
+				var107 = arg1.y
+				return var107[3]
+			end
+			if var107 > arg2[1693] or not INLINED_8() then
+				var107 = arg1.y
+			end
+			local var108 = -1462415796 + var107[
