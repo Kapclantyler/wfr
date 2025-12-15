@@ -405,8 +405,15 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                 end
                 local success = pcall(function()
                     local value = savedElement.value
+                    if value == nil then
+                        return
+                    end
                     if savedElement.type == "colorpicker" and type(value) == "table" then
-                        value = self:rgbToColor(value)
+                        if value.r and value.g and value.b then
+                            value = self:rgbToColor(value)
+                        else
+                            return
+                        end
                     elseif savedElement.type == "keybind" and type(value) == "string" then
                     elseif savedElement.type == "multidropdown" and type(value) == "table" then
                         local selectedMap = {}
@@ -416,6 +423,10 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                         value = selectedMap
                     elseif savedElement.type == "button" and type(value) == "string" then
                         value = tostring(value)
+                    elseif savedElement.type == "checkbox" and type(value) ~= "boolean" then
+                        return
+                    elseif savedElement.type == "slider" and type(value) ~= "number" then
+                        return
                     end
                     registeredElement.api.SetValue(value)
                     appliedCount = appliedCount + 1
@@ -427,22 +438,30 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                     if shouldExecuteCallback and not skipCallbackTypes[savedElement.type] then
                         local callbackSuccess, callbackError = pcall(function()
                             if savedElement.type == "colorpicker" then
-                                local alpha = 1
-                                registeredElement.originalCallback(value, alpha)
+                                if typeof(value) == "Color3" then
+                                    local alpha = 1
+                                    registeredElement.originalCallback(value, alpha)
+                                end
                             elseif savedElement.type == "multidropdown" then
-                                local selectedMap = {}
                                 if type(value) == "table" then
+                                    local selectedMap = {}
                                     for _, key in ipairs(value) do
                                         selectedMap[key] = true
                                     end
+                                    registeredElement.originalCallback(selectedMap)
                                 end
-                                registeredElement.originalCallback(selectedMap)
                             elseif savedElement.type == "slider" then
-                                registeredElement.originalCallback(value)
-                            elseif savedElement.type == "toggle" then
-                                registeredElement.originalCallback(value)
+                                if type(value) == "number" then
+                                    registeredElement.originalCallback(value)
+                                end
+                            elseif savedElement.type == "toggle" or savedElement.type == "checkbox" then
+                                if type(value) == "boolean" then
+                                    registeredElement.originalCallback(value)
+                                end
                             elseif savedElement.type == "dropdown" then
-                                registeredElement.originalCallback(value)
+                                if type(value) == "string" then
+                                    registeredElement.originalCallback(value)
+                                end
                             else
                                 registeredElement.originalCallback(value)
                             end
@@ -766,11 +785,16 @@ function ConfigManager:rgbToColor(rgb)
     if type(rgb) ~= "table" then
         return Color3.fromRGB(110, 117, 243)
     end
-    return Color3.fromRGB(
-        tonumber(rgb.r) or 110,
-        tonumber(rgb.g) or 117,
-        tonumber(rgb.b) or 243
-    )
+    if not rgb.r or not rgb.g or not rgb.b then
+        return Color3.fromRGB(110, 117, 243)
+    end
+    local r = tonumber(rgb.r) or 110
+    local g = tonumber(rgb.g) or 117
+    local b = tonumber(rgb.b) or 243
+    r = math.clamp(r, 0, 255)
+    g = math.clamp(g, 0, 255)
+    b = math.clamp(b, 0, 255)
+    return Color3.fromRGB(r, g, b)
 end
 function ConfigManager:safeNotify(notifType, title, message, duration)
     duration = duration or 3
