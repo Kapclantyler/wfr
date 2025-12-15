@@ -1,4 +1,4 @@
-warn("version5")
+warn("version6")
 local ConfigManager = {}
 ConfigManager.__index = ConfigManager
 local HttpService = game:GetService("HttpService")
@@ -272,7 +272,14 @@ function ConfigManager:gatherRegisteredElements(settings)
     if self.hubInstance._getAllRegisteredElements then
         local elements = self.hubInstance:_getAllRegisteredElements()
         for elementId, element in pairs(elements or {}) do
-            if element.type == "keybind" then
+            if not element or not element.type then
+                continue
+            end
+            local elementType = string.lower(tostring(element.type))
+            if elementType == "keybind" or elementType:find("keybind") or elementType:find("key") then
+                continue
+            end
+            if element.elementName and (string.lower(element.elementName):find("keybind") or string.lower(element.elementName):find("key bind")) then
                 continue
             end
             local skip = false
@@ -368,7 +375,14 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
     local appliedCount = 0
     local callbacksExecuted = 0
     for elementId, savedElement in pairs(elements) do
-        if savedElement.type == "keybind" then
+        if not savedElement or not savedElement.type then
+            continue
+        end
+        local savedType = string.lower(tostring(savedElement.type))
+        if savedType == "keybind" or savedType:find("keybind") or savedType:find("key") then
+            continue
+        end
+        if savedElement.elementName and (string.lower(savedElement.elementName):find("keybind") or string.lower(savedElement.elementName):find("key bind")) then
             continue
         end
         local skip = false
