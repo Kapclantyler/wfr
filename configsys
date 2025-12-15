@@ -1,3 +1,4 @@
+warn("version")
 local ConfigManager = {}
 ConfigManager.__index = ConfigManager
 local HttpService = game:GetService("HttpService")
