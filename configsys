@@ -1,4 +1,4 @@
-warn("version9")
+warn("mynutts")
 local ConfigManager = {}
 ConfigManager.__index = ConfigManager
 local HttpService = game:GetService("HttpService")
@@ -322,6 +322,7 @@ function ConfigManager:gatherRegisteredElements(settings)
                     return nil
                 end)
                 if success and value ~= nil then
+                    print("[ConfigManager] Saving element:", element.elementName, "| Type:", element.type, "| Value:", tostring(value))
                     settings.elements[elementId] = {
                         type = element.type,
                         tabName = element.tabName,
@@ -468,6 +469,7 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                             return
                         end
                     end
+                    print("[ConfigManager] Applying element:", savedElement.elementName, "| Type:", savedElement.type, "| Value:", tostring(value))
                     local tempCallback = registeredElement.originalCallback
                     if registeredElement.originalCallback and type(registeredElement.originalCallback) == "function" then
                         registeredElement.originalCallback = function() end
