@@ -1,4 +1,4 @@
-warn("version")
+warn("version2")
 local ConfigManager = {}
 ConfigManager.__index = ConfigManager
 local HttpService = game:GetService("HttpService")
@@ -268,7 +268,7 @@ function ConfigManager:gatherAllSettings()
 end
 function ConfigManager:gatherRegisteredElements(settings)
     local excludeElements = {"Auto Load Config"}
-    local excludeTypes = {"button"}
+    local excludeTypes = {"button", "keybind"}
     if self.hubInstance._getAllRegisteredElements then
         local elements = self.hubInstance:_getAllRegisteredElements()
         for elementId, element in pairs(elements or {}) do
@@ -291,10 +291,12 @@ function ConfigManager:gatherRegisteredElements(settings)
                 local success, value = pcall(function()
                     if element.api and element.api.GetValue then
                         local rawValue = element.api.GetValue()
-                        if element.type == "colorpicker" and typeof(rawValue) == "Color3" then
-                            return self:colorToRGB(rawValue)
-                        elseif element.type == "keybind" then
-                            return tostring(rawValue)
+                        if element.type == "colorpicker" then
+                            if typeof(rawValue) == "Color3" then
+                                return self:colorToRGB(rawValue)
+                            else
+                                return nil
+                            end
                         elseif element.type == "multidropdown" and type(rawValue) == "table" then
                             local selected = {}
                             for key, isSelected in pairs(rawValue) do
@@ -303,8 +305,6 @@ function ConfigManager:gatherRegisteredElements(settings)
                                 end
                             end
                             return selected
-                        elseif element.type == "button" then
-                            return tostring(rawValue)
                         else
                             return rawValue
                         end
@@ -356,7 +356,7 @@ function ConfigManager:applySettings(settings, executeCallbacks)
 end
 function ConfigManager:applyElementSettings(elements, executeCallbacks)
     local excludeElements = {"Auto Load Config"}
-    local excludeTypes = {"button"}
+    local excludeTypes = {"button", "keybind"}
     if not self.hubInstance._getAllRegisteredElements then
         return
     end
@@ -395,19 +395,6 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                 if type(registeredElement.originalCallback) ~= "function" then
                     continue
                 end
-                local skipSetValueTypes = {
-                    keybind = true,
-                    button = true
-                }
-                if skipSetValueTypes[savedElement.type] then
-                    continue
-                end
-                local currentValueExists = pcall(function()
-                    return registeredElement.api.GetValue()
-                end)
-                if not currentValueExists then
-                    continue
-                end
                 if savedElement.value == nil then
                     continue
                 end
@@ -418,7 +405,11 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                     end
                     if savedElement.type == "colorpicker" then
                         if type(value) == "table" and value.r and value.g and value.b then
-                            value = self:rgbToColor(value)
+                            if type(value.r) == "number" and type(value.g) == "number" and type(value.b) == "number" then
+                                value = self:rgbToColor(value)
+                            else
+                                return
+                            end
                         elseif typeof(value) ~= "Color3" then
                             return
                         end
@@ -448,11 +439,7 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                     registeredElement.api.SetValue(value)
                     appliedCount = appliedCount + 1
                     local shouldExecuteCallback = executeCallbacks and registeredElement.originalCallback and type(registeredElement.originalCallback) == "function"
-                    local skipCallbackTypes = {
-                        keybind = true,
-                        button = true
-                    }
-                    if shouldExecuteCallback and not skipCallbackTypes[savedElement.type] then
+                    if shouldExecuteCallback then
                         if savedElement.type == "checkbox" or savedElement.type == "toggle" then
                             if type(value) == "boolean" and value == false then
                                 return
@@ -920,5 +907,4 @@ function ConfigManager:emergencyReset()
     self.isInitialized = true
     return true
 end
-print("ho")
 return ConfigManager
