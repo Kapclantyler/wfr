@@ -337,8 +337,6 @@ function ConfigManager:gatherRegisteredElements(settings)
                     }
                 end
             end
-        else
-            print("[ConfigManager] Skipped element")
         end
     end
     print("[ConfigManager] Finished applying. Applied:", appliedCount, "| Callbacks executed:", callbacksExecuted)
