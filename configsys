@@ -1,4 +1,4 @@
-warn("version4")
+warn("version5")
 local ConfigManager = {}
 ConfigManager.__index = ConfigManager
 local HttpService = game:GetService("HttpService")
@@ -272,6 +272,9 @@ function ConfigManager:gatherRegisteredElements(settings)
     if self.hubInstance._getAllRegisteredElements then
         local elements = self.hubInstance:_getAllRegisteredElements()
         for elementId, element in pairs(elements or {}) do
+            if element.type == "keybind" then
+                continue
+            end
             local skip = false
             for _, excludeName in ipairs(excludeElements) do
                 if element.elementName == excludeName then
@@ -365,6 +368,9 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
     local appliedCount = 0
     local callbacksExecuted = 0
     for elementId, savedElement in pairs(elements) do
+        if savedElement.type == "keybind" then
+            continue
+        end
         local skip = false
         for _, excludeName in ipairs(excludeElements) do
             if savedElement.elementName == excludeName then
@@ -383,6 +389,9 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
         if not skip then
             local registeredElement = registeredElements[elementId]
             if registeredElement and registeredElement.api then
+                if registeredElement.type == "keybind" or savedElement.type == "keybind" then
+                    continue
+                end
                 if not registeredElement.api.SetValue then
                     continue
                 end
