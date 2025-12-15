@@ -394,6 +394,13 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                 if type(registeredElement.originalCallback) ~= "function" then
                     continue
                 end
+                local skipSetValueTypes = {
+                    keybind = true,
+                    button = true
+                }
+                if skipSetValueTypes[savedElement.type] then
+                    continue
+                end
                 local currentValueExists = pcall(function()
                     return registeredElement.api.GetValue()
                 end)
