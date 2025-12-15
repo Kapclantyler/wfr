@@ -1,4 +1,4 @@
-warn("mynutts")
+warn("ballon these ngasd")
 local ConfigManager = {}
 ConfigManager.__index = ConfigManager
 local HttpService = game:GetService("HttpService")
@@ -321,6 +321,9 @@ function ConfigManager:gatherRegisteredElements(settings)
                     end
                     return nil
                 end)
+                if not success then
+                    print("[ConfigManager] Save failed for", element.elementName, "Error:", value)
+                end
                 if success and value ~= nil then
                     print("[ConfigManager] Saving element:", element.elementName, "| Type:", element.type, "| Value:", tostring(value))
                     settings.elements[elementId] = {
@@ -333,8 +336,11 @@ function ConfigManager:gatherRegisteredElements(settings)
                     }
                 end
             end
+        else
+            print("[ConfigManager] Skipped element")
         end
     end
+    print("[ConfigManager] Finished applying. Applied:", appliedCount, "| Callbacks executed:", callbacksExecuted)
 end
 function ConfigManager:applySettings(settings, executeCallbacks)
     if not settings or not self.hubInstance then
@@ -369,26 +375,34 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
     local excludeElements = {"Auto Load Config"}
     local excludeTypes = {"button", "keybind"}
     if not self.hubInstance._getAllRegisteredElements then
+        print("[ConfigManager] No _getAllRegisteredElements function found")
         return
     end
     if executeCallbacks == nil then executeCallbacks = true end
     local registeredElements = self.hubInstance:_getAllRegisteredElements()
+    print("[ConfigManager] Starting to apply element settings. Total saved elements:", table.getn(elements) or 0)
+    print("[ConfigManager] Total registered elements:", table.getn(registeredElements) or 0)
     local appliedCount = 0
     local callbacksExecuted = 0
     for elementId, savedElement in pairs(elements) do
+        print("[ConfigManager] Processing elementId:", elementId, "| Name:", savedElement.elementName, "| Type:", savedElement.type)
         if not savedElement or not savedElement.type then
+            print("[ConfigManager] Skipped - no savedElement or type")
             continue
         end
         local savedType = string.lower(tostring(savedElement.type))
         if savedType == "keybind" or savedType:find("keybind") or savedType:find("key") then
+            print("[ConfigManager] Skipped - detected as keybind")
             continue
         end
         if savedElement.elementName and (string.lower(savedElement.elementName):find("keybind") or string.lower(savedElement.elementName):find("key bind")) then
+            print("[ConfigManager] Skipped - element name contains keybind")
             continue
         end
         local skip = false
         for _, excludeName in ipairs(excludeElements) do
             if savedElement.elementName == excludeName then
+                print("[ConfigManager] Skipped - excluded by name:", excludeName)
                 skip = true
                 break
             end
@@ -396,14 +410,17 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
         if not skip then
             for _, excludeType in ipairs(excludeTypes) do
                 if savedElement.type == excludeType then
+                    print("[ConfigManager] Skipped - excluded type:", excludeType)
                     skip = true
                     break
                 end
             end
         end
         if not skip then
+            print("[ConfigManager] Attempting to find registered element for:", elementId)
             local registeredElement = registeredElements[elementId]
             if registeredElement and registeredElement.api then
+                print("[ConfigManager] Found registered element, has API")
                 if registeredElement.type == "keybind" or savedElement.type == "keybind" then
                     continue
                 end
@@ -414,16 +431,18 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                     continue
                 end
                 if savedElement.value == nil then
+                    print("[ConfigManager] Skipped - value is nil")
                     continue
                 end
                 local currentValue = nil
-                local getCurrentSuccess = pcall(function()
+                local getCurrentSuccess, getCurrentError = pcall(function()
                     currentValue = registeredElement.api.GetValue()
                 end)
                 if not getCurrentSuccess then
+                    print("[ConfigManager] GetValue failed:", getCurrentError)
                     continue
                 end
-                local success = pcall(function()
+                local success, applyError = pcall(function()
                     local value = savedElement.value
                     if value == nil then
                         return
@@ -482,46 +501,61 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                     if executeCallbacks and tempCallback and type(tempCallback) == "function" then
                         if savedElement.type == "checkbox" or savedElement.type == "toggle" then
                             if type(value) == "boolean" and value == true then
-                                local callbackSuccess = pcall(function()
+                                local callbackSuccess, callbackError = pcall(function()
                                     tempCallback(value)
                                 end)
+                                if not callbackSuccess then
+                                    print("[ConfigManager] Callback failed for", savedElement.elementName, "Error:", callbackError)
+                                end
                                 if callbackSuccess then
                                     callbacksExecuted = callbacksExecuted + 1
                                 end
                             end
                         elseif savedElement.type == "colorpicker" then
                             if typeof(value) == "Color3" then
-                                local callbackSuccess = pcall(function()
+                                local callbackSuccess, callbackError = pcall(function()
                                     local alpha = 1
                                     tempCallback(value, alpha)
                                 end)
+                                if not callbackSuccess then
+                                    print("[ConfigManager] Callback failed for", savedElement.elementName, "Error:", callbackError)
+                                end
                                 if callbackSuccess then
                                     callbacksExecuted = callbacksExecuted + 1
                                 end
                             end
                         elseif savedElement.type == "slider" then
                             if type(value) == "number" then
-                                local callbackSuccess = pcall(function()
+                                local callbackSuccess, callbackError = pcall(function()
                                     tempCallback(value)
                                 end)
+                                if not callbackSuccess then
+                                    print("[ConfigManager] Callback failed for", savedElement.elementName, "Error:", callbackError)
+                                end
                                 if callbackSuccess then
                                     callbacksExecuted = callbacksExecuted + 1
                                 end
                             end
                         elseif savedElement.type == "dropdown" then
                             if type(value) == "string" then
-                                local callbackSuccess = pcall(function()
+                                local callbackSuccess, callbackError = pcall(function()
                                     tempCallback(value)
                                 end)
+                                if not callbackSuccess then
+                                    print("[ConfigManager] Callback failed for", savedElement.elementName, "Error:", callbackError)
+                                end
                                 if callbackSuccess then
                                     callbacksExecuted = callbacksExecuted + 1
                                 end
                             end
                         elseif savedElement.type == "multidropdown" then
                             if type(value) == "table" then
-                                local callbackSuccess = pcall(function()
+                                local callbackSuccess, callbackError = pcall(function()
                                     tempCallback(value)
                                 end)
+                                if not callbackSuccess then
+                                    print("[ConfigManager] Callback failed for", savedElement.elementName, "Error:", callbackError)
+                                end
                                 if callbackSuccess then
                                     callbacksExecuted = callbacksExecuted + 1
                                 end
@@ -529,6 +563,11 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                         end
                     end
                 end)
+                if not success then
+                    print("[ConfigManager] Apply failed for", savedElement.elementName, "Error:", applyError)
+                end
+            else
+                print("[ConfigManager] No registered element or API found for:", elementId)
             end
         end
     end
