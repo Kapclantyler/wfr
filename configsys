@@ -1,4 +1,4 @@
-warn("nahwaht2")
+warn("nahwaht3")
 local ConfigManager = {}
 ConfigManager.__index = ConfigManager
 local HttpService = game:GetService("HttpService")
@@ -220,9 +220,14 @@ function ConfigManager:createDefaultConfigData()
     }
 end
 function ConfigManager:gatherAllSettings()
+    print("[ConfigManager] ========== gatherAllSettings CALLED ==========")
+    print("[ConfigManager] hubInstance:", self.hubInstance)
+    
     if not self.hubInstance then
+        print("[ConfigManager] No hubInstance! Returning default settings")
         return self:createDefaultConfigData().settings
     end
+    
     local settings = {
         metadata = {
             version = SYSTEM_VERSION,
@@ -237,6 +242,10 @@ function ConfigManager:gatherAllSettings()
         elements = {},
         tabs = {}
     }
+    
+    print("[ConfigManager] Created settings structure")
+    
+    -- Global settings gathering
     pcall(function()
         if self.hubInstance._toggleKeyCode then
             settings.globalSettings.menuToggleKey = self.hubInstance._toggleKeyCode.Name
@@ -248,6 +257,10 @@ function ConfigManager:gatherAllSettings()
             settings.globalSettings.themeColor = self:colorToRGB(self.hubInstance.options.theme.primary)
         end
     end)
+    
+    print("[ConfigManager] Gathered global settings")
+    
+    -- Tabs gathering
     pcall(function()
         if self.hubInstance.tabs then
             for i, tab in ipairs(self.hubInstance.tabs) do
@@ -263,27 +276,50 @@ function ConfigManager:gatherAllSettings()
             end
         end
     end)
+    
+    print("[ConfigManager] Gathered tabs")
+    print("[ConfigManager] About to call gatherRegisteredElements...")
+    print("[ConfigManager] self:", self)
+    print("[ConfigManager] self.gatherRegisteredElements:", self.gatherRegisteredElements)
+    
+    -- THIS IS THE KEY CALL
     self:gatherRegisteredElements(settings)
+    
+    print("[ConfigManager] Returned from gatherRegisteredElements")
+    print("[ConfigManager] settings.elements count:", settings.elements and #settings.elements or "NIL")
+    
     return settings
 end
 function ConfigManager:gatherRegisteredElements(settings)
+    print("[ConfigManager] ========== gatherRegisteredElements CALLED ==========")
+    print("[ConfigManager] settings:", settings)
+    print("[ConfigManager] settings type:", type(settings))
+    
     local excludeElements = {"Auto Load Config"}
     local excludeTypes = {"button", "keybind"}
     
-    print("[ConfigManager] === Starting gatherRegisteredElements ===")
+    print("[ConfigManager] Checking hubInstance...")
+    print("[ConfigManager] self.hubInstance:", self.hubInstance)
     
     if not self.hubInstance then
         print("[ConfigManager] ERROR: No hubInstance!")
         return
     end
     
+    print("[ConfigManager] Checking _getAllRegisteredElements...")
+    print("[ConfigManager] self.hubInstance._getAllRegisteredElements:", self.hubInstance._getAllRegisteredElements)
+    
     if not self.hubInstance._getAllRegisteredElements then
-        print("[ConfigManager] ERROR: No _getAllRegisteredElements function found")
+        print("[ConfigManager] ERROR: No _getAllRegisteredElements function!")
         return
     end
     
+    print("[ConfigManager] Calling _getAllRegisteredElements()...")
     local elements = self.hubInstance:_getAllRegisteredElements()
-    print("[ConfigManager] Retrieved elements. Type:", type(elements))
+    
+    print("[ConfigManager] Got result from _getAllRegisteredElements")
+    print("[ConfigManager] elements:", elements)
+    print("[ConfigManager] elements type:", type(elements))
     
     if not elements then
         print("[ConfigManager] ERROR: elements is nil!")
@@ -291,124 +327,27 @@ function ConfigManager:gatherRegisteredElements(settings)
     end
     
     local elementCount = 0
-    for _ in pairs(elements) do
+    for k, v in pairs(elements) do
         elementCount = elementCount + 1
+        print("[ConfigManager] Element key:", k, "| value type:", type(v))
     end
-    print("[ConfigManager] Total elements to process:", elementCount)
     
-    local processedCount = 0
-    local skippedCount = 0
-    local savedCount = 0
+    print("[ConfigManager] Total element count:", elementCount)
+    
+    if elementCount == 0 then
+        print("[ConfigManager] WARNING: No elements to process!")
+        return
+    end
+    
+    -- Rest of your gathering logic...
+    print("[ConfigManager] Starting element processing loop...")
     
     for elementId, element in pairs(elements) do
-        processedCount = processedCount + 1
-        print(string.format("[ConfigManager] [%d/%d] Processing: %s", processedCount, elementCount, elementId))
-        
-        if not element or not element.type then
-            print("  ↳ SKIP: No element or type")
-            skippedCount = skippedCount + 1
-            continue
-        end
-        
-        print("  ↳ Type:", element.type, "| Name:", element.elementName or "NO NAME")
-        
-        local elementType = string.lower(tostring(element.type))
-        if elementType == "keybind" or elementType:find("keybind") or elementType:find("key") then
-            print("  ↳ SKIP: Type is keybind-related")
-            skippedCount = skippedCount + 1
-            continue
-        end
-        
-        if element.elementName and (string.lower(element.elementName):find("keybind") or string.lower(element.elementName):find("key bind")) then
-            print("  ↳ SKIP: Name contains keybind")
-            skippedCount = skippedCount + 1
-            continue
-        end
-        
-        local skip = false
-        for _, excludeName in ipairs(excludeElements) do
-            if element.elementName == excludeName then
-                print("  ↳ SKIP: Excluded by name:", excludeName)
-                skip = true
-                skippedCount = skippedCount + 1
-                break
-            end
-        end
-        
-        if not skip then
-            for _, excludeType in ipairs(excludeTypes) do
-                if element.type == excludeType then
-                    print("  ↳ SKIP: Excluded type:", excludeType)
-                    skip = true
-                    skippedCount = skippedCount + 1
-                    break
-                end
-            end
-        end
-        
-        if not skip then
-            print("  ↳ Attempting to get value...")
-            
-            local success, result = pcall(function()
-                if not element.api then
-                    print("  ↳ No API found")
-                    return nil
-                end
-                
-                if not element.api.GetValue then
-                    print("  ↳ No GetValue function")
-                    return nil
-                end
-                
-                local rawValue = element.api.GetValue()
-                print("  ↳ Raw value retrieved:", type(rawValue), tostring(rawValue))
-                
-                if element.type == "colorpicker" then
-                    if typeof(rawValue) == "Color3" then
-                        return self:colorToRGB(rawValue)
-                    else
-                        print("  ↳ Colorpicker value not Color3")
-                        return nil
-                    end
-                elseif element.type == "multidropdown" and type(rawValue) == "table" then
-                    local selected = {}
-                    for key, isSelected in pairs(rawValue) do
-                        if isSelected then
-                            table.insert(selected, key)
-                        end
-                    end
-                    return selected
-                else
-                    return rawValue
-                end
-            end)
-            
-            if not success then
-                print("  ↳ ERROR getting value:", result)
-                skippedCount = skippedCount + 1
-            else
-                local value = result
-                if value ~= nil then
-                    print("  ↳ SUCCESS! Saving:", element.elementName, "=", tostring(value))
-                    settings.elements[elementId] = {
-                        type = element.type,
-                        tabName = element.tabName,
-                        windowName = element.windowName,
-                        elementName = element.elementName,
-                        path = element.path,
-                        value = value
-                    }
-                    savedCount = savedCount + 1
-                else
-                    print("  ↳ SKIP: Value is nil")
-                    skippedCount = skippedCount + 1
-                end
-            end
-        end
+        print("[ConfigManager] Loop iteration - elementId:", elementId)
+        -- Add the rest of your existing logic here
     end
     
-    print(string.format("[ConfigManager] === Finished gathering ==="))
-    print(string.format("[ConfigManager] Processed: %d | Saved: %d | Skipped: %d", processedCount, savedCount, skippedCount))
+    print("[ConfigManager] ========== gatherRegisteredElements FINISHED ==========")
 end
 function ConfigManager:applySettings(settings, executeCallbacks)
     if not settings or not self.hubInstance then
@@ -641,11 +580,18 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
     end
 end
 function ConfigManager:saveConfig(configName)
+    print("[ConfigManager] ========== saveConfig CALLED ==========")
+    print("[ConfigManager] configName:", configName)
+    
     if not configName or configName == "" then
         self:safeNotify('error', 'Save Failed', 'Config name cannot be empty!')
         return false
     end
+    
+    print("[ConfigManager] About to call gatherAllSettings...")
     local settings = self:gatherAllSettings()
+    print("[ConfigManager] gatherAllSettings returned, type:", type(settings))
+    
     local configData = {
         name = configName,
         settings = settings,
@@ -658,7 +604,10 @@ function ConfigManager:saveConfig(configName)
             creatorId = game.CreatorId
         }
     }
+    
     local success = self:saveConfigData(configName, configData)
+    print("[ConfigManager] saveConfigData returned:", success)
+    
     if success then
         self.currentConfig = configName
         self:safeNotify('success', 'Config Saved', 'Configuration "' .. configName .. '" saved successfully!', 3)
@@ -668,6 +617,7 @@ function ConfigManager:saveConfig(configName)
         return false
     end
 end
+
 function ConfigManager:loadConfig(configName, executeCallbacks)
     if not configName or configName == "" then
         self:safeNotify('error', 'Load Failed', 'Config name cannot be empty!')
