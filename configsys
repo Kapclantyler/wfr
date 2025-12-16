@@ -1,4 +1,4 @@
-warn("nahwaht")
+warn("nahwaht2")
 local ConfigManager = {}
 ConfigManager.__index = ConfigManager
 local HttpService = game:GetService("HttpService")
@@ -269,64 +269,127 @@ end
 function ConfigManager:gatherRegisteredElements(settings)
     local excludeElements = {"Auto Load Config"}
     local excludeTypes = {"button", "keybind"}
-    if self.hubInstance._getAllRegisteredElements then
-        local elements = self.hubInstance:_getAllRegisteredElements()
-        for elementId, element in pairs(elements or {}) do
-            if not element or not element.type then
-                continue
+    
+    print("[ConfigManager] === Starting gatherRegisteredElements ===")
+    
+    if not self.hubInstance then
+        print("[ConfigManager] ERROR: No hubInstance!")
+        return
+    end
+    
+    if not self.hubInstance._getAllRegisteredElements then
+        print("[ConfigManager] ERROR: No _getAllRegisteredElements function found")
+        return
+    end
+    
+    local elements = self.hubInstance:_getAllRegisteredElements()
+    print("[ConfigManager] Retrieved elements. Type:", type(elements))
+    
+    if not elements then
+        print("[ConfigManager] ERROR: elements is nil!")
+        return
+    end
+    
+    local elementCount = 0
+    for _ in pairs(elements) do
+        elementCount = elementCount + 1
+    end
+    print("[ConfigManager] Total elements to process:", elementCount)
+    
+    local processedCount = 0
+    local skippedCount = 0
+    local savedCount = 0
+    
+    for elementId, element in pairs(elements) do
+        processedCount = processedCount + 1
+        print(string.format("[ConfigManager] [%d/%d] Processing: %s", processedCount, elementCount, elementId))
+        
+        if not element or not element.type then
+            print("  ↳ SKIP: No element or type")
+            skippedCount = skippedCount + 1
+            continue
+        end
+        
+        print("  ↳ Type:", element.type, "| Name:", element.elementName or "NO NAME")
+        
+        local elementType = string.lower(tostring(element.type))
+        if elementType == "keybind" or elementType:find("keybind") or elementType:find("key") then
+            print("  ↳ SKIP: Type is keybind-related")
+            skippedCount = skippedCount + 1
+            continue
+        end
+        
+        if element.elementName and (string.lower(element.elementName):find("keybind") or string.lower(element.elementName):find("key bind")) then
+            print("  ↳ SKIP: Name contains keybind")
+            skippedCount = skippedCount + 1
+            continue
+        end
+        
+        local skip = false
+        for _, excludeName in ipairs(excludeElements) do
+            if element.elementName == excludeName then
+                print("  ↳ SKIP: Excluded by name:", excludeName)
+                skip = true
+                skippedCount = skippedCount + 1
+                break
             end
-            local elementType = string.lower(tostring(element.type))
-            if elementType == "keybind" or elementType:find("keybind") or elementType:find("key") then
-                continue
-            end
-            if element.elementName and (string.lower(element.elementName):find("keybind") or string.lower(element.elementName):find("key bind")) then
-                continue
-            end
-            local skip = false
-            for _, excludeName in ipairs(excludeElements) do
-                if element.elementName == excludeName then
+        end
+        
+        if not skip then
+            for _, excludeType in ipairs(excludeTypes) do
+                if element.type == excludeType then
+                    print("  ↳ SKIP: Excluded type:", excludeType)
                     skip = true
+                    skippedCount = skippedCount + 1
                     break
                 end
             end
-            if not skip then
-                for _, excludeType in ipairs(excludeTypes) do
-                    if element.type == excludeType then
-                        skip = true
-                        break
-                    end
+        end
+        
+        if not skip then
+            print("  ↳ Attempting to get value...")
+            
+            local success, result = pcall(function()
+                if not element.api then
+                    print("  ↳ No API found")
+                    return nil
                 end
-            end
-            if not skip then
-                local success, result = pcall(function()
-                    if element.api and element.api.GetValue then
-                        local rawValue = element.api.GetValue()
-                        if element.type == "colorpicker" then
-                            if typeof(rawValue) == "Color3" then
-                                return self:colorToRGB(rawValue)
-                            else
-                                return nil
-                            end
-                        elseif element.type == "multidropdown" and type(rawValue) == "table" then
-                            local selected = {}
-                            for key, isSelected in pairs(rawValue) do
-                                if isSelected then
-                                    table.insert(selected, key)
-                                end
-                            end
-                            return selected
-                        else
-                            return rawValue
+                
+                if not element.api.GetValue then
+                    print("  ↳ No GetValue function")
+                    return nil
+                end
+                
+                local rawValue = element.api.GetValue()
+                print("  ↳ Raw value retrieved:", type(rawValue), tostring(rawValue))
+                
+                if element.type == "colorpicker" then
+                    if typeof(rawValue) == "Color3" then
+                        return self:colorToRGB(rawValue)
+                    else
+                        print("  ↳ Colorpicker value not Color3")
+                        return nil
+                    end
+                elseif element.type == "multidropdown" and type(rawValue) == "table" then
+                    local selected = {}
+                    for key, isSelected in pairs(rawValue) do
+                        if isSelected then
+                            table.insert(selected, key)
                         end
                     end
-                    return nil
-                end)
-                if not success then
-                    print("[ConfigManager] Save failed for", element.elementName, "Error:", result)
+                    return selected
+                else
+                    return rawValue
                 end
+            end)
+            
+            if not success then
+                print("  ↳ ERROR getting value:", result)
+                skippedCount = skippedCount + 1
+            else
                 local value = result
-                if success and value ~= nil then
-                    print("[ConfigManager] Saving element:", element.elementName, "| Type:", element.type, "| Value:", tostring(value))
+                if value ~= nil then
+                    print("  ↳ SUCCESS! Saving:", element.elementName, "=", tostring(value))
                     settings.elements[elementId] = {
                         type = element.type,
                         tabName = element.tabName,
@@ -335,11 +398,17 @@ function ConfigManager:gatherRegisteredElements(settings)
                         path = element.path,
                         value = value
                     }
+                    savedCount = savedCount + 1
+                else
+                    print("  ↳ SKIP: Value is nil")
+                    skippedCount = skippedCount + 1
                 end
             end
         end
     end
-    print("[ConfigManager] Finished applying. Applied:", appliedCount, "| Callbacks executed:", callbacksExecuted)
+    
+    print(string.format("[ConfigManager] === Finished gathering ==="))
+    print(string.format("[ConfigManager] Processed: %d | Saved: %d | Skipped: %d", processedCount, savedCount, skippedCount))
 end
 function ConfigManager:applySettings(settings, executeCallbacks)
     if not settings or not self.hubInstance then
