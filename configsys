@@ -1,12 +1,13 @@
-warn("nahwaht6")
+warn("ConfigManager v2.2 - Fixed")
 local ConfigManager = {}
 ConfigManager.__index = ConfigManager
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local SYSTEM_VERSION = "2.1"
+local SYSTEM_VERSION = "2.2"
 local CONFIG_FOLDER = "LynixHub_Configs"
 local DEFAULT_CONFIG = "Default"
+
 local function getFileSystemType()
     local fs = {
         hasListFiles = typeof(listfiles) == "function",
@@ -21,7 +22,9 @@ local function getFileSystemType()
     fs.hasFullFS = fs.hasBasicFS and fs.hasMakeFolder and fs.hasIsFolder
     return fs
 end
+
 local fileSystem = getFileSystemType()
+
 local function safeCreateDirectory(path)
     if not fileSystem.hasFullFS then return false end
     local success = pcall(function()
@@ -31,6 +34,7 @@ local function safeCreateDirectory(path)
     end)
     return success and isfolder(path)
 end
+
 local function safeWriteFile(path, content)
     if not fileSystem.hasWriteFile then return false end
     local success = pcall(function()
@@ -38,6 +42,7 @@ local function safeWriteFile(path, content)
     end)
     return success
 end
+
 local function safeReadFile(path)
     if not fileSystem.hasReadFile or not fileSystem.hasIsFile then return nil end
     local success, content = pcall(function()
@@ -48,6 +53,7 @@ local function safeReadFile(path)
     end)
     return success and content or nil
 end
+
 local function safeDeleteFile(path)
     if not fileSystem.hasIsFile then return false end
     local success = pcall(function()
@@ -61,6 +67,7 @@ local function safeDeleteFile(path)
     end)
     return success
 end
+
 local function safeListFiles(directory)
     if not fileSystem.hasListFiles or not fileSystem.hasIsFolder then return {} end
     local success, files = pcall(function()
@@ -71,6 +78,7 @@ local function safeListFiles(directory)
     end)
     return success and files or {}
 end
+
 function ConfigManager.new(hubInstance)
     local self = setmetatable({}, ConfigManager)
     self.hubInstance = hubInstance
@@ -83,19 +91,20 @@ function ConfigManager.new(hubInstance)
     self:delayedInitialize()
     return self
 end
+
 function ConfigManager:delayedInitialize()
     task.spawn(function()
         local attempts = 0
-        local maxAttempts = 15
+        local maxAttempts = 20
         while attempts < maxAttempts do
             attempts = attempts + 1
             if self.hubInstance and self.hubInstance.tabs and #self.hubInstance.tabs > 0 then
-                task.wait(0.2)
+                task.wait(0.3)
                 local success = self:initializeConfigSystem()
                 if success then
                     self.isInitialized = true
                     self:cleanupDuplicateConfigs()
-                    task.wait(0.1)
+                    task.wait(0.2)
                     if not self:configExists(DEFAULT_CONFIG) then
                         self:createDefaultConfig()
                     end
@@ -103,26 +112,28 @@ function ConfigManager:delayedInitialize()
                     break
                 end
             end
-            task.wait(0.1)
+            task.wait(0.15)
         end
         if not self.isInitialized then
-            self:safeNotify('error', 'Config System', 'Failed to initialize after ' .. maxAttempts .. ' attempts')
+            self:safeNotify('error', 'Config System', 'Failed to initialize')
             self.hasFileSystem = false
             self.isInitialized = true
             self:ensureDefaultConfig()
         end
     end)
 end
+
 function ConfigManager:initializeConfigSystem()
     local success = pcall(function()
         if self.hasFileSystem then
             self:setupFileSystem()
             local testSuccess = self:testFileSystemPersistence()
             if not testSuccess then
+                warn("[ConfigManager] Filesystem test failed, retrying...")
                 self:repairFileSystem()
             end
         else
-            self:safeNotify('warning', 'File System', 'Using memory storage only - configs lost on restart', 4)
+            self:safeNotify('warning', 'File System', 'Using memory storage only', 4)
             task.spawn(function()
                 task.wait(2)
                 self:repairFileSystem()
@@ -133,66 +144,61 @@ function ConfigManager:initializeConfigSystem()
     end)
     return success
 end
+
 function ConfigManager:setupFileSystem()
     if not fileSystem.hasFullFS then return end
     local paths = {
         "workspace/" .. self.configFolder,
+        self.configFolder,
         "autoexec/" .. self.configFolder,
-        "syn/" .. self.configFolder,
-        "krnl/" .. self.configFolder,
-        "scriptware/" .. self.configFolder,
-        "fluxus/" .. self.configFolder,
-        self.configFolder
     }
     for _, path in ipairs(paths) do
         if safeCreateDirectory(path) then
-            local testFile = path .. "/persistence_test.txt"
+            local testFile = path .. "/test.tmp"
             local testContent = "test_" .. os.time()
             if safeWriteFile(testFile, testContent) then
+                task.wait(0.1)
                 local readBack = safeReadFile(testFile)
                 if readBack == testContent then
                     self.configFolder = path
                     safeDeleteFile(testFile)
-                    task.spawn(function()
-                        task.wait(0.5)
-                        if isfolder(path) then
-                        end
-                    end)
+                    print("[ConfigManager] Using folder:", path)
                     return
                 end
             end
         end
     end
     self.hasFileSystem = false
+    warn("[ConfigManager] No valid filesystem path found")
 end
+
 function ConfigManager:ensureDefaultConfig()
-    for attempt = 1, 3 do
+    for attempt = 1, 5 do
         if self:configExists(DEFAULT_CONFIG) then
             return true
         end
         local defaultData = self:createDefaultConfigData()
         local success = self:saveConfigData(DEFAULT_CONFIG, defaultData)
         if success then
-            task.wait(0.1)
+            task.wait(0.2)
             if self:configExists(DEFAULT_CONFIG) then
                 return true
             end
         end
-        if attempt < 3 then
-            task.wait(0.2)
+        if attempt < 5 then
+            task.wait(0.3)
         end
     end
-    if not self:configExists(DEFAULT_CONFIG) then
-        local defaultData = self:createDefaultConfigData()
-        self.memoryStore.configs[DEFAULT_CONFIG] = defaultData
-        return true
-    end
-    return false
+    local defaultData = self:createDefaultConfigData()
+    self.memoryStore.configs[DEFAULT_CONFIG] = defaultData
+    return true
 end
+
 function ConfigManager:createDefaultConfig()
     local defaultData = self:createDefaultConfigData()
     return self:saveConfigData(DEFAULT_CONFIG, defaultData)
 end
+
 function ConfigManager:createDefaultConfigData()
     return {
         name = DEFAULT_CONFIG,
@@ -207,6 +213,7 @@ function ConfigManager:createDefaultConfigData()
                 watermarkVisible = true,
                 themeColor = {r = 110, g = 117, b = 243}
             },
+            elements = {},
             tabs = {}
         },
         metadata = {
@@ -214,17 +221,14 @@ function ConfigManager:createDefaultConfigData()
             created = os.time(),
             lastModified = os.time(),
             creator = Players.LocalPlayer.Name,
-            description = "Default LynixHub configuration",
+            description = "Default configuration",
             creatorId = game.CreatorId
         }
     }
 end
+
 function ConfigManager:gatherAllSettings()
-    print("[ConfigManager] ========== gatherAllSettings CALLED ==========")
-    print("[ConfigManager] hubInstance:", self.hubInstance)
-    
     if not self.hubInstance then
-        print("[ConfigManager] No hubInstance! Returning default settings")
         return self:createDefaultConfigData().settings
     end
     
@@ -239,13 +243,10 @@ function ConfigManager:gatherAllSettings()
             watermarkVisible = true,
             themeColor = {r = 110, g = 117, b = 243}
         },
-        elements = {},  -- Initialize empty elements table HERE
+        elements = {},
         tabs = {}
     }
     
-    print("[ConfigManager] Created settings structure")
-    
-    -- Global settings gathering
     pcall(function()
         if self.hubInstance._toggleKeyCode then
             settings.globalSettings.menuToggleKey = self.hubInstance._toggleKeyCode.Name
@@ -258,9 +259,6 @@ function ConfigManager:gatherAllSettings()
         end
     end)
     
-    print("[ConfigManager] Gathered global settings")
-    
-    -- Tabs gathering
     pcall(function()
         if self.hubInstance.tabs then
             for i, tab in ipairs(self.hubInstance.tabs) do
@@ -277,138 +275,62 @@ function ConfigManager:gatherAllSettings()
         end
     end)
     
-    print("[ConfigManager] Gathered tabs")
-    print("[ConfigManager] About to call gatherRegisteredElements...")
-    
     self:gatherRegisteredElements(settings)
-    
-    print("[ConfigManager] Returned from gatherRegisteredElements")
-    print("[ConfigManager] settings.elements count:", settings.elements and #settings.elements or "NIL")
     
     return settings
 end
+
 function ConfigManager:gatherRegisteredElements(settings)
-    print("[ConfigManager] ========== gatherRegisteredElements CALLED ==========")
-    
     local excludeElements = {"Auto Load Config"}
     local excludeTypes = {"button", "keybind"}
     
-    if not self.hubInstance then
-        print("[ConfigManager] ERROR: No hubInstance!")
-        return
-    end
-    
-    if not self.hubInstance._getAllRegisteredElements then
-        print("[ConfigManager] ERROR: No _getAllRegisteredElements function!")
+    if not self.hubInstance or not self.hubInstance._getAllRegisteredElements then
         return
     end
     
     local elements = self.hubInstance:_getAllRegisteredElements()
+    if not elements then return end
     
-    if not elements then
-        print("[ConfigManager] ERROR: elements is nil!")
-        return
-    end
-    
-    local elementCount = 0
-    for k, v in pairs(elements) do
-        elementCount = elementCount + 1
-    end
-    
-    print("[ConfigManager] Total registered elements:", elementCount)
-    
-    if elementCount == 0 then
-        print("[ConfigManager] WARNING: No elements to process!")
-        return
-    end
-    
-    -- Initialize elements table if it doesn't exist
     if not settings.elements then
         settings.elements = {}
     end
     
-    local processedCount = 0
-    local skippedCount = 0
-    local errorCount = 0
-    
     for elementId, element in pairs(elements) do
-        print("[ConfigManager] ==================")
-        print("[ConfigManager] Processing elementId:", elementId)
-        print("[ConfigManager]   - elementName:", element.elementName)
-        print("[ConfigManager]   - type:", element.type)
-        print("[ConfigManager]   - tabName:", element.tabName)
-        print("[ConfigManager]   - windowName:", element.windowName)
-        print("[ConfigManager]   - has api:", element.api ~= nil)
-        
-        if element.api then
-            print("[ConfigManager]   - api.GetValue exists:", element.api.GetValue ~= nil)
-            print("[ConfigManager]   - api.SetValue exists:", element.api.SetValue ~= nil)
-        end
-        
-        -- Skip excluded elements by name
         local skip = false
+        
         for _, excludeName in ipairs(excludeElements) do
             if element.elementName == excludeName then
-                print("[ConfigManager]   -> SKIPPED: excluded by name")
                 skip = true
-                skippedCount = skippedCount + 1
                 break
             end
         end
         
-        -- Skip excluded types
         if not skip then
             for _, excludeType in ipairs(excludeTypes) do
                 if element.type == excludeType then
-                    print("[ConfigManager]   -> SKIPPED: excluded type")
                     skip = true
-                    skippedCount = skippedCount + 1
                     break
                 end
             end
         end
         
-        -- Check if element has required API
-        if not skip then
-            if not element.api then
-                print("[ConfigManager]   -> ERROR: No api object!")
-                errorCount = errorCount + 1
-                skip = true
-            elseif not element.api.GetValue then
-                print("[ConfigManager]   -> ERROR: No GetValue method!")
-                errorCount = errorCount + 1
-                skip = true
-            end
-        end
-        
-        -- Process element if not skipped
-        if not skip then
+        if not skip and element.api and element.api.GetValue then
             local success, value = pcall(function()
                 return element.api.GetValue()
             end)
             
             if success then
-                print("[ConfigManager]   -> SUCCESS: Got value:", tostring(value), "| type:", type(value))
-                
-                -- Special handling for different types
                 local savedValue = value
-                if element.type == "colorpicker" then
-                    if typeof(value) == "Color3" then
-                        savedValue = self:colorToRGB(value)
-                        print("[ConfigManager]   -> Converted Color3 to RGB table")
-                    end
-                elseif element.type == "multidropdown" then
-                    if type(value) == "table" then
-                        -- Convert map to array
-                        local selected = {}
-                        for key, isSelected in pairs(value) do
-                            if isSelected then
-                                table.insert(selected, key)
-                            end
+                if element.type == "colorpicker" and typeof(value) == "Color3" then
+                    savedValue = self:colorToRGB(value)
+                elseif element.type == "multidropdown" and type(value) == "table" then
+                    local selected = {}
+                    for key, isSelected in pairs(value) do
+                        if isSelected then
+                            table.insert(selected, key)
                         end
-                        savedValue = selected
-                        print("[ConfigManager]   -> Converted multidropdown map to array")
                     end
+                    savedValue = selected
                 end
                 
                 table.insert(settings.elements, {
@@ -420,27 +342,14 @@ function ConfigManager:gatherRegisteredElements(settings)
                     value = savedValue,
                     path = element.path
                 })
-                
-                processedCount = processedCount + 1
-            else
-                print("[ConfigManager]   -> ERROR: GetValue failed:", tostring(value))
-                errorCount = errorCount + 1
             end
         end
     end
-    
-    print("[ConfigManager] ==================")
-    print("[ConfigManager] SUMMARY:")
-    print("[ConfigManager]   - Total elements:", elementCount)
-    print("[ConfigManager]   - Processed:", processedCount)
-    print("[ConfigManager]   - Skipped:", skippedCount)
-    print("[ConfigManager]   - Errors:", errorCount)
-    print("[ConfigManager]   - Saved to config:", #settings.elements)
-    print("[ConfigManager] ========== gatherRegisteredElements FINISHED ==========")
 end
+
 function ConfigManager:applySettings(settings, executeCallbacks)
     if not settings or not self.hubInstance then
-        self:safeNotify('error', 'Apply Settings', 'Invalid settings data or no UI instance')
+        self:safeNotify('error', 'Apply Settings', 'Invalid settings data')
         return false
     end
     if executeCallbacks == nil then executeCallbacks = true end
@@ -467,52 +376,38 @@ function ConfigManager:applySettings(settings, executeCallbacks)
     end
     return success
 end
+
 function ConfigManager:applyElementSettings(elements, executeCallbacks)
     local excludeElements = {"Auto Load Config"}
-    local excludeTypes = {"button", "keybind"}
     
     if not self.hubInstance._getAllRegisteredElements then
-        print("[ConfigManager] No _getAllRegisteredElements function found")
         return
     end
     
     if executeCallbacks == nil then executeCallbacks = true end
     
     local registeredElements = self.hubInstance:_getAllRegisteredElements()
-    print("[ConfigManager] Starting to apply element settings. Total saved elements:", #elements)
-    print("[ConfigManager] Total registered elements:", #registeredElements)
-    
     local appliedCount = 0
     local callbacksExecuted = 0
-    local failedCount = 0
     
     for elementId, savedElement in pairs(elements) do
-        print("[ConfigManager] ==================")
-        print("[ConfigManager] Processing elementId:", elementId, "| Name:", savedElement.elementName, "| Type:", savedElement.type)
-        
         if not savedElement or not savedElement.type then
-            print("[ConfigManager] Skipped - no savedElement or type")
             continue
         end
         
         local savedType = string.lower(tostring(savedElement.type))
         
-        -- Skip keybinds entirely
         if savedType == "keybind" or savedType:find("keybind") or savedType:find("key") then
-            print("[ConfigManager] Skipped - detected as keybind")
             continue
         end
         
         if savedElement.elementName and (string.lower(savedElement.elementName):find("keybind") or string.lower(savedElement.elementName):find("key bind")) then
-            print("[ConfigManager] Skipped - element name contains keybind")
             continue
         end
         
-        -- Check excluded names
         local skip = false
         for _, excludeName in ipairs(excludeElements) do
             if savedElement.elementName == excludeName then
-                print("[ConfigManager] Skipped - excluded by name:", excludeName)
                 skip = true
                 break
             end
@@ -520,36 +415,16 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
         
         if skip then continue end
         
-        print("[ConfigManager] Attempting to find registered element for:", elementId)
         local registeredElement = registeredElements[elementId]
         
-        if not registeredElement then
-            print("[ConfigManager] No registered element found for:", elementId)
-            failedCount = failedCount + 1
-            continue
-        end
-        
-        if not registeredElement.api then
-            print("[ConfigManager] No API found for:", elementId)
-            failedCount = failedCount + 1
-            continue
-        end
-        
-        print("[ConfigManager] Found registered element with API")
-        
-        -- Check if we have SetValue (this is all we really need)
-        if not registeredElement.api.SetValue then
-            print("[ConfigManager] No SetValue method for:", savedElement.elementName)
-            failedCount = failedCount + 1
+        if not registeredElement or not registeredElement.api or not registeredElement.api.SetValue then
             continue
         end
         
         if savedElement.value == nil then
-            print("[ConfigManager] Skipped - value is nil")
             continue
         end
         
-        -- Try to get current value (optional, for comparison)
         local currentValue = nil
         if registeredElement.api.GetValue then
             pcall(function()
@@ -557,7 +432,6 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
             end)
         end
         
-        -- Apply the value
         local success, applyError = pcall(function()
             local value = savedElement.value
             
@@ -565,32 +439,21 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                 return
             end
             
-            -- Type conversion and validation
             if savedElement.type == "colorpicker" then
                 if type(value) == "table" and value.r and value.g and value.b then
-                    if type(value.r) == "number" and type(value.g) == "number" and type(value.b) == "number" then
-                        value = self:rgbToColor(value)
-                    else
-                        print("[ConfigManager] Invalid RGB values")
-                        return
-                    end
+                    value = self:rgbToColor(value)
                 elseif typeof(value) ~= "Color3" then
-                    print("[ConfigManager] Invalid color value type")
                     return
                 end
             elseif savedElement.type == "checkbox" or savedElement.type == "toggle" then
                 if type(value) ~= "boolean" then
-                    print("[ConfigManager] Invalid boolean value")
                     return
                 end
-                -- Skip if value hasn't changed
                 if currentValue ~= nil and currentValue == value then
-                    print("[ConfigManager] Value unchanged, skipping")
                     return
                 end
             elseif savedElement.type == "slider" then
                 if type(value) ~= "number" then
-                    print("[ConfigManager] Invalid number value")
                     return
                 end
             elseif savedElement.type == "multidropdown" then
@@ -601,34 +464,25 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                     end
                     value = selectedMap
                 else
-                    print("[ConfigManager] Invalid multidropdown value")
                     return
                 end
             elseif savedElement.type == "dropdown" then
                 if type(value) ~= "string" then
-                    print("[ConfigManager] Invalid dropdown value")
                     return
                 end
             end
             
-            print("[ConfigManager] Applying element:", savedElement.elementName, "| Type:", savedElement.type, "| Value:", tostring(value))
-            
-            -- Store original callback
             local tempCallback = registeredElement.originalCallback
             
-            -- Temporarily disable callback during SetValue
             if registeredElement.originalCallback and type(registeredElement.originalCallback) == "function" then
                 registeredElement.originalCallback = function() end
             end
             
-            -- Apply the value with error handling
             local setSuccess, setError = pcall(function()
                 registeredElement.api.SetValue(value)
             end)
             
             if not setSuccess then
-                print("[ConfigManager] SetValue failed:", setError)
-                -- Restore callback
                 if tempCallback and type(tempCallback) == "function" then
                     registeredElement.originalCallback = tempCallback
                 end
@@ -636,19 +490,15 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
             end
             
             appliedCount = appliedCount + 1
-            print("[ConfigManager] Successfully applied:", savedElement.elementName)
             
-            -- Restore callback
             if tempCallback and type(tempCallback) == "function" then
                 registeredElement.originalCallback = tempCallback
             end
             
-            -- Execute callbacks if requested
             if executeCallbacks and tempCallback and type(tempCallback) == "function" then
                 local shouldExecuteCallback = false
                 
                 if savedElement.type == "checkbox" or savedElement.type == "toggle" then
-                    -- Only execute callback if value is true
                     shouldExecuteCallback = (type(value) == "boolean" and value == true)
                 elseif savedElement.type == "colorpicker" then
                     shouldExecuteCallback = (typeof(value) == "Color3")
@@ -661,49 +511,29 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                 end
                 
                 if shouldExecuteCallback then
-                    local callbackSuccess, callbackError = pcall(function()
+                    pcall(function()
                         if savedElement.type == "colorpicker" then
-                            tempCallback(value, 1) -- Alpha = 1
+                            tempCallback(value, 1)
                         else
                             tempCallback(value)
                         end
-                    end)
-                    
-                    if callbackSuccess then
                         callbacksExecuted = callbacksExecuted + 1
-                        print("[ConfigManager] Callback executed for:", savedElement.elementName)
-                    else
-                        print("[ConfigManager] Callback failed for", savedElement.elementName, "Error:", callbackError)
-                    end
+                    end)
                 end
             end
         end)
-        
-        if not success then
-            print("[ConfigManager] Apply failed for", savedElement.elementName, "Error:", applyError)
-            failedCount = failedCount + 1
-        end
     end
     
-    print("[ConfigManager] ==================")
-    print("[ConfigManager] APPLY SUMMARY:")
-    print("[ConfigManager]   - Successfully applied:", appliedCount)
-    print("[ConfigManager]   - Callbacks executed:", callbacksExecuted)
-    print("[ConfigManager]   - Failed:", failedCount)
-    print("[ConfigManager] ==================")
+    print("[ConfigManager] Applied", appliedCount, "elements,", callbacksExecuted, "callbacks executed")
 end
+
 function ConfigManager:saveConfig(configName)
-    print("[ConfigManager] ========== saveConfig CALLED ==========")
-    print("[ConfigManager] configName:", configName)
-    
     if not configName or configName == "" then
         self:safeNotify('error', 'Save Failed', 'Config name cannot be empty!')
         return false
     end
     
-    print("[ConfigManager] About to call gatherAllSettings...")
     local settings = self:gatherAllSettings()
-    print("[ConfigManager] gatherAllSettings returned, type:", type(settings))
     
     local configData = {
         name = configName,
@@ -713,13 +543,12 @@ function ConfigManager:saveConfig(configName)
             created = os.time(),
             lastModified = os.time(),
             creator = Players.LocalPlayer.Name,
-            description = "LynixHub configuration: " .. configName,
+            description = "Configuration: " .. configName,
             creatorId = game.CreatorId
         }
     }
     
     local success = self:saveConfigData(configName, configData)
-    print("[ConfigManager] saveConfigData returned:", success)
     
     if success then
         self.currentConfig = configName
@@ -752,23 +581,20 @@ function ConfigManager:loadConfig(configName, executeCallbacks)
     if success then
         self.currentConfig = configName
         local callbackMsg = executeCallbacks and " (with callbacks)" or " (values only)"
-        self:safeNotify('success', 'Config Loaded', 'Configuration "' .. configName .. '" loaded successfully!' .. callbackMsg, 3)
+        self:safeNotify('success', 'Config Loaded', 'Configuration "' .. configName .. '" loaded!' .. callbackMsg, 3)
         return true
     else
         self:safeNotify('error', 'Load Failed', 'Could not apply configuration!')
         return false
     end
 end
-function ConfigManager:loadConfigWithoutCallbacks(configName)
-    return self:loadConfig(configName, false)
-end
+
 function ConfigManager:createConfig(configName)
     if not configName or configName == "" then
         self:safeNotify('error', 'Create Failed', 'Config name cannot be empty!')
         return false
     end
     
-    -- Wait for initialization
     local waitAttempts = 0
     while not self.isInitialized and waitAttempts < 10 do
         waitAttempts = waitAttempts + 1
@@ -780,20 +606,16 @@ function ConfigManager:createConfig(configName)
         self.isInitialized = true
     end
     
-    -- Check if config already exists
     if self:configExists(configName) then
         self:safeNotify('warning', 'Config Exists', 'Configuration "' .. configName .. '" already exists!')
         return false
     end
     
-    -- Save the config (this will create it)
     local success = self:saveConfig(configName)
     
     if success then
-        -- Force write to file system AND memory
         local configData = self:loadConfigData(configName)
         if configData then
-            -- Ensure it's in both places
             self.memoryStore.configs[configName] = configData
             
             if self.hasFileSystem then
@@ -801,24 +623,21 @@ function ConfigManager:createConfig(configName)
                 local jsonString = self.httpService:JSONEncode(configData)
                 safeWriteFile(filePath, jsonString)
                 
-                -- Verify write
-                task.wait(0.1)
+                task.wait(0.2)
                 local verifyContent = safeReadFile(filePath)
                 if not verifyContent or verifyContent == "" then
-                    -- File write failed, keep in memory only
-                    print("[ConfigManager] Warning: File write failed, using memory only")
+                    warn("[ConfigManager] File write verification failed")
                 end
             end
         end
         
-        self:safeNotify('success', 'Config Created', 'Configuration "' .. configName .. '" created successfully!', 3)
-        
-        -- Return true immediately
+        self:safeNotify('success', 'Config Created', 'Configuration "' .. configName .. '" created!', 3)
         return true
     else
         return false
     end
 end
+
 function ConfigManager:deleteConfig(configName)
     if not configName or configName == "" or string.lower(configName) == string.lower(DEFAULT_CONFIG) then
         self:safeNotify('error', 'Delete Failed', 'Cannot delete default configuration!')
@@ -828,21 +647,23 @@ function ConfigManager:deleteConfig(configName)
     if self.hasFileSystem then
         local filePath = self.configFolder .. "/" .. configName .. ".json"
         success = safeDeleteFile(filePath)
-    else
-        if self.memoryStore.configs[configName] then
-            self.memoryStore.configs[configName] = nil
-            success = true
-        end
+    end
+    if self.memoryStore.configs[configName] then
+        self.memoryStore.configs[configName] = nil
+        success = true
     end
     if success then
-        self:safeNotify('success', 'Config Deleted', 'Configuration "' .. configName .. '" deleted successfully!', 3)
+        self:safeNotify('success', 'Config Deleted', 'Configuration "' .. configName .. '" deleted!', 3)
         return true
     else
         self:safeNotify('error', 'Delete Failed', 'Could not delete configuration!')
         return false
     end
 end
+
 function ConfigManager:saveConfigData(configName, configData)
+    self.memoryStore.configs[configName] = configData
+    
     if self.hasFileSystem then
         local filePath = self.configFolder .. "/" .. configName .. ".json"
         local success, jsonString = pcall(function()
@@ -855,22 +676,23 @@ function ConfigManager:saveConfigData(configName, configData)
                     task.wait(0.1)
                     local verifyContent = safeReadFile(filePath)
                     if not verifyContent or verifyContent ~= jsonString then
-                        self.memoryStore.configs[configName] = configData
+                        warn("[ConfigManager] Verification failed for:", configName)
                     end
                 end)
                 return true
             else
-                self.memoryStore.configs[configName] = configData
+                warn("[ConfigManager] Write failed, using memory only")
                 return true
             end
         else
-            return false
+            warn("[ConfigManager] JSON encode failed")
+            return true
         end
     else
-        self.memoryStore.configs[configName] = configData
         return true
     end
 end
+
 function ConfigManager:loadConfigData(configName)
     if not configName or configName == "" then return nil end
     if self.hasFileSystem then
@@ -881,6 +703,7 @@ function ConfigManager:loadConfigData(configName)
                 return self.httpService:JSONDecode(fileContent)
             end)
             if success and result then
+                self.memoryStore.configs[configName] = result
                 return result
             end
         end
@@ -896,6 +719,7 @@ function ConfigManager:loadConfigData(configName)
     end
     return nil
 end
+
 function ConfigManager:configExists(configName)
     if not configName or configName == "" then return false end
     if self.hasFileSystem then
@@ -914,22 +738,20 @@ function ConfigManager:configExists(configName)
     end
     return false
 end
+
 function ConfigManager:getConfigList()
     local configs = {}
     local configSet = {}
     
-    -- Always ensure Default exists first
     if not self:configExists(DEFAULT_CONFIG) then
         self:ensureDefaultConfig()
     end
     
-    -- Scan file system
     if self.hasFileSystem then
         local files = safeListFiles(self.configFolder)
         for _, filePath in ipairs(files) do
             local fileName = filePath:match("[/\\]([^/\\]+)%.json$")
             if fileName and not configSet[string.lower(fileName)] then
-                -- Verify file is readable and valid
                 local content = safeReadFile(filePath)
                 if content and content ~= "" then
                     local success, data = pcall(function()
@@ -945,7 +767,6 @@ function ConfigManager:getConfigList()
         end
     end
     
-    -- Add memory configs
     for configName, _ in pairs(self.memoryStore.configs) do
         if not configSet[string.lower(configName)] then
             table.insert(configs, configName)
@@ -953,12 +774,9 @@ function ConfigManager:getConfigList()
         end
     end
     
-    -- Ensure Default is first
     if not configSet[string.lower(DEFAULT_CONFIG)] then
         table.insert(configs, 1, DEFAULT_CONFIG)
-        configSet[string.lower(DEFAULT_CONFIG)] = true
     else
-        -- Move Default to front if it's not already
         for i, name in ipairs(configs) do
             if string.lower(name) == string.lower(DEFAULT_CONFIG) then
                 table.remove(configs, i)
@@ -968,7 +786,6 @@ function ConfigManager:getConfigList()
         end
     end
     
-    -- Filter by current game
     local validConfigs = {}
     local currentCreatorId = game.CreatorId
     
@@ -989,69 +806,36 @@ function ConfigManager:getConfigList()
     
     table.sort(validConfigs)
     
-    print("[ConfigManager] Found", #validConfigs, "valid configs")
-    
     return validConfigs
 end
-function ConfigManager:syncMemoryToFileSystem()
-    if not self.hasFileSystem then
-        return false
-    end
-    local syncCount = 0
-    for configName, configData in pairs(self.memoryStore.configs) do
-        local filePath = self.configFolder .. "/" .. configName .. ".json"
-        if not (fileSystem.hasIsFile and isfile(filePath)) then
-            local success, jsonString = pcall(function()
-                return self.httpService:JSONEncode(configData)
-            end)
-            if success and jsonString and safeWriteFile(filePath, jsonString) then
-                syncCount = syncCount + 1
-            end
+
+function ConfigManager:testFileSystemPersistence()
+    if not self.hasFileSystem then return false end
+    
+    local testFile = self.configFolder .. "/test.tmp"
+    local testContent = "test_" .. os.time()
+    
+    if safeWriteFile(testFile, testContent) then
+        task.wait(0.1)
+        local readContent = safeReadFile(testFile)
+        safeDeleteFile(testFile)
+        
+        if readContent == testContent then
+            return true
         end
     end
-    return syncCount > 0
+    return false
 end
+
 function ConfigManager:repairFileSystem()
     fileSystem = getFileSystemType()
     self.hasFileSystem = fileSystem.hasBasicFS
     if self.hasFileSystem then
         self:setupFileSystem()
-        if table.getn(self.memoryStore.configs) > 0 then
-            self:syncMemoryToFileSystem()
-        end
-        return true
-    else
-        return false
     end
+    return self.hasFileSystem
 end
-function ConfigManager:testFileSystemPersistence()
-    if not self.hasFileSystem then return false end
-    
-    local testFile = self.configFolder .. "/persistence_check.txt"
-    local testContent = "persistence_test_" .. os.time()
-    
-    -- Try to write
-    if safeWriteFile(testFile, testContent) then
-        -- Wait a bit
-        task.wait(0.1)
-        
-        -- Try to read back
-        local readContent = safeReadFile(testFile)
-        
-        -- Clean up
-        safeDeleteFile(testFile)
-        
-        if readContent == testContent then
-            return true
-        else
-            print("[ConfigManager] Persistence test failed: content mismatch")
-            return false
-        end
-    else
-        print("[ConfigManager] Persistence test failed: write failed")
-        return false
-    end
-end
+
 function ConfigManager:colorToRGB(color)
     if typeof(color) ~= "Color3" then
         return {r = 110, g = 117, b = 243}
@@ -1062,6 +846,7 @@ function ConfigManager:colorToRGB(color)
         b = math.floor(color.B * 255 + 0.5)
     }
 end
+
 function ConfigManager:rgbToColor(rgb)
     if type(rgb) ~= "table" then
         return Color3.fromRGB(110, 117, 243)
@@ -1069,66 +854,24 @@ function ConfigManager:rgbToColor(rgb)
     if not rgb.r or not rgb.g or not rgb.b then
         return Color3.fromRGB(110, 117, 243)
     end
-    local r = tonumber(rgb.r) or 110
-    local g = tonumber(rgb.g) or 117
-    local b = tonumber(rgb.b) or 243
-    r = math.clamp(r, 0, 255)
-    g = math.clamp(g, 0, 255)
-    b = math.clamp(b, 0, 255)
+    local r = math.clamp(tonumber(rgb.r) or 110, 0, 255)
+    local g = math.clamp(tonumber(rgb.g) or 117, 0, 255)
+    local b = math.clamp(tonumber(rgb.b) or 243, 0, 255)
     return Color3.fromRGB(r, g, b)
 end
+
 function ConfigManager:safeNotify(notifType, title, message, duration)
     duration = duration or 3
-    local success = pcall(function()
+    pcall(function()
         if self.hubInstance and self.hubInstance.notifications then
             local method = self.hubInstance.notifications[notifType]
             if method and type(method) == "function" then
                 method(self.hubInstance.notifications, title, message, duration)
-                return true
             end
         end
-        return false
     end)
-    if not success then
-    end
 end
-function ConfigManager:getDebugInfo()
-    local elementCount = 0
-    local elementTypes = {}
-    local elementsByTab = {}
-    local callbackCount = 0
-    if self.hubInstance and self.hubInstance._getAllRegisteredElements then
-        local elements = self.hubInstance:_getAllRegisteredElements()
-        for _, element in pairs(elements or {}) do
-            elementCount = elementCount + 1
-            elementTypes[element.type] = (elementTypes[element.type] or 0) + 1
-            if element.originalCallback and type(element.originalCallback) == "function" then
-                callbackCount = callbackCount + 1
-            end
-            if not elementsByTab[element.tabName] then
-                elementsByTab[element.tabName] = {}
-            end
-            if not elementsByTab[element.tabName][element.windowName] then
-                elementsByTab[element.tabName][element.windowName] = 0
-            end
-            elementsByTab[element.tabName][element.windowName] = elementsByTab[element.tabName][element.windowName] + 1
-        end
-    end
-    return {
-        initialized = self.isInitialized,
-        hasFileSystem = self.hasFileSystem,
-        configFolder = self.configFolder,
-        currentConfig = self.currentConfig,
-        memoryConfigs = self.hasFileSystem and 0 or table.getn(self.memoryStore.configs or {}),
-        fileSystemDetails = fileSystem,
-        registeredElements = {
-            total = elementCount,
-            byType = elementTypes,
-            byTab = elementsByTab,
-            withCallbacks = callbackCount
-        }
-    }
-end
+
 function ConfigManager:cleanupDuplicateConfigs()
     local seenConfigs = {}
     local configsToRemove = {}
@@ -1147,40 +890,6 @@ function ConfigManager:cleanupDuplicateConfigs()
     for _, configName in ipairs(configsToRemove) do
         self.memoryStore.configs[configName] = nil
     end
-    if self.hasFileSystem then
-        local files = safeListFiles(self.configFolder)
-        local fileSeenConfigs = {}
-        local filesToRemove = {}
-        for _, filePath in ipairs(files) do
-            local fileName = filePath:match("[/\\]([^/\\]+)%.json$")
-            if fileName then
-                local lowerName = string.lower(fileName)
-                if fileSeenConfigs[lowerName] then
-                    if fileName == DEFAULT_CONFIG then
-                        table.insert(filesToRemove, self.configFolder .. "/" .. fileSeenConfigs[lowerName] .. ".json")
-                    else
-                        table.insert(filesToRemove, filePath)
-                    end
-                else
-                    fileSeenConfigs[lowerName] = fileName
-                end
-            end
-        end
-        for _, filePath in ipairs(filesToRemove) do
-            safeDeleteFile(filePath)
-        end
-    end
 end
-function ConfigManager:emergencyReset()
-    self.memoryStore.configs = {}
-    fileSystem = getFileSystemType()
-    self.hasFileSystem = fileSystem.hasBasicFS
-    if self.hasFileSystem then
-        self:setupFileSystem()
-    end
-    self:cleanupDuplicateConfigs()
-    self:ensureDefaultConfig()
-    self.isInitialized = true
-    return true
-end
+
 return ConfigManager
