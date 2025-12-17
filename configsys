@@ -779,30 +779,57 @@ function ConfigManager:createConfig(configName)
         self:safeNotify('error', 'Create Failed', 'Config name cannot be empty!')
         return false
     end
+    
+    -- Wait for initialization
     local waitAttempts = 0
     while not self.isInitialized and waitAttempts < 10 do
         waitAttempts = waitAttempts + 1
         task.wait(0.1)
     end
+    
     if not self.isInitialized then
         self:ensureDefaultConfig()
         self.isInitialized = true
     end
+    
+    -- Check if config already exists
     if self:configExists(configName) then
         self:safeNotify('warning', 'Config Exists', 'Configuration "' .. configName .. '" already exists!')
         return false
     end
+    
+    -- Save the config (this will create it)
     local success = self:saveConfig(configName)
+    
     if success then
-        self:safeNotify('success', 'Config Created', 'Configuration "' .. configName .. '" created successfully!', 3)
-        task.spawn(function()
-            task.wait(0.2)
-            if not self:configExists(configName) then
-                self:saveConfig(configName)
+        -- Force write to file system AND memory
+        local configData = self:loadConfigData(configName)
+        if configData then
+            -- Ensure it's in both places
+            self.memoryStore.configs[configName] = configData
+            
+            if self.hasFileSystem then
+                local filePath = self.configFolder .. "/" .. configName .. ".json"
+                local jsonString = self.httpService:JSONEncode(configData)
+                safeWriteFile(filePath, jsonString)
+                
+                -- Verify write
+                task.wait(0.1)
+                local verifyContent = safeReadFile(filePath)
+                if not verifyContent or verifyContent == "" then
+                    -- File write failed, keep in memory only
+                    print("[ConfigManager] Warning: File write failed, using memory only")
+                end
             end
-        end)
+        end
+        
+        self:safeNotify('success', 'Config Created', 'Configuration "' .. configName .. '" created successfully!', 3)
+        
+        -- Return true immediately
+        return true
+    else
+        return false
     end
-    return success
 end
 function ConfigManager:deleteConfig(configName)
     if not configName or configName == "" or string.lower(configName) == string.lower(DEFAULT_CONFIG) then
