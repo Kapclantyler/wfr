@@ -929,42 +929,61 @@ end
 function ConfigManager:getConfigList()
     local configs = {}
     local configSet = {}
+    
+    -- Always ensure Default exists first
     if not self:configExists(DEFAULT_CONFIG) then
         self:ensureDefaultConfig()
     end
+    
+    -- Scan file system
     if self.hasFileSystem then
         local files = safeListFiles(self.configFolder)
         for _, filePath in ipairs(files) do
             local fileName = filePath:match("[/\\]([^/\\]+)%.json$")
             if fileName and not configSet[string.lower(fileName)] then
-                if self:configExists(fileName) then
-                    table.insert(configs, fileName)
-                    configSet[string.lower(fileName)] = true
-                end
-            end
-        end
-        if #configs == 0 then
-            local knownConfigs = {DEFAULT_CONFIG}
-            for _, name in ipairs(knownConfigs) do
-                if self:configExists(name) and not configSet[string.lower(name)] then
-                    table.insert(configs, name)
-                    configSet[string.lower(name)] = true
+                -- Verify file is readable and valid
+                local content = safeReadFile(filePath)
+                if content and content ~= "" then
+                    local success, data = pcall(function()
+                        return self.httpService:JSONDecode(content)
+                    end)
+                    
+                    if success and data then
+                        table.insert(configs, fileName)
+                        configSet[string.lower(fileName)] = true
+                    end
                 end
             end
         end
     end
+    
+    -- Add memory configs
     for configName, _ in pairs(self.memoryStore.configs) do
         if not configSet[string.lower(configName)] then
             table.insert(configs, configName)
             configSet[string.lower(configName)] = true
         end
     end
+    
+    -- Ensure Default is first
     if not configSet[string.lower(DEFAULT_CONFIG)] then
         table.insert(configs, 1, DEFAULT_CONFIG)
         configSet[string.lower(DEFAULT_CONFIG)] = true
+    else
+        -- Move Default to front if it's not already
+        for i, name in ipairs(configs) do
+            if string.lower(name) == string.lower(DEFAULT_CONFIG) then
+                table.remove(configs, i)
+                table.insert(configs, 1, DEFAULT_CONFIG)
+                break
+            end
+        end
     end
+    
+    -- Filter by current game
     local validConfigs = {}
     local currentCreatorId = game.CreatorId
+    
     for _, configName in ipairs(configs) do
         if configName and configName ~= "" and self:configExists(configName) then
             local configData = self:loadConfigData(configName)
@@ -979,7 +998,11 @@ function ConfigManager:getConfigList()
             end
         end
     end
+    
     table.sort(validConfigs)
+    
+    print("[ConfigManager] Found", #validConfigs, "valid configs")
+    
     return validConfigs
 end
 function ConfigManager:syncMemoryToFileSystem()
@@ -1015,17 +1038,29 @@ function ConfigManager:repairFileSystem()
 end
 function ConfigManager:testFileSystemPersistence()
     if not self.hasFileSystem then return false end
+    
     local testFile = self.configFolder .. "/persistence_check.txt"
     local testContent = "persistence_test_" .. os.time()
+    
+    -- Try to write
     if safeWriteFile(testFile, testContent) then
+        -- Wait a bit
+        task.wait(0.1)
+        
+        -- Try to read back
         local readContent = safeReadFile(testFile)
+        
+        -- Clean up
         safeDeleteFile(testFile)
+        
         if readContent == testContent then
             return true
         else
+            print("[ConfigManager] Persistence test failed: content mismatch")
             return false
         end
     else
+        print("[ConfigManager] Persistence test failed: write failed")
         return false
     end
 end
