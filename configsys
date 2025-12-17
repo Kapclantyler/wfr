@@ -1,4 +1,4 @@
-warn("ConfigManager v2.4 - Fixed")
+warn("ConfigManager v2.5 - Fixed")
 local ConfigManager = {}
 ConfigManager.__index = ConfigManager
 local HttpService = game:GetService("HttpService")
@@ -333,15 +333,21 @@ function ConfigManager:gatherRegisteredElements(settings)
                     savedValue = selected
                 end
                 
-                table.insert(settings.elements, {
-                    id = elementId,
+                -- Create stable key using tab, window, and element name
+                local stableKey = string.format("%s|%s|%s", 
+                    element.tabName or "unknown",
+                    element.windowName or "unknown", 
+                    element.elementName or "unknown"
+                )
+                
+                settings.elements[stableKey] = {
                     type = element.type,
                     tabName = element.tabName,
                     windowName = element.windowName,
                     elementName = element.elementName,
                     value = savedValue,
                     path = element.path
-                })
+                }
             end
         end
     end
@@ -389,22 +395,24 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
     
     local registeredElements = self.hubInstance:_getAllRegisteredElements()
     
-    -- Count elements
-    local savedCount = 0
-    for _ in pairs(elements) do savedCount = savedCount + 1 end
-    
-    local registeredCount = 0
-    for _ in pairs(registeredElements) do registeredCount = registeredCount + 1 end
-    
-    print("[ConfigManager] Starting apply:")
-    print("[ConfigManager]   Saved elements:", savedCount)
-    print("[ConfigManager]   Registered elements:", registeredCount)
+    -- Create lookup table by stable key
+    local elementsByKey = {}
+    for elementId, element in pairs(registeredElements) do
+        local stableKey = string.format("%s|%s|%s", 
+            element.tabName or "unknown",
+            element.windowName or "unknown", 
+            element.elementName or "unknown"
+        )
+        elementsByKey[stableKey] = element
+    end
     
     local appliedCount = 0
     local callbacksExecuted = 0
     local skippedCount = 0
     
-    for elementId, savedElement in pairs(elements) do
+    print("[ConfigManager] Starting apply with", #elements, "saved elements")
+    
+    for stableKey, savedElement in pairs(elements) do
         if not savedElement or not savedElement.type then
             skippedCount = skippedCount + 1
             continue
@@ -435,38 +443,24 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
         
         if skip then continue end
         
-        local registeredElement = registeredElements[elementId]
+        -- Find element by stable key
+        local registeredElement = elementsByKey[stableKey]
         
         if not registeredElement then
-            print("[ConfigManager] No registered element for ID:", elementId, "Name:", savedElement.elementName)
+            print("[ConfigManager] No match for:", savedElement.elementName)
             skippedCount = skippedCount + 1
             continue
         end
         
-        if not registeredElement.api then
-            print("[ConfigManager] No API for:", savedElement.elementName)
-            skippedCount = skippedCount + 1
-            continue
-        end
-        
-        if not registeredElement.api.SetValue then
-            print("[ConfigManager] No SetValue for:", savedElement.elementName)
+        if not registeredElement.api or not registeredElement.api.SetValue then
+            print("[ConfigManager] No API/SetValue for:", savedElement.elementName)
             skippedCount = skippedCount + 1
             continue
         end
         
         if savedElement.value == nil then
-            print("[ConfigManager] Nil value for:", savedElement.elementName)
             skippedCount = skippedCount + 1
             continue
-        end
-        
-        -- Get current value for comparison
-        local currentValue = nil
-        if registeredElement.api.GetValue then
-            pcall(function()
-                currentValue = registeredElement.api.GetValue()
-            end)
         end
         
         -- Apply the value
@@ -519,14 +513,13 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
             
             if not setSuccess then
                 print("[ConfigManager] SetValue failed for", savedElement.elementName, ":", setError)
-                -- Restore callback
                 if tempCallback then
                     registeredElement.originalCallback = tempCallback
                 end
                 return
             end
             
-            print("[ConfigManager] Successfully applied:", savedElement.elementName, "=", tostring(value))
+            print("[ConfigManager] ✓ Applied:", savedElement.elementName, "=", tostring(value))
             appliedCount = appliedCount + 1
             
             -- Restore callback
@@ -551,17 +544,14 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                 end
                 
                 if shouldExecute then
-                    local cbSuccess = pcall(function()
+                    pcall(function()
                         if savedElement.type == "colorpicker" then
                             tempCallback(value, 1)
                         else
                             tempCallback(value)
                         end
-                    end)
-                    
-                    if cbSuccess then
                         callbacksExecuted = callbacksExecuted + 1
-                    end
+                    end)
                 end
             end
         end)
@@ -572,10 +562,7 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
     end
     
     print("[ConfigManager] ==================")
-    print("[ConfigManager] APPLY SUMMARY:")
-    print("[ConfigManager]   Applied:", appliedCount)
-    print("[ConfigManager]   Callbacks:", callbacksExecuted)
-    print("[ConfigManager]   Skipped:", skippedCount)
+    print("[ConfigManager] Applied:", appliedCount, "| Callbacks:", callbacksExecuted, "| Skipped:", skippedCount)
     print("[ConfigManager] ==================")
 end
 
