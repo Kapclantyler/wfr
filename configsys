@@ -1,4 +1,4 @@
-warn("ConfigManager v2.3 - Fixed")
+warn("ConfigManager v2.4 - Fixed")
 local ConfigManager = {}
 ConfigManager.__index = ConfigManager
 local HttpService = game:GetService("HttpService")
