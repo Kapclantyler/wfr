@@ -239,7 +239,7 @@ function ConfigManager:gatherAllSettings()
             watermarkVisible = true,
             themeColor = {r = 110, g = 117, b = 243}
         },
-        elements = {},
+        elements = {},  -- Initialize empty elements table HERE
         tabs = {}
     }
     
@@ -279,10 +279,7 @@ function ConfigManager:gatherAllSettings()
     
     print("[ConfigManager] Gathered tabs")
     print("[ConfigManager] About to call gatherRegisteredElements...")
-    print("[ConfigManager] self:", self)
-    print("[ConfigManager] self.gatherRegisteredElements:", self.gatherRegisteredElements)
     
-    -- THIS IS THE KEY CALL
     self:gatherRegisteredElements(settings)
     
     print("[ConfigManager] Returned from gatherRegisteredElements")
@@ -329,7 +326,6 @@ function ConfigManager:gatherRegisteredElements(settings)
     local elementCount = 0
     for k, v in pairs(elements) do
         elementCount = elementCount + 1
-        print("[ConfigManager] Element key:", k, "| value type:", type(v))
     end
     
     print("[ConfigManager] Total element count:", elementCount)
@@ -339,14 +335,61 @@ function ConfigManager:gatherRegisteredElements(settings)
         return
     end
     
-    -- Rest of your gathering logic...
+    -- Initialize elements table if it doesn't exist
+    if not settings.elements then
+        settings.elements = {}
+    end
+    
     print("[ConfigManager] Starting element processing loop...")
     
     for elementId, element in pairs(elements) do
-        print("[ConfigManager] Loop iteration - elementId:", elementId)
-        -- Add the rest of your existing logic here
+        print("[ConfigManager] Processing element:", elementId, "| Name:", element.elementName, "| Type:", element.type)
+        
+        -- Skip excluded elements by name
+        local skip = false
+        for _, excludeName in ipairs(excludeElements) do
+            if element.elementName == excludeName then
+                print("[ConfigManager] Skipped - excluded by name:", excludeName)
+                skip = true
+                break
+            end
+        end
+        
+        -- Skip excluded types
+        if not skip then
+            for _, excludeType in ipairs(excludeTypes) do
+                if element.type == excludeType then
+                    print("[ConfigManager] Skipped - excluded type:", excludeType)
+                    skip = true
+                    break
+                end
+            end
+        end
+        
+        -- Process element if not skipped
+        if not skip and element.api and element.api.GetValue then
+            local success, value = pcall(function()
+                return element.api.GetValue()
+            end)
+            
+            if success and value ~= nil then
+                print("[ConfigManager] Saving element:", element.elementName, "| Value:", tostring(value))
+                table.insert(settings.elements, {
+                    id = elementId,
+                    type = element.type,
+                    tabName = element.tabName,
+                    windowName = element.windowName,
+                    elementName = element.elementName,
+                    value = value,
+                    path = element.path
+                })
+            else
+                print("[ConfigManager] Failed to get value for:", element.elementName)
+            end
+        end
     end
     
+    print("[ConfigManager] Total elements saved:", #settings.elements)
     print("[ConfigManager] ========== gatherRegisteredElements FINISHED ==========")
 end
 function ConfigManager:applySettings(settings, executeCallbacks)
