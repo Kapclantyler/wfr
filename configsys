@@ -662,6 +662,7 @@ function ConfigManager:deleteConfig(configName)
 end
 
 function ConfigManager:saveConfigData(configName, configData)
+    -- Save to memory FIRST
     self.memoryStore.configs[configName] = configData
     
     if self.hasFileSystem then
@@ -670,31 +671,31 @@ function ConfigManager:saveConfigData(configName, configData)
             return self.httpService:JSONEncode(configData)
         end)
         if success and jsonString then
-            local writeSuccess = safeWriteFile(filePath, jsonString)
-            if writeSuccess then
-                task.spawn(function()
-                    task.wait(0.1)
-                    local verifyContent = safeReadFile(filePath)
-                    if not verifyContent or verifyContent ~= jsonString then
-                        warn("[ConfigManager] Verification failed for:", configName)
-                    end
-                end)
-                return true
-            else
-                warn("[ConfigManager] Write failed, using memory only")
-                return true
-            end
-        else
-            warn("[ConfigManager] JSON encode failed")
-            return true
+            safeWriteFile(filePath, jsonString)
+            -- Don't fail if file write doesn't work, we have it in memory
         end
-    else
-        return true
     end
+    
+    return true  -- Always return true since we saved to memory
 end
 
 function ConfigManager:loadConfigData(configName)
     if not configName or configName == "" then return nil end
+    
+    -- Check memory first
+    local memoryConfig = self.memoryStore.configs[configName]
+    if memoryConfig then
+        return memoryConfig
+    end
+    
+    -- Check case-insensitive in memory
+    for memConfigName, configData in pairs(self.memoryStore.configs) do
+        if string.lower(memConfigName) == string.lower(configName) then
+            return configData
+        end
+    end
+    
+    -- Try file system
     if self.hasFileSystem then
         local filePath = self.configFolder .. "/" .. configName .. ".json"
         local fileContent = safeReadFile(filePath)
@@ -703,20 +704,13 @@ function ConfigManager:loadConfigData(configName)
                 return self.httpService:JSONDecode(fileContent)
             end)
             if success and result then
+                -- Cache it in memory
                 self.memoryStore.configs[configName] = result
                 return result
             end
         end
     end
-    local memoryConfig = self.memoryStore.configs[configName]
-    if memoryConfig then
-        return memoryConfig
-    end
-    for memConfigName, configData in pairs(self.memoryStore.configs) do
-        if string.lower(memConfigName) == string.lower(configName) then
-            return configData
-        end
-    end
+    
     return nil
 end
 
