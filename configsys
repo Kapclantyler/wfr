@@ -381,34 +381,54 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
     local excludeElements = {"Auto Load Config"}
     
     if not self.hubInstance._getAllRegisteredElements then
+        warn("[ConfigManager] No _getAllRegisteredElements function found")
         return
     end
     
     if executeCallbacks == nil then executeCallbacks = true end
     
     local registeredElements = self.hubInstance:_getAllRegisteredElements()
+    
+    -- Count elements
+    local savedCount = 0
+    for _ in pairs(elements) do savedCount = savedCount + 1 end
+    
+    local registeredCount = 0
+    for _ in pairs(registeredElements) do registeredCount = registeredCount + 1 end
+    
+    print("[ConfigManager] Starting apply:")
+    print("[ConfigManager]   Saved elements:", savedCount)
+    print("[ConfigManager]   Registered elements:", registeredCount)
+    
     local appliedCount = 0
     local callbacksExecuted = 0
+    local skippedCount = 0
     
     for elementId, savedElement in pairs(elements) do
         if not savedElement or not savedElement.type then
+            skippedCount = skippedCount + 1
             continue
         end
         
         local savedType = string.lower(tostring(savedElement.type))
         
+        -- Skip keybinds
         if savedType == "keybind" or savedType:find("keybind") or savedType:find("key") then
+            skippedCount = skippedCount + 1
             continue
         end
         
         if savedElement.elementName and (string.lower(savedElement.elementName):find("keybind") or string.lower(savedElement.elementName):find("key bind")) then
+            skippedCount = skippedCount + 1
             continue
         end
         
+        -- Check excluded names
         local skip = false
         for _, excludeName in ipairs(excludeElements) do
             if savedElement.elementName == excludeName then
                 skip = true
+                skippedCount = skippedCount + 1
                 break
             end
         end
@@ -417,14 +437,31 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
         
         local registeredElement = registeredElements[elementId]
         
-        if not registeredElement or not registeredElement.api or not registeredElement.api.SetValue then
+        if not registeredElement then
+            print("[ConfigManager] No registered element for ID:", elementId, "Name:", savedElement.elementName)
+            skippedCount = skippedCount + 1
+            continue
+        end
+        
+        if not registeredElement.api then
+            print("[ConfigManager] No API for:", savedElement.elementName)
+            skippedCount = skippedCount + 1
+            continue
+        end
+        
+        if not registeredElement.api.SetValue then
+            print("[ConfigManager] No SetValue for:", savedElement.elementName)
+            skippedCount = skippedCount + 1
             continue
         end
         
         if savedElement.value == nil then
+            print("[ConfigManager] Nil value for:", savedElement.elementName)
+            skippedCount = skippedCount + 1
             continue
         end
         
+        -- Get current value for comparison
         local currentValue = nil
         if registeredElement.api.GetValue then
             pcall(function()
@@ -432,13 +469,11 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
             end)
         end
         
-        local success, applyError = pcall(function()
+        -- Apply the value
+        local success = pcall(function()
             local value = savedElement.value
             
-            if value == nil then
-                return
-            end
-            
+            -- Type conversion
             if savedElement.type == "colorpicker" then
                 if type(value) == "table" and value.r and value.g and value.b then
                     value = self:rgbToColor(value)
@@ -447,9 +482,6 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                 end
             elseif savedElement.type == "checkbox" or savedElement.type == "toggle" then
                 if type(value) ~= "boolean" then
-                    return
-                end
-                if currentValue ~= nil and currentValue == value then
                     return
                 end
             elseif savedElement.type == "slider" then
@@ -472,59 +504,79 @@ function ConfigManager:applyElementSettings(elements, executeCallbacks)
                 end
             end
             
+            -- Store callback
             local tempCallback = registeredElement.originalCallback
             
+            -- Disable callback temporarily
             if registeredElement.originalCallback and type(registeredElement.originalCallback) == "function" then
                 registeredElement.originalCallback = function() end
             end
             
+            -- Apply value
             local setSuccess, setError = pcall(function()
                 registeredElement.api.SetValue(value)
             end)
             
             if not setSuccess then
-                if tempCallback and type(tempCallback) == "function" then
+                print("[ConfigManager] SetValue failed for", savedElement.elementName, ":", setError)
+                -- Restore callback
+                if tempCallback then
                     registeredElement.originalCallback = tempCallback
                 end
                 return
             end
             
+            print("[ConfigManager] Successfully applied:", savedElement.elementName, "=", tostring(value))
             appliedCount = appliedCount + 1
             
-            if tempCallback and type(tempCallback) == "function" then
+            -- Restore callback
+            if tempCallback then
                 registeredElement.originalCallback = tempCallback
             end
             
+            -- Execute callback if needed
             if executeCallbacks and tempCallback and type(tempCallback) == "function" then
-                local shouldExecuteCallback = false
+                local shouldExecute = false
                 
                 if savedElement.type == "checkbox" or savedElement.type == "toggle" then
-                    shouldExecuteCallback = (type(value) == "boolean" and value == true)
+                    shouldExecute = (type(value) == "boolean" and value == true)
                 elseif savedElement.type == "colorpicker" then
-                    shouldExecuteCallback = (typeof(value) == "Color3")
+                    shouldExecute = (typeof(value) == "Color3")
                 elseif savedElement.type == "slider" then
-                    shouldExecuteCallback = (type(value) == "number")
+                    shouldExecute = (type(value) == "number")
                 elseif savedElement.type == "dropdown" then
-                    shouldExecuteCallback = (type(value) == "string")
+                    shouldExecute = (type(value) == "string")
                 elseif savedElement.type == "multidropdown" then
-                    shouldExecuteCallback = (type(value) == "table")
+                    shouldExecute = (type(value) == "table")
                 end
                 
-                if shouldExecuteCallback then
-                    pcall(function()
+                if shouldExecute then
+                    local cbSuccess = pcall(function()
                         if savedElement.type == "colorpicker" then
                             tempCallback(value, 1)
                         else
                             tempCallback(value)
                         end
-                        callbacksExecuted = callbacksExecuted + 1
                     end)
+                    
+                    if cbSuccess then
+                        callbacksExecuted = callbacksExecuted + 1
+                    end
                 end
             end
         end)
+        
+        if not success then
+            skippedCount = skippedCount + 1
+        end
     end
     
-    print("[ConfigManager] Applied", appliedCount, "elements,", callbacksExecuted, "callbacks executed")
+    print("[ConfigManager] ==================")
+    print("[ConfigManager] APPLY SUMMARY:")
+    print("[ConfigManager]   Applied:", appliedCount)
+    print("[ConfigManager]   Callbacks:", callbacksExecuted)
+    print("[ConfigManager]   Skipped:", skippedCount)
+    print("[ConfigManager] ==================")
 end
 
 function ConfigManager:saveConfig(configName)
