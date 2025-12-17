@@ -1,4 +1,4 @@
-warn("nahwaht3")
+warn("nahwaht4")
 local ConfigManager = {}
 ConfigManager.__index = ConfigManager
 local HttpService = game:GetService("HttpService")
@@ -289,34 +289,21 @@ function ConfigManager:gatherAllSettings()
 end
 function ConfigManager:gatherRegisteredElements(settings)
     print("[ConfigManager] ========== gatherRegisteredElements CALLED ==========")
-    print("[ConfigManager] settings:", settings)
-    print("[ConfigManager] settings type:", type(settings))
     
     local excludeElements = {"Auto Load Config"}
     local excludeTypes = {"button", "keybind"}
-    
-    print("[ConfigManager] Checking hubInstance...")
-    print("[ConfigManager] self.hubInstance:", self.hubInstance)
     
     if not self.hubInstance then
         print("[ConfigManager] ERROR: No hubInstance!")
         return
     end
     
-    print("[ConfigManager] Checking _getAllRegisteredElements...")
-    print("[ConfigManager] self.hubInstance._getAllRegisteredElements:", self.hubInstance._getAllRegisteredElements)
-    
     if not self.hubInstance._getAllRegisteredElements then
         print("[ConfigManager] ERROR: No _getAllRegisteredElements function!")
         return
     end
     
-    print("[ConfigManager] Calling _getAllRegisteredElements()...")
     local elements = self.hubInstance:_getAllRegisteredElements()
-    
-    print("[ConfigManager] Got result from _getAllRegisteredElements")
-    print("[ConfigManager] elements:", elements)
-    print("[ConfigManager] elements type:", type(elements))
     
     if not elements then
         print("[ConfigManager] ERROR: elements is nil!")
@@ -328,7 +315,7 @@ function ConfigManager:gatherRegisteredElements(settings)
         elementCount = elementCount + 1
     end
     
-    print("[ConfigManager] Total element count:", elementCount)
+    print("[ConfigManager] Total registered elements:", elementCount)
     
     if elementCount == 0 then
         print("[ConfigManager] WARNING: No elements to process!")
@@ -340,17 +327,31 @@ function ConfigManager:gatherRegisteredElements(settings)
         settings.elements = {}
     end
     
-    print("[ConfigManager] Starting element processing loop...")
+    local processedCount = 0
+    local skippedCount = 0
+    local errorCount = 0
     
     for elementId, element in pairs(elements) do
-        print("[ConfigManager] Processing element:", elementId, "| Name:", element.elementName, "| Type:", element.type)
+        print("[ConfigManager] ==================")
+        print("[ConfigManager] Processing elementId:", elementId)
+        print("[ConfigManager]   - elementName:", element.elementName)
+        print("[ConfigManager]   - type:", element.type)
+        print("[ConfigManager]   - tabName:", element.tabName)
+        print("[ConfigManager]   - windowName:", element.windowName)
+        print("[ConfigManager]   - has api:", element.api ~= nil)
+        
+        if element.api then
+            print("[ConfigManager]   - api.GetValue exists:", element.api.GetValue ~= nil)
+            print("[ConfigManager]   - api.SetValue exists:", element.api.SetValue ~= nil)
+        end
         
         -- Skip excluded elements by name
         local skip = false
         for _, excludeName in ipairs(excludeElements) do
             if element.elementName == excludeName then
-                print("[ConfigManager] Skipped - excluded by name:", excludeName)
+                print("[ConfigManager]   -> SKIPPED: excluded by name")
                 skip = true
+                skippedCount = skippedCount + 1
                 break
             end
         end
@@ -359,37 +360,82 @@ function ConfigManager:gatherRegisteredElements(settings)
         if not skip then
             for _, excludeType in ipairs(excludeTypes) do
                 if element.type == excludeType then
-                    print("[ConfigManager] Skipped - excluded type:", excludeType)
+                    print("[ConfigManager]   -> SKIPPED: excluded type")
                     skip = true
+                    skippedCount = skippedCount + 1
                     break
                 end
             end
         end
         
+        -- Check if element has required API
+        if not skip then
+            if not element.api then
+                print("[ConfigManager]   -> ERROR: No api object!")
+                errorCount = errorCount + 1
+                skip = true
+            elseif not element.api.GetValue then
+                print("[ConfigManager]   -> ERROR: No GetValue method!")
+                errorCount = errorCount + 1
+                skip = true
+            end
+        end
+        
         -- Process element if not skipped
-        if not skip and element.api and element.api.GetValue then
+        if not skip then
             local success, value = pcall(function()
                 return element.api.GetValue()
             end)
             
-            if success and value ~= nil then
-                print("[ConfigManager] Saving element:", element.elementName, "| Value:", tostring(value))
+            if success then
+                print("[ConfigManager]   -> SUCCESS: Got value:", tostring(value), "| type:", type(value))
+                
+                -- Special handling for different types
+                local savedValue = value
+                if element.type == "colorpicker" then
+                    if typeof(value) == "Color3" then
+                        savedValue = self:colorToRGB(value)
+                        print("[ConfigManager]   -> Converted Color3 to RGB table")
+                    end
+                elseif element.type == "multidropdown" then
+                    if type(value) == "table" then
+                        -- Convert map to array
+                        local selected = {}
+                        for key, isSelected in pairs(value) do
+                            if isSelected then
+                                table.insert(selected, key)
+                            end
+                        end
+                        savedValue = selected
+                        print("[ConfigManager]   -> Converted multidropdown map to array")
+                    end
+                end
+                
                 table.insert(settings.elements, {
                     id = elementId,
                     type = element.type,
                     tabName = element.tabName,
                     windowName = element.windowName,
                     elementName = element.elementName,
-                    value = value,
+                    value = savedValue,
                     path = element.path
                 })
+                
+                processedCount = processedCount + 1
             else
-                print("[ConfigManager] Failed to get value for:", element.elementName)
+                print("[ConfigManager]   -> ERROR: GetValue failed:", tostring(value))
+                errorCount = errorCount + 1
             end
         end
     end
     
-    print("[ConfigManager] Total elements saved:", #settings.elements)
+    print("[ConfigManager] ==================")
+    print("[ConfigManager] SUMMARY:")
+    print("[ConfigManager]   - Total elements:", elementCount)
+    print("[ConfigManager]   - Processed:", processedCount)
+    print("[ConfigManager]   - Skipped:", skippedCount)
+    print("[ConfigManager]   - Errors:", errorCount)
+    print("[ConfigManager]   - Saved to config:", #settings.elements)
     print("[ConfigManager] ========== gatherRegisteredElements FINISHED ==========")
 end
 function ConfigManager:applySettings(settings, executeCallbacks)
