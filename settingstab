@@ -1,680 +1,390 @@
--- SettingsTab.lua
--- Builds the Settings tab content for ModernUI
--- Exports: function Build(ui, afterTab) -> returns the created tab
+-- SettingsTab.lua v2.2 - Fixed
+local SettingsTab = {}
+local externalBindings = {}
 
-    local SettingsTab = {}
-    local externalBindings = {}
+local function createTabAfter(ui, title, icon, afterTab)
+    local tab = ui:CreateTab(title, icon)
+    return tab
+end
+
+function SettingsTab.Build(ui, afterTab, deps)
+    local ConfigSystem = nil
     
-    local function createTabAfter(ui, title, icon, afterTab)
-        -- Currently the library appends; place after is not supported directly, so create normally
-        local tab = ui:CreateTab(title, icon)
-        return tab
+    local attempts = 0
+    while attempts < 10 do
+        if ui._configManagerForSettings then
+            ConfigSystem = ui._configManagerForSettings
+            break
+        elseif ui.configManager then
+            ConfigSystem = ui.configManager
+            break
+        elseif deps and deps.ConfigSystem then
+            ConfigSystem = deps.ConfigSystem
+            break
+        end
+        attempts = attempts + 1
+        if attempts < 10 then
+            task.wait(0.05)
+        end
     end
     
-    function SettingsTab.Build(ui, afterTab, deps)
-        -- Verwende neues ConfigManager System falls verfügbar, sonst Fallback
-        local ConfigSystem = nil
-        
-        -- Warte kurz, da ConfigManager möglicherweise noch nicht bereit ist
-        local attempts = 0
-        while attempts < 5 do
-            if ui._configManagerForSettings then
-                ConfigSystem = ui._configManagerForSettings
-                break
-            elseif ui.configManager then
-                ConfigSystem = ui.configManager
-                break
-            elseif deps and deps.ConfigSystem then
-                ConfigSystem = deps.ConfigSystem
-                break
-            else
-                attempts = attempts + 1
-                if attempts < 5 then
-                    task.wait(0.01)
-                end
-            end
-        end
-        
-        if not ConfigSystem then
-            -- Versuche ConfigSystem direkt zu laden
-            local success = pcall(function()
-                -- Lokales ConfigSystem probieren
-                local ok, module = pcall(function()
-                    return require(script.Parent:WaitForChild("ConfigSystem"))
-                end)
-                
-                if ok and module then
-                    ConfigSystem = module.new(ui)
-                else
-                    -- GitHub Fallback
-                    local ConfigManagerClass = loadstring(game:HttpGet("https://raw.githubusercontent.com/Lirum86/CDD/refs/heads/main/Conli.lua"))()
-                    if ConfigManagerClass then
-                        ConfigSystem = ConfigManagerClass.new(ui)
-                    end
-                end
-            end)
-        end
-        
-        local tab = createTabAfter(ui, "Settings", "⚙️", afterTab)
+    if not ConfigSystem then
+        warn("[SettingsTab] No ConfigSystem found!")
+    end
     
-        -- Window 1: Keybind + Watermark toggle
-        local winKeys = tab:CreateWindow("UI Settings")
-        winKeys:CreateKeybind("UI Toggle", "RightShift", function(key)
-            ui:SetToggleKey(key)
-        end)
-    
-        -- Watermark Checkbox mit gebundenem Keybind
-        local watermarkCheckbox = winKeys:CreateCheckbox("Watermark", true, function(val)
-            ui:SetWatermarkVisible(val)
-        end)
-        -- Keybind für Watermark Toggle (gebunden an Checkbox)
-        -- Callback erhält true/false je nach Mode:
-        -- Toggle-Mode: true = aktivieren, false = deaktivieren (umschalten bei jedem Druck)
-        -- Hold-Mode: true = aktivieren (bei Press), false = deaktivieren (bei Release)
-        winKeys:CreateKeybind("Toggle Watermark", "W", function(state)
-            if watermarkCheckbox and watermarkCheckbox.SetValue then
-                watermarkCheckbox.SetValue(state)
-            end
-        end, watermarkCheckbox)
-    
-        winKeys:CreateCheckbox("Show Keybind List", false, function(val)
-            ui:SetKeybindListVisible(val)
-        end)
-        winKeys:CreateColorPicker("Theme Color", (ui.options and ui.options.theme and ui.options.theme.primary) or Color3.fromRGB(110,117,243), function(color, alpha)
-            ui:SetTheme({ primary = color })
-        end)
-        
-        -- Anti AFK Checkbox (standard an)
-        local antiAfkEnabled = true
-        local antiAfkConnection = nil
-        
-        local function startAntiAfk()
-            if antiAfkConnection then
-                antiAfkConnection:Disconnect()
-            end
-            
-            local VirtualUser = game:GetService('VirtualUser')
-            antiAfkConnection = game:GetService('Players').LocalPlayer.Idled:Connect(function()
-                VirtualUser:CaptureController()
-                VirtualUser:ClickButton2(Vector2.new())
-            end)
-        end
-        
-        local function stopAntiAfk()
-            if antiAfkConnection then
-                antiAfkConnection:Disconnect()
-                antiAfkConnection = nil
-            end
-        end
-        
-        winKeys:CreateCheckbox("Anti AFK", true, function(val)
-            antiAfkEnabled = val
-            if val then
-                startAntiAfk()
-            else
-                stopAntiAfk()
-            end
-        end)
-        
-        -- FPS Boost Button
-        winKeys:CreateButton("FPS Boost", function()
-            local function optimizeGame()
-                local lighting = game:GetService("Lighting")
-                local terrain = workspace:FindFirstChildOfClass('Terrain')
-                
-                lighting.GlobalShadows = false
-                lighting.FogEnd = 9e9
-                lighting.Brightness = 0
-                
-                for _, effect in pairs(lighting:GetChildren()) do
-                    if effect:IsA("PostEffect") then
-                        effect.Enabled = false
-                    end
-                end
-                
-                if terrain then
-                    terrain.WaterWaveSize = 0
-                    terrain.WaterWaveSpeed = 0
-                    terrain.WaterReflectance = 0
-                    terrain.WaterTransparency = 0
-                end
-                
-                settings().Rendering.QualityLevel = "Level01"
-                
-                for _, descendant in pairs(workspace:GetDescendants()) do
-                    if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") then
-                        descendant.Enabled = false
-                    elseif descendant:IsA("Explosion") then
-                        descendant.BlastPressure = 1
-                        descendant.BlastRadius = 1
-                    elseif descendant:IsA("Fire") or descendant:IsA("SpotLight") or descendant:IsA("Smoke") or descendant:IsA("Sparkles") then
-                        descendant.Enabled = false
-                    elseif descendant:IsA("MeshPart") then
-                        descendant.Material = Enum.Material.Plastic
-                        descendant.Reflectance = 0
-                    elseif descendant:IsA("Part") or descendant:IsA("UnionOperation") or descendant:IsA("CornerWedgePart") or descendant:IsA("TrussPart") then
-                        descendant.Material = Enum.Material.Plastic
-                        descendant.Reflectance = 0
-                    elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
-                        descendant.Transparency = 1
-                    elseif descendant:IsA("PointLight") or descendant:IsA("SurfaceLight") then
-                        descendant.Enabled = false
-                    end
-                end
-                
-                game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function(char)
-                    wait(0.5)
-                    for _, part in pairs(char:GetDescendants()) do
-                        if part:IsA("Part") or part:IsA("MeshPart") then
-                            part.Material = Enum.Material.Plastic
-                            part.Reflectance = 0
-                        end
-                    end
-                end)
-            end
-    
-            optimizeGame()
-    
-            workspace.DescendantAdded:Connect(function(descendant)
-                wait()
-                if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") then
-                    descendant.Enabled = false
-                elseif descendant:IsA("Fire") or descendant:IsA("Smoke") or descendant:IsA("Sparkles") then
-                    descendant.Enabled = false
-                elseif descendant:IsA("PointLight") or descendant:IsA("SpotLight") or descendant:IsA("SurfaceLight") then
-                    descendant.Enabled = false
-                end
-            end)
-        end)
-        
-        -- Start Anti AFK automatically
-        startAntiAfk()
-    
-        -- Window 2: Config system
-        local winCfg = tab:CreateWindow("Config")
-    
-        local cfgName = ""
-        local configNameBox = winCfg:CreateTextBox("Config Name", "MyConfig", function(name)
-            cfgName = name
-        end)
-    
-        local configsDropdown = nil
-        local function refreshDropdown(selectName)
-            if not configsDropdown then 
-                return 
-            end
-            
-            -- Warte bis ConfigSystem verfügbar ist
-            local waitAttempts = 0
-            while not ConfigSystem and waitAttempts < 5 do
-                waitAttempts = waitAttempts + 1
-                task.wait(0.1)
-            end
-            
-            local list = {"Default"}
-            
-            if ConfigSystem then
-                -- Versuche mehrere Male die Liste zu laden
-                for attempt = 1, 3 do
-                    if ConfigSystem.getConfigList then
-                        local newList = ConfigSystem:getConfigList()
-                        if newList and #newList > 0 then
-                            list = newList
-                            break
-                        end
-                    elseif ConfigSystem.List then
-                        local newList = ConfigSystem.List()
-                        if newList and #newList > 0 then
-                            list = newList
-                            break
-                        end
-                    end
-                    
-                    if attempt < 3 then
-                        task.wait(0.2) -- Kurz warten zwischen Versuchen
-                    end
-                end
-            end
-            
-            -- Default Config sicherstellen
-            if not table.find(list, "Default") then
-                table.insert(list, 1, "Default")
-            end
-            
-            -- Dropdown sicher aktualisieren
-            if configsDropdown.SetOptions then 
-                pcall(function() 
-                    configsDropdown.SetOptions(list) 
-                end)
-            end
-            
-            local choose = selectName or selectedConfig or "Default"
-            
-            -- Prüfe ob gewählte Config in Liste existiert
-            if not table.find(list, choose) then
-                choose = "Default"
-            end
-            
-            if choose and configsDropdown.SetValue then 
-                local success = pcall(function() 
-                    configsDropdown.SetValue(choose) 
-                end)
-                if success then
-                    selectedConfig = choose
-                end
-            end
-        end
-    
-        local createBtn = winCfg:CreateButton("Create Config", function()
-            if not ConfigSystem then 
-                return 
-            end
-            
-            if cfgName == nil or cfgName == '' then 
-                return 
-            end
-            
-            -- Prüfe ob Config bereits existiert
-            local alreadyExists = false
-            if ConfigSystem.configExists then
-                alreadyExists = ConfigSystem:configExists(cfgName)
-            elseif ConfigSystem.Exists then
-                alreadyExists = ConfigSystem.Exists(cfgName)
-            end
-            
-            if alreadyExists then
-                return
-            end
-            
-            local success = false
-            if ConfigSystem.createConfig then
-                -- Neues ConfigManager System
-                success = ConfigSystem:createConfig(cfgName)
-            elseif ConfigSystem.Create then
-                -- Altes ConfigSystem
-                success = ConfigSystem.Create(cfgName)
-            end
-            
-            if success then
-                -- Warte kurz und aktualisiere dann das Dropdown
-                task.spawn(function()
-                    task.wait(0.3) -- Längere Wartezeit für bessere Synchronisation
-                    
-                    -- Mehrfach versuchen bis Config sichtbar ist
-                    for attempt = 1, 5 do
-                        refreshDropdown(cfgName)
-                        
-                        -- Prüfe ob Config wirklich im Dropdown ist
-                        task.wait(0.1)
-                        if selectedConfig == cfgName then
-                            break -- Erfolgreich!
-                        end
-                        
-                        if attempt < 5 then
-                            task.wait(0.2)
-                        end
-                    end
-                    
-                    -- Config Name Input leeren
-                    if configNameBox and configNameBox.SetValue then
-                        configNameBox.SetValue("")
-                        cfgName = ""
-                    end
-                end)
-            end
-        end)
-    
-        local selectedConfig = "Default"
-        local initialList = {"Default"}
-        
-        -- Dropdown erst erstellen, dann später aktualisieren
-        configsDropdown = winCfg:CreateDropdown("Configs", initialList, selectedConfig, function(val)
-            selectedConfig = val
-        end)
-        
-        -- Dropdown-Liste asynchron laden und aktualisieren
-        local function updateDropdownList()
-            if not ConfigSystem then return end
-            
-            local list = {"Default"}
-            
-            if ConfigSystem.getConfigList then
-                local newList = ConfigSystem:getConfigList()
-                if newList and #newList > 0 then
-                    list = newList
-                end
-            elseif ConfigSystem.List then
-                local newList = ConfigSystem.List()
-                if newList and #newList > 0 then
-                    list = newList
-                end
-            end
-            
-            -- Default Config sicherstellen in Liste
-            if not table.find(list, "Default") then
-                table.insert(list, 1, "Default")
-            end
-            
-            -- Dropdown aktualisieren
-            if configsDropdown and configsDropdown.SetOptions then
-                pcall(function() 
-                    configsDropdown.SetOptions(list)
-                    if selectedConfig and table.find(list, selectedConfig) then
-                        configsDropdown.SetValue(selectedConfig)
-                    else
-                        configsDropdown.SetValue("Default")
-                        selectedConfig = "Default"
-                    end
-                end)
-            end
-        end
-        
-        task.spawn(function()
-            local attempts = 0
-            while attempts < 20 do -- Mehr Versuche
-                attempts = attempts + 1
-                
-                if ConfigSystem and (ConfigSystem.isInitialized == nil or ConfigSystem.isInitialized) then
-                    updateDropdownList()
-                    break
-                else
-                    task.wait(0.1) -- Kürzere Wartezeit
-                end
-            end
-            
-            -- Fallback: Auch wenn nicht initialisiert, versuche zu laden
-            if attempts >= 20 then
-                updateDropdownList()
-            end
-        end)
-    
-        local function colorToTbl(c)
-            if typeof(c) ~= 'Color3' then return {r=110,g=117,b=243} end
-            return { r = math.floor(c.R*255+0.5), g = math.floor(c.G*255+0.5), b = math.floor(c.B*255+0.5) }
-        end
-        local function tblToColor(t)
-            if type(t) ~= 'table' then return Color3.fromRGB(110,117,243) end
-            return Color3.fromRGB(tonumber(t.r) or 110, tonumber(t.g) or 117, tonumber(t.b) or 243)
-        end
-    
-        -- Replace your Load button with this debug version:
+    local tab = createTabAfter(ui, "Settings", "⚙️", afterTab)
 
-    local loadBtn = winCfg:CreateButton("Load", function()
-        warn("========================================")
-        warn("[SettingsTab] LOAD BUTTON CLICKED")
-        warn("========================================")
-        
-        warn("[SettingsTab] ConfigSystem:", ConfigSystem)
-        warn("[SettingsTab] ConfigSystem type:", type(ConfigSystem))
-        
-        if not ConfigSystem then 
-            warn("[SettingsTab] ERROR: ConfigSystem is nil!")
-            warn("[SettingsTab] Aborting load")
-            return 
-        end
-        
-        warn("[SettingsTab] selectedConfig:", selectedConfig)
-        warn("[SettingsTab] selectedConfig type:", type(selectedConfig))
-        
-        if not selectedConfig then 
-            warn("[SettingsTab] ERROR: selectedConfig is nil!")
-            warn("[SettingsTab] Aborting load")
-            return 
-        end
-        
-        warn("[SettingsTab] Checking for loadConfig method...")
-        warn("[SettingsTab] ConfigSystem.loadConfig:", ConfigSystem.loadConfig)
-        
-        local success = false
-        if ConfigSystem.loadConfig then
-            warn("[SettingsTab] Found loadConfig method, calling it...")
-            warn("[SettingsTab] Calling: ConfigSystem:loadConfig('" .. tostring(selectedConfig) .. "')")
-            
-            -- Call the method
-            success = ConfigSystem:loadConfig(selectedConfig)
-            
-            warn("[SettingsTab] loadConfig returned:", success)
-        elseif ConfigSystem.Load then
-            warn("[SettingsTab] Using legacy Load method instead...")
-            -- Your legacy code here...
-            local data = ConfigSystem.Load(selectedConfig)
-            if type(data) == 'table' then
-                if data.primary then ui:SetTheme({ primary = tblToColor(data.primary) }) end
-                if data.watermark ~= nil then ui:SetWatermarkVisible(data.watermark and true or false) end
-                if data.toggleKey then ui:SetToggleKey(data.toggleKey) end
-                if type(data.controls) == 'table' then
-                    for key, value in pairs(data.controls) do
-                        local control = externalBindings[key]
-                        if control and type(control) == 'table' and type(control.SetValue) == 'function' then
-                            if type(value) == 'table' and value.__type == 'color' then
-                                value = Color3.fromRGB(tonumber(value.r) or 110, tonumber(value.g) or 117, tonumber(value.b) or 243)
-                            end
-                            pcall(function() control.SetValue(value) end)
-                        end
-                    end
-                end
-                success = true
-            end
-        else
-            warn("[SettingsTab] ERROR: No load method found!")
-            warn("[SettingsTab] ConfigSystem methods:")
-            for k, v in pairs(ConfigSystem) do
-                if type(v) == "function" then
-                    warn("  - " .. k)
-                end
-            end
-        end
-        
-        warn("[SettingsTab] Load completed. Success:", success)
-        warn("========================================")
+    -- UI Settings Window
+    local winKeys = tab:CreateWindow("UI Settings")
+    
+    winKeys:CreateKeybind("UI Toggle", "RightShift", function(key)
+        ui:SetToggleKey(key)
     end)
 
-    -- Also replace your Save button with this debug version:
+    local watermarkCheckbox = winKeys:CreateCheckbox("Watermark", true, function(val)
+        ui:SetWatermarkVisible(val)
+    end)
+    
+    winKeys:CreateKeybind("Toggle Watermark", "W", function(state)
+        if watermarkCheckbox and watermarkCheckbox.SetValue then
+            watermarkCheckbox.SetValue(state)
+        end
+    end, watermarkCheckbox)
 
-    local saveBtn = winCfg:CreateButton("Save", function()
-        warn("========================================")
-        warn("[SettingsTab] SAVE BUTTON CLICKED")
-        warn("========================================")
+    winKeys:CreateCheckbox("Show Keybind List", false, function(val)
+        ui:SetKeybindListVisible(val)
+    end)
+    
+    winKeys:CreateColorPicker("Theme Color", (ui.options and ui.options.theme and ui.options.theme.primary) or Color3.fromRGB(110,117,243), function(color, alpha)
+        ui:SetTheme({ primary = color })
+    end)
+    
+    -- Anti AFK
+    local antiAfkEnabled = true
+    local antiAfkConnection = nil
+    
+    local function startAntiAfk()
+        if antiAfkConnection then
+            antiAfkConnection:Disconnect()
+        end
         
-        warn("[SettingsTab] ConfigSystem:", ConfigSystem)
+        local VirtualUser = game:GetService('VirtualUser')
+        antiAfkConnection = game:GetService('Players').LocalPlayer.Idled:Connect(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+    end
+    
+    local function stopAntiAfk()
+        if antiAfkConnection then
+            antiAfkConnection:Disconnect()
+            antiAfkConnection = nil
+        end
+    end
+    
+    winKeys:CreateCheckbox("Anti AFK", true, function(val)
+        antiAfkEnabled = val
+        if val then
+            startAntiAfk()
+        else
+            stopAntiAfk()
+        end
+    end)
+    
+    -- FPS Boost
+    winKeys:CreateButton("FPS Boost", function()
+        local lighting = game:GetService("Lighting")
+        local terrain = workspace:FindFirstChildOfClass('Terrain')
         
-        if not ConfigSystem then 
-            warn("[SettingsTab] ERROR: ConfigSystem is nil!")
+        lighting.GlobalShadows = false
+        lighting.FogEnd = 9e9
+        lighting.Brightness = 0
+        
+        for _, effect in pairs(lighting:GetChildren()) do
+            if effect:IsA("PostEffect") then
+                effect.Enabled = false
+            end
+        end
+        
+        if terrain then
+            terrain.WaterWaveSize = 0
+            terrain.WaterWaveSpeed = 0
+            terrain.WaterReflectance = 0
+            terrain.WaterTransparency = 0
+        end
+        
+        settings().Rendering.QualityLevel = "Level01"
+        
+        for _, descendant in pairs(workspace:GetDescendants()) do
+            if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") then
+                descendant.Enabled = false
+            elseif descendant:IsA("MeshPart") then
+                descendant.Material = Enum.Material.Plastic
+                descendant.Reflectance = 0
+            end
+        end
+    end)
+    
+    startAntiAfk()
+
+    -- Config Window
+    local winCfg = tab:CreateWindow("Config")
+
+    local cfgName = ""
+    local configNameBox = winCfg:CreateTextBox("Config Name", "MyConfig", function(name)
+        cfgName = name
+    end)
+
+    local configsDropdown = nil
+    local selectedConfig = "Default"
+    
+    local function refreshDropdown(selectName)
+        if not configsDropdown or not ConfigSystem then 
             return 
         end
         
-        warn("[SettingsTab] selectedConfig:", selectedConfig)
+        local list = {"Default"}
         
-        if not selectedConfig then 
-            warn("[SettingsTab] ERROR: selectedConfig is nil!")
+        if ConfigSystem then
+            for attempt = 1, 3 do
+                local newList = nil
+                if ConfigSystem.getConfigList then
+                    newList = ConfigSystem:getConfigList()
+                elseif ConfigSystem.List then
+                    newList = ConfigSystem.List()
+                end
+                
+                if newList and #newList > 0 then
+                    list = newList
+                    break
+                end
+                
+                if attempt < 3 then
+                    task.wait(0.2)
+                end
+            end
+        end
+        
+        if not table.find(list, "Default") then
+            table.insert(list, 1, "Default")
+        end
+        
+        if configsDropdown.SetOptions then 
+            pcall(function() 
+                configsDropdown.SetOptions(list) 
+            end)
+        end
+        
+        local choose = selectName or selectedConfig or "Default"
+        
+        if not table.find(list, choose) then
+            choose = "Default"
+        end
+        
+        if choose and configsDropdown.SetValue then 
+            pcall(function() 
+                configsDropdown.SetValue(choose) 
+                selectedConfig = choose
+            end)
+        end
+    end
+
+    -- Create Config Button
+    winCfg:CreateButton("Create Config", function()
+        if not ConfigSystem or not cfgName or cfgName == '' then 
             return 
         end
         
-        warn("[SettingsTab] Checking for saveConfig method...")
+        local alreadyExists = false
+        if ConfigSystem.configExists then
+            alreadyExists = ConfigSystem:configExists(cfgName)
+        end
+        
+        if alreadyExists then
+            return
+        end
         
         local success = false
-        if ConfigSystem.saveConfig then
-            warn("[SettingsTab] Found saveConfig method, calling it...")
-            warn("[SettingsTab] Calling: ConfigSystem:saveConfig('" .. tostring(selectedConfig) .. "')")
-            
-            success = ConfigSystem:saveConfig(selectedConfig)
-            
-            warn("[SettingsTab] saveConfig returned:", success)
-        elseif ConfigSystem.Save then
-            warn("[SettingsTab] Using legacy Save method...")
-            -- Your legacy save code...
+        if ConfigSystem.createConfig then
+            success = ConfigSystem:createConfig(cfgName)
         end
         
         if success then
-            task.defer(function() refreshDropdown(selectedConfig) end)
-        end
-        
-        warn("[SettingsTab] Save completed. Success:", success)
-        warn("========================================")
-    end)
-        
-        local deleteBtn = winCfg:CreateButton("Delete", function()
-            if not ConfigSystem then 
-                return 
-            end
-            
-            if not selectedConfig then 
-                return 
-            end
-            
-            if selectedConfig and (string.lower(selectedConfig) == "default") then
-                return
-            end
-            
-            local success = false
-            if ConfigSystem.deleteConfig then
-                -- Neues ConfigManager System
-                success = ConfigSystem:deleteConfig(selectedConfig)
-            elseif ConfigSystem.Delete then
-                -- Altes ConfigSystem
-                success = ConfigSystem.Delete(selectedConfig)
-            end
-            
-            if success then
-                local deletedConfig = selectedConfig
-                selectedConfig = nil
-                
-                task.defer(function()
-                    -- Config-Liste aktualisieren
-                    local list = {"Default"}
-                    if ConfigSystem.getConfigList then
-                        list = ConfigSystem:getConfigList()
-                    elseif ConfigSystem.List then
-                        list = ConfigSystem.List()
-                    end
-                    
-                    if configsDropdown then
-                        configsDropdown.SetOptions(list)
-                        configsDropdown.SetValue(list[1])
-                        selectedConfig = list[1]
-                    end
-                end)
-            end
-        end)
-    
-        -- AutoLoad Checkbox mit korrektem State
-        local autoLoadCheckbox = winCfg:CreateCheckbox("Auto Load Config", false, function(val)
-            if ConfigSystem then
-                if ConfigSystem.setAutoLoad then
-                    -- Neues ConfigManager System
-                    ConfigSystem:setAutoLoad(val and selectedConfig or nil)
-                elseif ConfigSystem.SetAutoLoad then
-                    -- Altes ConfigSystem
-                    ConfigSystem.SetAutoLoad(val and selectedConfig or nil)
-                end
-            end
-        end)
-    
-        -- Ensure default exists and auto refresh list on build
-        if ConfigSystem then
-            -- Warte bis ConfigSystem bereit ist
             task.spawn(function()
-                local attempts = 0
-                while attempts < 15 do -- Mehr Versuche
-                    attempts = attempts + 1
+                task.wait(0.5)
+                
+                for attempt = 1, 5 do
+                    refreshDropdown(cfgName)
                     
-                    if ConfigSystem.isInitialized == nil or ConfigSystem.isInitialized then
-                        -- Default Config sicherstellen
-                        local defaultExists = false
-                        if ConfigSystem.configExists then
-                            defaultExists = ConfigSystem:configExists('Default')
-                        elseif ConfigSystem.Exists then
-                            defaultExists = ConfigSystem.Exists('Default')
-                        end
-                        
-                        if not defaultExists then
-                            -- Mehrfach versuchen Default Config zu erstellen
-                            for createAttempt = 1, 3 do
-                                local success = false
-                                if ConfigSystem.createConfig then
-                                    success = ConfigSystem:createConfig('Default')
-                                elseif ConfigSystem.Create then
-                                    success = ConfigSystem.Create('Default')
-                                end
-                                
-                                if success then
-                                    task.wait(0.2)
-                                    if ConfigSystem:configExists('Default') then
-                                        break
-                                    end
-                                end
-                                
-                                if createAttempt < 3 then
-                                    task.wait(0.3)
-                                end
-                            end
-                        end
-                        
-                        -- Dropdown mit aktueller Liste refreshen (mehrfach versuchen)
-                        for refreshAttempt = 1, 3 do
-                            refreshDropdown('Default')
-                            task.wait(0.2)
-                            
-                            if selectedConfig == 'Default' then
-                                break
-                            end
-                        end
-                        
+                    task.wait(0.2)
+                    if selectedConfig == cfgName then
                         break
-                    else
-                        task.wait(0.1) -- Kürzere Wartezeit
                     end
                 end
-            end)
-            
-            -- AutoLoad Status beim Start anzeigen (aber nur visuell, nicht automatisch ändern)
-            task.spawn(function()
-                task.wait(0.01)
                 
-                local auto = nil
-                if ConfigSystem.getAutoLoad then
-                    auto = ConfigSystem:getAutoLoad()
-                elseif ConfigSystem.GetAutoLoad then
-                    auto = ConfigSystem.GetAutoLoad()
-                end
-                
-                if auto and auto ~= "" then
-                    -- Config im Dropdown setzen
-                    pcall(function() 
-                        if configsDropdown and configsDropdown.SetValue then 
-                            configsDropdown.SetValue(auto) 
-                        end 
-                    end)
-                    selectedConfig = auto
-                    
-                    -- Checkbox visuell auf den korrekten Status setzen (nur beim Start)
-                    pcall(function()
-                        if autoLoadCheckbox and autoLoadCheckbox.SetValue then
-                            autoLoadCheckbox.SetValue(true)
-                        end
-                    end)
-                else
-                    -- Checkbox visuell auf false setzen (nur beim Start)
-                    pcall(function()
-                        if autoLoadCheckbox and autoLoadCheckbox.SetValue then
-                            autoLoadCheckbox.SetValue(false)
-                        end
-                    end)
+                if configNameBox and configNameBox.SetValue then
+                    configNameBox.SetValue("")
+                    cfgName = ""
                 end
             end)
         end
+    end)
+
+    -- Configs Dropdown
+    local initialList = {"Default"}
+    configsDropdown = winCfg:CreateDropdown("Configs", initialList, selectedConfig, function(val)
+        selectedConfig = val
+    end)
     
-        return tab
-    end
-    
-    -- Register external controls from Example.lua
-    function SettingsTab.RegisterBindings(map)
-        if type(map) ~= 'table' then return end
-        for k, v in pairs(map) do
-            if type(k) == 'string' and type(v) == 'table' then
-                externalBindings[k] = v
+    -- Update dropdown list after initialization
+    task.spawn(function()
+        local attempts = 0
+        while attempts < 20 do
+            attempts = attempts + 1
+            
+            if ConfigSystem and (ConfigSystem.isInitialized == nil or ConfigSystem.isInitialized) then
+                task.wait(0.5)
+                refreshDropdown()
+                break
+            else
+                task.wait(0.1)
             end
         end
-    end
+    end)
+
+    -- Load Button
+    winCfg:CreateButton("Load", function()
+        if not ConfigSystem or not selectedConfig then 
+            return 
+        end
+        
+        local success = false
+        if ConfigSystem.loadConfig then
+            success = ConfigSystem:loadConfig(selectedConfig)
+        end
+    end)
+
+    -- Save Button
+    winCfg:CreateButton("Save", function()
+        if not ConfigSystem or not selectedConfig then 
+            return 
+        end
+        
+        local success = false
+        if ConfigSystem.saveConfig then
+            success = ConfigSystem:saveConfig(selectedConfig)
+        end
+        
+        if success then
+            task.defer(function() 
+                refreshDropdown(selectedConfig) 
+            end)
+        end
+    end)
     
-    return SettingsTab
+    -- Delete Button
+    winCfg:CreateButton("Delete", function()
+        if not ConfigSystem or not selectedConfig then 
+            return 
+        end
+        
+        if string.lower(selectedConfig) == "default" then
+            return
+        end
+        
+        local success = false
+        if ConfigSystem.deleteConfig then
+            success = ConfigSystem:deleteConfig(selectedConfig)
+        end
+        
+        if success then
+            selectedConfig = nil
+            
+            task.defer(function()
+                local list = {"Default"}
+                if ConfigSystem.getConfigList then
+                    list = ConfigSystem:getConfigList()
+                end
+                
+                if configsDropdown then
+                    configsDropdown.SetOptions(list)
+                    configsDropdown.SetValue(list[1])
+                    selectedConfig = list[1]
+                end
+            end)
+        end
+    end)
+
+    -- Auto Load Checkbox
+    local autoLoadCheckbox = winCfg:CreateCheckbox("Auto Load Config", false, function(val)
+        if ConfigSystem then
+            if ConfigSystem.setAutoLoad then
+                ConfigSystem:setAutoLoad(val and selectedConfig or nil)
+            end
+        end
+    end)
+
+    -- Ensure default config exists
+    if ConfigSystem then
+        task.spawn(function()
+            local attempts = 0
+            while attempts < 15 do
+                attempts = attempts + 1
+                
+                if ConfigSystem.isInitialized == nil or ConfigSystem.isInitialized then
+                    local defaultExists = false
+                    if ConfigSystem.configExists then
+                        defaultExists = ConfigSystem:configExists('Default')
+                    end
+                    
+                    if not defaultExists then
+                        for createAttempt = 1, 3 do
+                            local success = false
+                            if ConfigSystem.createConfig then
+                                success = ConfigSystem:createConfig('Default')
+                            end
+                            
+                            if success then
+                                task.wait(0.3)
+                                if ConfigSystem:configExists('Default') then
+                                    break
+                                end
+                            end
+                            
+                            if createAttempt < 3 then
+                                task.wait(0.4)
+                            end
+                        end
+                    end
+                    
+                    task.wait(0.3)
+                    for refreshAttempt = 1, 3 do
+                        refreshDropdown('Default')
+                        task.wait(0.2)
+                        
+                        if selectedConfig == 'Default' then
+                            break
+                        end
+                    end
+                    
+                    break
+                else
+                    task.wait(0.1)
+                end
+            end
+        end)
+    end
+
+    return tab
+end
+
+function SettingsTab.RegisterBindings(map)
+    if type(map) ~= 'table' then return end
+    for k, v in pairs(map) do
+        if type(k) == 'string' and type(v) == 'table' then
+            externalBindings[k] = v
+        end
+    end
+end
+
+return SettingsTab
