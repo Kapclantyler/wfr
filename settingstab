@@ -51,7 +51,7 @@ function SettingsTab.Build(ui, afterTab, deps)
         end
     end, watermarkCheckbox)
 
-    winKeys:CreateCheckbox("Show Keybind List", false, function(val)
+    winKeys:CreateCheckbox("Show Keybind List", true, function(val)
         ui:SetKeybindListVisible(val)
     end)
     
