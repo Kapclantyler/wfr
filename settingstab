@@ -45,7 +45,7 @@ function SettingsTab.Build(ui, afterTab, deps)
         ui:SetWatermarkVisible(val)
     end)
     
-    winKeys:CreateKeybind("Toggle Watermark", "W", function(state)
+    winKeys:CreateKeybind("Toggle Watermark", "PageUp", function(state)
         if watermarkCheckbox and watermarkCheckbox.SetValue then
             watermarkCheckbox.SetValue(state)
         end
