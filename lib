@@ -411,6 +411,8 @@
         self:_createPlayerInfo()
     end
 
+   -- Add this method to your ModernUI library
+
     function ModernUI:CreateTextBox(options)
         options = options or {}
         local title = options.title or "Text Box"
@@ -632,9 +634,46 @@
                 return label
             end,
             
+            AddTextLabelWithImage = function(text, textSize, textColor, imageId, imageSize)
+                imageSize = imageSize or 16
+                
+                -- Container frame for image + text
+                local container = Instance.new('Frame')
+                container.Name = 'TextEntryWithImage'
+                container.Size = UDim2.new(1, -16, 0, math.max(imageSize, 20))
+                container.BackgroundTransparency = 1
+                container.Parent = contentFrame
+                
+                -- Image
+                local image = Instance.new('ImageLabel')
+                image.Name = 'Icon'
+                image.Size = UDim2.new(0, imageSize, 0, imageSize)
+                image.Position = UDim2.new(0, 0, 0.5, -imageSize/2)
+                image.BackgroundTransparency = 1
+                image.Image = imageId or ""
+                image.Parent = container
+                
+                -- Text label
+                local label = Instance.new('TextLabel')
+                label.Name = 'Text'
+                label.Size = UDim2.new(1, -(imageSize + 4), 1, 0)
+                label.Position = UDim2.new(0, imageSize + 4, 0, 0)
+                label.BackgroundTransparency = 1
+                label.Text = text or ""
+                label.TextColor3 = textColor or self.options.theme.text
+                label.Font = Enum.Font.Gotham
+                label.TextSize = textSize or 12
+                label.TextXAlignment = Enum.TextXAlignment.Left
+                label.TextYAlignment = Enum.TextYAlignment.Center
+                label.Parent = container
+                
+                return container
+            end,
+            
             ClearContent = function()
                 for _, child in ipairs(contentFrame:GetChildren()) do
-                    if child:IsA('TextLabel') and child.Name == 'TextEntry' then
+                    if (child:IsA('TextLabel') and child.Name == 'TextEntry') or 
+                       (child:IsA('Frame') and child.Name == 'TextEntryWithImage') then
                         child:Destroy()
                     end
                 end
@@ -647,6 +686,7 @@
         
         return api
     end
+
 
     function ModernUI:_createPlayerInfo()
         -- Avatar-Sektion nur so breit wie Tab-Container
