@@ -44,13 +44,6 @@ function SettingsTab.Build(ui, afterTab, deps)
     local watermarkCheckbox = winKeys:CreateCheckbox("Watermark", true, function(val)
         ui:SetWatermarkVisible(val)
     end)
-    
-    winKeys:CreateKeybind("Toggle Watermark", "PageUp", function(state)
-        if watermarkCheckbox and watermarkCheckbox.SetValue then
-            watermarkCheckbox.SetValue(state)
-        end
-    end, watermarkCheckbox)
-
     winKeys:CreateCheckbox("Show Keybind List", true, function(val)
         ui:SetKeybindListVisible(val)
     end)
