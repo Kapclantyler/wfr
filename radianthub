@@ -8,4 +8,6 @@ elseif game.GameId == 5750914919 then -- fisch
     loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/da053313889734b36eb44512d63e8cf4.lua"))()
 elseif game.CreatorId == 35489258 then -- the forge
     loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/7f9388ae74e27096281daeddca0a7253.lua"))()
+else
+    loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/575a6812d5a3a0e4acb2634fa1acb99a.lua"))()
 end
