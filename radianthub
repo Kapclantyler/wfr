@@ -11,7 +11,7 @@ elseif game.CreatorId == 35489258 then -- the forge
 elseif game.CreatorId == 1103278 then -- pf 
     loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/3ea66f536abf2b0359241a99563f76e9.lua"))()
 elseif game.CreatorId == 7358272 then -- TTK Testing
-    
+    loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/b9ce375c6d149a8cbb0465a7f7e3c9c9.lua"))()
 else
     loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/575a6812d5a3a0e4acb2634fa1acb99a.lua"))()
 end
